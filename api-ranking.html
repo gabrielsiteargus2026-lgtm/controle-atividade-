@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API - Ranking de Colaboradores</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            position: relative;
+            padding-top: 180px;
+        }
+
+        .header-logo {
+            position: fixed;
+            width: 120px;
+            height: 120px;
+            object-fit: contain;
+            z-index: 999;
+            right: 20px;
+            top: 20px;
+        }
+
+        h1 {
+            color: #5BA3D1;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .info {
+            background: #2d2d30;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 3px solid #5BA3D1;
+        }
+
+        .info p {
+            margin: 5px 0;
+        }
+
+        .endpoint {
+            color: #ce9178;
+        }
+
+        .method {
+            color: #569cd6;
+            font-weight: bold;
+        }
+
+        .json-output {
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+
+        pre {
+            color: #d4d4d4;
+            font-size: 0.9em;
+        }
+
+        .key {
+            color: #9cdcfe;
+        }
+
+        .string {
+            color: #ce9178;
+        }
+
+        .number {
+            color: #b5cea8;
+        }
+
+        .refresh-btn {
+            background: #5BA3D1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 20px;
+        }
+
+        .refresh-btn:hover {
+            background: #4A8DC1;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat {
+            background: #2d2d30;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 3px solid #5BA3D1;
+        }
+
+        .stat-label {
+            color: #858585;
+            font-size: 0.9em;
+        }
+
+        .stat-value {
+            color: #5BA3D1;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            margin-left: 280px;
+        }
+
+        /* Menu Lateral */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 260px;
+            height: 100vh;
+            background: linear-gradient(180deg, #2C5282 0%, #1e3a5f 100%);
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .sidebar-header h2 {
+            color: white;
+            font-size: 1.2em;
+            margin-bottom: 5px;
+        }
+
+        .sidebar-header p {
+            color: #b0d4f1;
+            font-size: 0.85em;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 10px;
+        }
+
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .sidebar-menu a:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding-left: 20px;
+        }
+
+        .sidebar-menu a.active {
+            background: #5BA3D1;
+            color: white;
+        }
+
+        .sidebar-menu a.active::before {
+            content: '▶';
+            margin-left: -8px;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 220px;
+            }
+
+            .container {
+                margin-left: 240px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            }
+
+            .container {
+                margin-left: 0;
+            }
+        }
+    </style>
+    <!-- ⚙️ Configuração Centralizada do Firebase -->
+    <script src="firebase-config.js"></script>
+    <script>
+        // Carregar credenciais salvas no localStorage (se houver)
+        const savedConfig = localStorage.getItem('firebaseConfig');
+        if (savedConfig) {
+            window.firebaseConfig = JSON.parse(savedConfig);
+        }
+        // Se não estiver configurado, redirecionar para setup
+        if (!window.firebaseConfig || !window.firebaseConfig.apiKey || window.firebaseConfig.apiKey.includes('SUA_')) {
+            window.location.href = 'setup-firebase.html';
+        }
+    </script>
+</head>
+<body>
+    <!-- Menu Lateral -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h2>Controle</h2>
+            <p>Atividades</p>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="index.html">📊 Dashboard</a></li>
+            <li><a href="historico.html">📋 Histórico</a></li>
+            <li><a href="dashboard-ranking.html">🥇 Ranking</a></li>
+            <li><a href="api-ranking.html" class="active">⚙️ API</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <img src="argus-logo 1.png" alt="Argus" class="header-logo">
+            <h1>API - Ranking de Colaboradores</h1>
+        </div>
+
+        <div class="info">
+            <p><strong>Endpoint:</strong> <span class="endpoint">GET /api/ranking?data=DD/MM/YYYY</span></p>
+            <p><strong>Descrição:</strong> Retorna o ranking de colaboradores com mais atividades no dia especificado</p>
+            <p><strong>Atualização:</strong> Em tempo real (a cada 2 segundos)</p>
+        </div>
+
+        <div class="info">
+            <p><strong>Exemplos de Uso:</strong></p>
+            <p>
+                <span class="method">JavaScript (Fetch):</span><br>
+                <code style="color: #ce9178;">
+                    fetch('/api/ranking?data=24/04/2026')<br>
+                    &nbsp;&nbsp;.then(r =&gt; r.json())<br>
+                    &nbsp;&nbsp;.then(data =&gt; console.log(data))
+                </code>
+            </p>
+        </div>
+
+        <h2 style="color: #4ec9b0; margin-top: 30px; margin-bottom: 15px;">Dados do Ranking</h2>
+
+        <div class="stats-grid" id="statsGrid"></div>
+
+        <div class="json-output">
+            <pre id="jsonOutput">Carregando dados...</pre>
+        </div>
+
+        <button class="refresh-btn" onclick="atualizarJSON()">🔄 Atualizar</button>
+    </div>
+
+    <script type="module">
+        // ⚡ FIREBASE CONFIG
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        // ✅ Usando configuração centralizada de firebase-config.js
+        if (!window.firebaseConfig) {
+            throw new Error('⚠️ firebaseConfig não encontrado! Redirecione para setup-firebase.html');
+        }
+
+        const app = initializeApp(window.firebaseConfig);
+        const db = getDatabase(app);
+
+        let todasAtividades = [];
+        let todasEmAndamento = [];
+
+        // ================= LISTENERS DO FIREBASE =================
+        onValue(ref(db, 'atividades'), (snapshot) => {
+            const dados = snapshot.val() || {};
+            todasAtividades = Object.values(dados);
+            formatarJSON();
+        });
+
+        onValue(ref(db, 'atividades_em_andamento'), (snapshot) => {
+            const dados = snapshot.val() || {};
+            todasEmAndamento = Object.values(dados);
+            formatarJSON();
+        });
+
+        // ================= FORMATAR E EXIBIR JSON =================
+        function formatarJSON() {
+            const hoje = new Date();
+            const ano = hoje.getFullYear();
+            const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+            const dia = String(hoje.getDate()).padStart(2, '0');
+            const dataHoje = `${ano}-${mes}-${dia}`;
+
+            // Filtrar atividades de hoje
+            const atividadesHoje = todasAtividades.filter(a => a.data_inicio === dataHoje);
+            const emAndamentoHoje = todasEmAndamento.filter(a => a.data_inicio === dataHoje);
+
+            // Montar ranking
+            const ranking = {};
+
+            atividadesHoje.forEach(atividade => {
+                if (!ranking[atividade.colaborador]) {
+                    ranking[atividade.colaborador] = {
+                        total: 0,
+                        finalizadas: 0,
+                        em_andamento: 0
+                    };
+                }
+                ranking[atividade.colaborador].total++;
+                ranking[atividade.colaborador].finalizadas++;
+            });
+
+            emAndamentoHoje.forEach(atividade => {
+                if (!ranking[atividade.colaborador]) {
+                    ranking[atividade.colaborador] = {
+                        total: 0,
+                        finalizadas: 0,
+                        em_andamento: 0
+                    };
+                }
+                ranking[atividade.colaborador].total++;
+                ranking[atividade.colaborador].em_andamento++;
+            });
+
+            const rankingArray = Object.entries(ranking)
+                .map(([colaborador, dados]) => ({
+                    posicao: 0,
+                    colaborador,
+                    total: dados.total,
+                    finalizadas: dados.finalizadas,
+                    em_andamento: dados.em_andamento
+                }))
+                .sort((a, b) => b.finalizadas - a.finalizadas)
+                .map((item, index) => ({ ...item, posicao: index + 1 }));
+
+            const resposta = {
+                sucesso: true,
+                timestamp: new Date().toISOString(),
+                data: dataHoje,
+                total_atividades: rankingArray.reduce((sum, item) => sum + item.total, 0),
+                total_finalizadas: rankingArray.reduce((sum, item) => sum + item.finalizadas, 0),
+                total_em_andamento: rankingArray.reduce((sum, item) => sum + item.em_andamento, 0),
+                total_colaboradores: rankingArray.length,
+                ranking: rankingArray
+            };
+
+            // Atualizar visualização JSON
+            document.getElementById('jsonOutput').textContent = JSON.stringify(resposta, null, 2);
+
+            // Atualizar estatísticas
+            document.getElementById('statsGrid').innerHTML = `
+                <div class="stat">
+                    <div class="stat-label">Total de Atividades</div>
+                    <div class="stat-value">${resposta.total_atividades}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Finalizadas</div>
+                    <div class="stat-value">${resposta.total_finalizadas}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Em Andamento</div>
+                    <div class="stat-value">${resposta.total_em_andamento}</div>
+                </div>
+            `;
+        }
+
+        window.atualizarJSON = formatarJSON;
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', formatarJSON);
+    </script>
+</body>
+</html>

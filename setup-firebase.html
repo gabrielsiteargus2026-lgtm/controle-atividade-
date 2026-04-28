@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚙️ Configurar Firebase</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .step {
+            background: #f5f5f5;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .step h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-family: 'Courier New', monospace;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: #f9f9f9;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .hint {
+            font-size: 0.85em;
+            color: #999;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-save {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-save:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-test {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-test:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+            font-weight: 600;
+        }
+
+        .status.success {
+            display: block;
+            background: #c6f6d5;
+            color: #22543d;
+            border-left: 4px solid #48bb78;
+        }
+
+        .status.error {
+            display: block;
+            background: #fed7d7;
+            color: #742a2a;
+            border-left: 4px solid #f56565;
+        }
+
+        .video-link {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .video-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .video-link a:hover {
+            text-decoration: underline;
+        }
+
+        .info-box {
+            background: #edf2f7;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #4299e1;
+            margin-bottom: 20px;
+        }
+
+        .info-box strong {
+            color: #2c5282;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔥 Configurar Firebase</h1>
+            <p>Configure as credenciais do Firebase em 3 passos</p>
+        </div>
+
+        <div class="info-box">
+            <strong>⚠️ Importante:</strong> Você só precisa fazer isso UMA VEZ. As credenciais serão salvas localmente.
+        </div>
+
+        <!-- PASSO 1: INSTRUÇÕES -->
+        <div class="step">
+            <h3><span class="step-number">1</span> Obter Credenciais no Firebase Console</h3>
+            <ol style="margin-left: 20px; color: #666;">
+                <li>Acesse <strong><a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a></strong></li>
+                <li>Clique em <strong>"Criar Projeto"</strong> (ou use um existente)</li>
+                <li>No menu esquerdo, clique em <strong>"Realtime Database"</strong></li>
+                <li>Clique em <strong>"Criar Banco de Dados"</strong> (Modo: Iniciar em modo de teste)</li>
+                <li>Volte a <strong>"Configurações do Projeto"</strong> (⚙️ no topo)</li>
+                <li>Na aba <strong>"Geral"</strong>, procure por <strong>"Sua Aplicação"</strong></li>
+                <li>Clique em <strong>&lt;/&gt;</strong> (ícone Web)</li>
+                <li>Copie o objeto <strong>firebaseConfig</strong> completo</li>
+            </ol>
+        </div>
+
+        <!-- PASSO 2: COLE AS CREDENCIAIS -->
+        <div class="step">
+            <h3><span class="step-number">2</span> Cole as Credenciais Aqui</h3>
+            <form id="firebaseForm">
+                <div class="form-group">
+                    <label for="apiKey">API Key</label>
+                    <input type="text" id="apiKey" placeholder="AIzaSyD..." required>
+                    <div class="hint">Encontre em: firebaseConfig.apiKey</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="authDomain">Auth Domain</label>
+                    <input type="text" id="authDomain" placeholder="seu-projeto.firebaseapp.com" required>
+                    <div class="hint">Formato: seu-projeto.firebaseapp.com</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="databaseURL">Database URL</label>
+                    <input type="text" id="databaseURL" placeholder="https://seu-projeto.firebaseio.com" required>
+                    <div class="hint">Formato: https://seu-projeto.firebaseio.com</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="projectId">Project ID</label>
+                    <input type="text" id="projectId" placeholder="seu-projeto" required>
+                    <div class="hint">Encontre em: firebaseConfig.projectId</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="storageBucket">Storage Bucket (Opcional)</label>
+                    <input type="text" id="storageBucket" placeholder="seu-projeto.appspot.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="messagingSenderId">Messaging Sender ID (Opcional)</label>
+                    <input type="text" id="messagingSenderId" placeholder="123456789">
+                </div>
+
+                <div class="form-group">
+                    <label for="appId">App ID (Opcional)</label>
+                    <input type="text" id="appId" placeholder="1:123456789:web:abc123xyz">
+                </div>
+            </form>
+        </div>
+
+        <!-- PASSO 3: SALVAR -->
+        <div class="step">
+            <h3><span class="step-number">3</span> Salvar Configuração</h3>
+            <div class="buttons">
+                <button class="btn-save" onclick="salvarConfig()">💾 Salvar Credenciais</button>
+                <button class="btn-test" onclick="testarConfig()">✅ Testar Conexão</button>
+            </div>
+            <div id="status" class="status"></div>
+        </div>
+
+        <div class="video-link">
+            💡 <strong>Dúvida?</strong> Veja o<br>
+            <a href="https://www.youtube.com/results?search_query=firebase+realtime+database+setup" target="_blank">Tutorial do Firebase no YouTube →</a>
+        </div>
+    </div>
+
+    <script>
+        // Carregar config salva ao abrir a página
+        window.addEventListener('DOMContentLoaded', function() {
+            const config = JSON.parse(localStorage.getItem('firebaseConfig') || '{}');
+            if (config.apiKey) {
+                document.getElementById('apiKey').value = config.apiKey;
+                document.getElementById('authDomain').value = config.authDomain || '';
+                document.getElementById('databaseURL').value = config.databaseURL || '';
+                document.getElementById('projectId').value = config.projectId || '';
+                document.getElementById('storageBucket').value = config.storageBucket || '';
+                document.getElementById('messagingSenderId').value = config.messagingSenderId || '';
+                document.getElementById('appId').value = config.appId || '';
+            }
+        });
+
+        function salvarConfig() {
+            const config = {
+                apiKey: document.getElementById('apiKey').value,
+                authDomain: document.getElementById('authDomain').value,
+                databaseURL: document.getElementById('databaseURL').value,
+                projectId: document.getElementById('projectId').value,
+                storageBucket: document.getElementById('storageBucket').value || "seu-projeto.appspot.com",
+                messagingSenderId: document.getElementById('messagingSenderId').value || "123456789",
+                appId: document.getElementById('appId').value || "1:123456789:web:abc123xyz"
+            };
+
+            if (!config.apiKey || !config.authDomain || !config.databaseURL || !config.projectId) {
+                mostrarStatus('❌ Preencha todos os campos obrigatórios!', 'error');
+                return;
+            }
+
+            // Salvar em localStorage
+            localStorage.setItem('firebaseConfig', JSON.stringify(config));
+            
+            // Salvar também em window para uso imediato
+            window.firebaseConfig = config;
+
+            mostrarStatus('✅ Credenciais salvas com sucesso! Você pode fechar esta página.', 'success');
+            
+            // Redirecionar para index.html após 2 segundos
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 2000);
+        }
+
+        function testarConfig() {
+            const config = {
+                apiKey: document.getElementById('apiKey').value,
+                authDomain: document.getElementById('authDomain').value,
+                databaseURL: document.getElementById('databaseURL').value,
+                projectId: document.getElementById('projectId').value,
+                storageBucket: document.getElementById('storageBucket').value || "seu-projeto.appspot.com",
+                messagingSenderId: document.getElementById('messagingSenderId').value || "123456789",
+                appId: document.getElementById('appId').value || "1:123456789:web:abc123xyz"
+            };
+
+            if (!config.apiKey || !config.authDomain || !config.databaseURL || !config.projectId) {
+                mostrarStatus('❌ Preencha todos os campos obrigatórios!', 'error');
+                return;
+            }
+
+            // Testar conexão
+            fetch(config.databaseURL + '/.json?auth=' + config.apiKey)
+                .then(response => {
+                    if (response.ok) {
+                        mostrarStatus('✅ Conexão com Firebase bem-sucedida!', 'success');
+                    } else {
+                        mostrarStatus('❌ Erro na conexão. Verifique as credenciais.', 'error');
+                    }
+                })
+                .catch(error => {
+                    mostrarStatus('❌ Erro ao testar: ' + error.message, 'error');
+                });
+        }
+
+        function mostrarStatus(mensagem, tipo) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = mensagem;
+            statusDiv.className = 'status ' + tipo;
+        }
+    </script>
+</body>
+</html>

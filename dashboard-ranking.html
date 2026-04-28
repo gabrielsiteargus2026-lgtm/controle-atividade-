@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Ranking de Colaboradores</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e8f1f7 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            position: relative;
+            padding-top: 180px;
+        }
+
+        .header-logo {
+            position: fixed;
+            width: 120px;
+            height: 120px;
+            object-fit: contain;
+            z-index: 999;
+            right: 20px;
+            top: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #2C5282;
+            text-align: center;
+        }
+
+        .header p {
+            font-size: 0.95em;
+            opacity: 0.9;
+            color: #666;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            color: #5BA3D1;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.5em;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input[type="date"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .form-group input[type="date"]:focus {
+            outline: none;
+            border-color: #5BA3D1;
+        }
+
+        .ranking-list {
+            list-style: none;
+        }
+
+        .ranking-item {
+            padding: 18px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            background: rgba(91, 163, 209, 0.08);
+            border-left: 5px solid #5BA3D1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .ranking-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .ranking-item.first {
+            border-left-color: #ffd700;
+            background: linear-gradient(135deg, #fffef0 0%, #fffacd 100%);
+            transform: scale(1.02);
+        }
+
+        .ranking-item.first:hover {
+            transform: scale(1.02) translateX(5px);
+        }
+
+        .ranking-item.second {
+            border-left-color: #c0c0c0;
+            background: linear-gradient(135deg, #f8f8f8 0%, #e8e8e8 100%);
+        }
+
+        .ranking-item.third {
+            border-left-color: #cd7f32;
+            background: linear-gradient(135deg, #faf5f0 0%, #ffe4d4 100%);
+        }
+
+        .ranking-position {
+            font-size: 1.8em;
+            margin-right: 15px;
+            min-width: 40px;
+        }
+
+        .ranking-info {
+            flex: 1;
+        }
+
+        .ranking-name {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 3px;
+        }
+
+        .ranking-details {
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        .ranking-count {
+            background: #5BA3D1;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 1.1em;
+            font-weight: bold;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            background: rgba(91, 163, 209, 0.12);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border-left: 4px solid #5BA3D1;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #5BA3D1;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .auto-refresh {
+            text-align: center;
+            color: #999;
+            font-size: 0.85em;
+            margin-top: 20px;
+        }
+
+        .last-update {
+            color: #5BA3D1;
+            font-weight: bold;
+        }
+
+        /* Menu Lateral */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 260px;
+            height: 100vh;
+            background: linear-gradient(180deg, #2C5282 0%, #1e3a5f 100%);
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .sidebar-header h2 {
+            color: white;
+            font-size: 1.2em;
+            margin-bottom: 5px;
+        }
+
+        .sidebar-header p {
+            color: #b0d4f1;
+            font-size: 0.85em;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 10px;
+        }
+
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .sidebar-menu a:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding-left: 20px;
+        }
+
+        .sidebar-menu a.active {
+            background: #5BA3D1;
+            color: white;
+        }
+
+        .sidebar-menu a.active::before {
+            content: '▶';
+            margin-left: -8px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            margin-left: 280px;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 220px;
+            }
+
+            .container {
+                margin-left: 240px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            }
+
+            .container {
+                margin-left: 0;
+            }
+        }
+    </style>
+    <!-- ⚙️ Configuração Centralizada do Firebase -->
+    <script src="firebase-config.js"></script>
+    <script>
+        // Carregar credenciais salvas no localStorage (se houver)
+        const savedConfig = localStorage.getItem('firebaseConfig');
+        if (savedConfig) {
+            window.firebaseConfig = JSON.parse(savedConfig);
+        }
+        // Se não estiver configurado, redirecionar para setup
+        if (!window.firebaseConfig || !window.firebaseConfig.apiKey || window.firebaseConfig.apiKey.includes('SUA_')) {
+            window.location.href = 'setup-firebase.html';
+        }
+    </script>
+</head>
+<body>
+    <!-- Menu Lateral -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h2>Controle</h2>
+            <p>Atividades</p>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="index.html">📊 Dashboard</a></li>
+            <li><a href="historico.html">📋 Histórico</a></li>
+            <li><a href="dashboard-ranking.html" class="active">🥇 Ranking</a></li>
+            <li><a href="api-ranking.html">⚙️ API</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <img src="argus-logo 1.png" alt="Argus" class="header-logo">
+            <h1>Dashboard de Ranking</h1>
+        </div>
+
+        <div class="card">
+            <h2>Filtrar por Data</h2>
+            <div class="form-group">
+                <label for="filtroData">Selecione uma data:</label>
+                <input type="date" id="filtroData">
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🥇 Ranking do Dia</h2>
+            <ul class="ranking-list" id="rankingList">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📊</div>
+                    <p>Carregando dados...</p>
+                </div>
+            </ul>
+
+            <div class="stats" id="statsContainer"></div>
+
+            <div class="auto-refresh">
+                ⏱️ Última atualização: <span class="last-update" id="ultimaAtualizacao">agora</span>
+                <br>
+                Atualiza automaticamente a cada 2 segundos
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // ⚡ FIREBASE CONFIG
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        // ✅ Usando configuração centralizada de firebase-config.js
+        if (!window.firebaseConfig) {
+            throw new Error('⚠️ firebaseConfig não encontrado! Redirecione para setup-firebase.html');
+        }
+
+        const app = initializeApp(window.firebaseConfig);
+        const db = getDatabase(app);
+
+        const filtroData = document.getElementById('filtroData');
+        const rankingList = document.getElementById('rankingList');
+        const statsContainer = document.getElementById('statsContainer');
+        const ultimaAtualizacao = document.getElementById('ultimaAtualizacao');
+
+        // ================= LISTENER DO FIREBASE =================
+        onValue(ref(db, 'atividades'), (snapshot) => {
+            const dados = snapshot.val() || {};
+            const atividades = Object.values(dados);
+            atualizarRanking(atividades);
+        });
+
+        onValue(ref(db, 'atividades_em_andamento'), (snapshot) => {
+            const dados = snapshot.val() || {};
+            const emAndamento = Object.values(dados);
+            atualizarRankingComEmAndamento(emAndamento);
+        });
+
+        // ================= ATUALIZAR RANKING =================
+        function atualizarRanking(atividades = []) {
+            const dataSelecionada = filtroData.value;
+            if (!dataSelecionada) {
+                rankingList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><p>Selecione uma data</p></div>';
+                statsContainer.innerHTML = '';
+                return;
+            }
+
+            // Filtrar por data
+            const atividadesFiltradas = atividades.filter(a => a.data_inicio === dataSelecionada);
+
+            // Contar atividades por colaborador
+            const ranking = {};
+            atividadesFiltradas.forEach(atividade => {
+                if (!ranking[atividade.colaborador]) {
+                    ranking[atividade.colaborador] = {
+                        total: 0,
+                        finalizadas: 0,
+                        duracao_total_segundos: 0
+                    };
+                }
+                ranking[atividade.colaborador].total++;
+                ranking[atividade.colaborador].finalizadas++;
+
+                // Somar duração em segundos
+                if (atividade.duracao) {
+                    const [h, m, s] = atividade.duracao.split(':').map(Number);
+                    ranking[atividade.colaborador].duracao_total_segundos += (h * 3600) + (m * 60) + s;
+                }
+            });
+
+            // Converter para array e ordenar
+            const rankingArray = Object.entries(ranking)
+                .map(([colaborador, dados]) => ({
+                    colaborador,
+                    total: dados.total,
+                    finalizadas: dados.finalizadas,
+                    duracao_total: formatarSegundos(dados.duracao_total_segundos)
+                }))
+                .sort((a, b) => b.finalizadas - a.finalizadas);
+
+            if (rankingArray.length === 0) {
+                rankingList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>Nenhuma atividade registrada neste dia</p></div>';
+                statsContainer.innerHTML = '';
+                return;
+            }
+
+            renderizarRanking(rankingArray);
+        }
+
+        function atualizarRankingComEmAndamento(emAndamento = []) {
+            const dataSelecionada = filtroData.value;
+            if (!dataSelecionada) return;
+
+            // Adicionar em_andamento ao ranking
+            const ranking = {};
+            emAndamento
+                .filter(a => a.data_inicio === dataSelecionada)
+                .forEach(atividade => {
+                    if (!ranking[atividade.colaborador]) {
+                        ranking[atividade.colaborador] = {
+                            total: 0,
+                            em_andamento: 0
+                        };
+                    }
+                    ranking[atividade.colaborador].total++;
+                    ranking[atividade.colaborador].em_andamento++;
+                });
+
+            // Atualizar UI com status
+            const items = document.querySelectorAll('.ranking-item');
+            items.forEach(item => {
+                const nomeColaborador = item.querySelector('.ranking-name').textContent;
+                if (ranking[nomeColaborador]) {
+                    const statusText = ranking[nomeColaborador].em_andamento > 0 
+                        ? `<span style="font-size: 0.8em; color: #ff9800;">🔄 ${ranking[nomeColaborador].em_andamento} em andamento</span>`
+                        : '';
+                    
+                    const details = item.querySelector('.ranking-details');
+                    if (details) {
+                        details.innerHTML = details.innerHTML.split('|')[0] + '| ' + statusText;
+                    }
+                }
+            });
+        }
+
+        function renderizarRanking(rankingArray) {
+            rankingList.innerHTML = rankingArray.map((item, index) => {
+                let classe = '';
+                const medalhas = ['🥇', '🥈', '🥉'];
+                const icone = index < 3 ? medalhas[index] : `<span style="color: #667eea; font-weight: bold;">${index + 1}</span>`;
+
+                if (index === 0) classe = 'first';
+                else if (index === 1) classe = 'second';
+                else if (index === 2) classe = 'third';
+
+                return `
+                    <li class="ranking-item ${classe}">
+                        <span class="ranking-position">${icone}</span>
+                        <div class="ranking-info">
+                            <div class="ranking-name">${item.colaborador}</div>
+                            <div class="ranking-details">
+                                ✅ ${item.finalizadas} finalizadas | ⏱️ ${item.duracao_total}
+                            </div>
+                        </div>
+                        <span class="ranking-count">${item.total}</span>
+                    </li>
+                `;
+            }).join('');
+
+            // Atualizar estatísticas
+            const totalAtividades = rankingArray.reduce((sum, item) => sum + item.total, 0);
+            const totalFinalizadas = rankingArray.reduce((sum, item) => sum + item.finalizadas, 0);
+            const emAndamento_total = totalAtividades - totalFinalizadas;
+
+            statsContainer.innerHTML = `
+                <div class="stat-box">
+                    <div class="stat-value">${totalAtividades}</div>
+                    <div class="stat-label">Total de Atividades</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${totalFinalizadas}</div>
+                    <div class="stat-label">Finalizadas</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${emAndamento_total}</div>
+                    <div class="stat-label">Em Andamento</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${rankingArray.length}</div>
+                    <div class="stat-label">Colaboradores</div>
+                </div>
+            `;
+
+            // Atualizar hora da última atualização
+            const agora = new Date();
+            ultimaAtualizacao.textContent = agora.toLocaleTimeString('pt-BR');
+        }
+
+        // ================= HELPER =================
+        function formatarSegundos(segundos) {
+            const h = Math.floor(segundos / 3600);
+            const m = Math.floor((segundos % 3600) / 60);
+            const s = segundos % 60;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        // ================= INICIALIZAR =================
+        document.addEventListener('DOMContentLoaded', () => {
+            const hoje = new Date();
+            const ano = hoje.getFullYear();
+            const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+            const dia = String(hoje.getDate()).padStart(2, '0');
+            filtroData.value = `${ano}-${mes}-${dia}`;
+        });
+
+        filtroData.addEventListener('change', () => {
+            // Triggerar listeners para atualizar
+        });
+    </script>
+</body>
+</html>
