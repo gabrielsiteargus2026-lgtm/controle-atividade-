@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔥 Teste Radical Firebase</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 { color: #ff0; margin-bottom: 20px; text-align: center; }
+        .test-section {
+            background: #1a1a1a;
+            border: 2px solid #0f0;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        .test-section h2 {
+            color: #0f0;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        .log {
+            background: #0a0a0a;
+            border: 1px solid #0f0;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+        .log-ok { color: #0f0; }
+        .log-error { color: #f00; }
+        .log-warning { color: #ff0; }
+        .log-info { color: #0ff; }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 3px;
+        }
+        button:hover { background: #0a0; }
+        button.danger {
+            background: #f00;
+            color: #fff;
+        }
+        .status {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .status.ok { background: #003300; color: #0f0; border: 1px solid #0f0; }
+        .status.error { background: #330000; color: #f00; border: 1px solid #f00; }
+        .status.warning { background: #333300; color: #ff0; border: 1px solid #ff0; }
+    </style>
+</head>
+<body>
+    <h1>🔥 TESTE RADICAL DO FIREBASE</h1>
+
+    <div class="test-section">
+        <h2>1️⃣ Status de Conexão</h2>
+        <div id="statusConexao" class="status warning">Conectando...</div>
+        <button onclick="testarConexao()">Testar Conexão</button>
+    </div>
+
+    <div class="test-section">
+        <h2>2️⃣ Teste de Escrita</h2>
+        <div id="statusEscrita" class="status warning">Pronto para testar</div>
+        <button onclick="testeEscrita()">Escrever no Firebase</button>
+        <div class="log" id="logEscrita"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3️⃣ Teste de Leitura</h2>
+        <div id="statusLeitura" class="status warning">Pronto para testar</div>
+        <button onclick="testeLeitura()">Ler do Firebase</button>
+        <div class="log" id="logLeitura"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4️⃣ Teste de Listener (Tempo Real)</h2>
+        <div id="statusListener" class="status warning">Ativo - aguardando mudanças</div>
+        <button onclick="iniciarListener()">Iniciar Listener</button>
+        <button onclick="pararListener()" class="danger">Parar Listener</button>
+        <div class="log" id="logListener"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5️⃣ Teste Completo de Sincronização</h2>
+        <p style="margin-bottom: 10px;">
+            Abra esta página em 2 NAVEGADORES/DISPOSITIVOS diferentes.
+            Em um, clique "Enviar Mensagem" e veja a outra atualizar automaticamente.
+        </p>
+        <input type="text" id="inputMensagem" placeholder="Digite uma mensagem..." style="padding: 8px; width: 100%; margin-bottom: 10px; background: #1a1a1a; color: #0f0; border: 1px solid #0f0; border-radius: 3px;">
+        <button onclick="enviarMensagem()">📤 Enviar Mensagem</button>
+        <button onclick="limparMensagens()" class="danger">🗑️ Limpar</button>
+        <div class="log" id="logMensagens"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>6️⃣ Diagnóstico</h2>
+        <button onclick="mostrarDiagnostico()">🔍 Ver Diagnóstico Completo</button>
+        <button onclick="abrirConsole()">📝 Abrir Console (F12)</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { 
+            getDatabase, 
+            ref, 
+            set,
+            get,
+            push,
+            onValue,
+            off,
+            remove
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyBoLGZgImxHrg_n8Lq12Ppv80m5HLXQKjs",
+          authDomain: "controle-atividade-a6b6d.firebaseapp.com",
+          databaseURL: "https://controle-atividade-a6b6d-default-rtdb.firebaseio.com",
+          projectId: "controle-atividade-a6b6d",
+          storageBucket: "controle-atividade-a6b6d.appspot.com",
+          messagingSenderId: "449852839157",
+          appId: "1:449852839157:web:da90aec3840427f375e1bc"
+        };
+
+        let app, db;
+        let listenerAtivo = false;
+        let unsubscribe = null;
+
+        function log(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            const time = new Date().toLocaleTimeString('pt-BR');
+            const linha = document.createElement('div');
+            linha.className = `log-${type}`;
+            linha.textContent = `[${time}] ${message}`;
+            container.appendChild(linha);
+            container.scrollTop = container.scrollHeight;
+            console.log(`[${type}] ${message}`);
+        }
+
+        function setStatus(elementId, message, type = 'warning') {
+            const el = document.getElementById(elementId);
+            el.className = `status ${type}`;
+            el.textContent = message;
+        }
+
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getDatabase(app);
+            setStatus('statusConexao', '✅ Firebase Inicializado', 'ok');
+            log('logEscrita', 'Firebase SDK carregado', 'ok');
+        } catch (error) {
+            setStatus('statusConexao', `❌ Erro: ${error.message}`, 'error');
+            log('logEscrita', `Erro ao inicializar Firebase: ${error.message}`, 'error');
+        }
+
+        window.testarConexao = async function() {
+            try {
+                setStatus('statusConexao', '⏳ Testando...', 'warning');
+                log('logEscrita', 'Iniciando teste de conexão...', 'info');
+
+                const testRef = ref(db, 'teste_conexao');
+                await set(testRef, { 
+                    timestamp: new Date().toISOString(),
+                    navegador: navigator.userAgent.substring(0, 50)
+                });
+
+                setStatus('statusConexao', '✅ Conexão OK - Firebase está funcionando!', 'ok');
+                log('logEscrita', 'Teste de conexão bem-sucedido!', 'ok');
+            } catch (error) {
+                setStatus('statusConexao', `❌ Conexão falhou: ${error.message}`, 'error');
+                log('logEscrita', `Erro: ${error.message}`, 'error');
+            }
+        };
+
+        window.testeEscrita = async function() {
+            try {
+                setStatus('statusEscrita', '⏳ Escrevendo...', 'warning');
+                
+                const dadosRef = ref(db, `teste/dados_${Date.now()}`);
+                await set(dadosRef, {
+                    id: Date.now(),
+                    mensagem: 'Teste de escrita',
+                    timestamp: new Date().toISOString(),
+                    navegador: navigator.userAgent.substring(0, 30)
+                });
+
+                setStatus('statusEscrita', '✅ Dados escritos no Firebase', 'ok');
+                log('logEscrita', '✅ Dados escritos com sucesso!', 'ok');
+            } catch (error) {
+                setStatus('statusEscrita', `❌ Erro ao escrever: ${error.message}`, 'error');
+                log('logEscrita', `❌ Erro: ${error.message}`, 'error');
+            }
+        };
+
+        window.testeLeitura = async function() {
+            try {
+                setStatus('statusLeitura', '⏳ Lendo...', 'warning');
+                
+                const dadosRef = ref(db, 'teste');
+                const snapshot = await get(dadosRef);
+
+                if (snapshot.exists()) {
+                    const dados = snapshot.val();
+                    setStatus('statusLeitura', `✅ Dados lidos: ${Object.keys(dados).length} itens`, 'ok');
+                    log('logLeitura', `✅ Leitura bem-sucedida! Dados:`, 'ok');
+                    log('logLeitura', JSON.stringify(dados, null, 2), 'info');
+                } else {
+                    setStatus('statusLeitura', '⚠️ Nenhum dado encontrado', 'warning');
+                    log('logLeitura', 'Nenhum dado no caminho "teste"', 'warning');
+                }
+            } catch (error) {
+                setStatus('statusLeitura', `❌ Erro ao ler: ${error.message}`, 'error');
+                log('logLeitura', `❌ Erro: ${error.message}`, 'error');
+            }
+        };
+
+        window.iniciarListener = function() {
+            if (listenerAtivo) {
+                log('logListener', '⚠️ Listener já está ativo!', 'warning');
+                return;
+            }
+
+            try {
+                setStatus('statusListener', '👂 Listener ativo...', 'ok');
+                const mensagensRef = ref(db, 'teste_mensagens');
+
+                unsubscribe = onValue(mensagensRef, (snapshot) => {
+                    const dados = snapshot.val();
+                    if (dados) {
+                        log('logListener', `🔔 Mudança detectada! ${Object.keys(dados).length} mensagens`, 'ok');
+                        Object.values(dados).forEach(msg => {
+                            log('logListener', `   📝 ${msg}`, 'info');
+                        });
+                    } else {
+                        log('logListener', '⚠️ Nenhuma mensagem no Firebase', 'warning');
+                    }
+                }, (error) => {
+                    log('logListener', `❌ Erro no listener: ${error.message}`, 'error');
+                });
+
+                listenerAtivo = true;
+                log('logListener', '✅ Listener iniciado - aguardando mudanças...', 'ok');
+            } catch (error) {
+                setStatus('statusListener', `❌ Erro: ${error.message}`, 'error');
+                log('logListener', `❌ Erro: ${error.message}`, 'error');
+            }
+        };
+
+        window.pararListener = function() {
+            if (unsubscribe) {
+                unsubscribe();
+                listenerAtivo = false;
+                setStatus('statusListener', '⏹️ Listener parado', 'warning');
+                log('logListener', 'Listener parado', 'info');
+            }
+        };
+
+        window.enviarMensagem = async function() {
+            const input = document.getElementById('inputMensagem');
+            const mensagem = input.value.trim();
+
+            if (!mensagem) {
+                alert('Digite uma mensagem!');
+                return;
+            }
+
+            try {
+                const mensagensRef = ref(db, 'teste_mensagens');
+                const novaRef = push(mensagensRef);
+                
+                await set(novaRef, mensagem);
+
+                log('logMensagens', `📤 Mensagem enviada: "${mensagem}"`, 'ok');
+                input.value = '';
+                input.focus();
+            } catch (error) {
+                log('logMensagens', `❌ Erro ao enviar: ${error.message}`, 'error');
+            }
+        };
+
+        window.limparMensagens = async function() {
+            if (!confirm('Deletar todas as mensagens?')) return;
+
+            try {
+                const mensagensRef = ref(db, 'teste_mensagens');
+                await remove(mensagensRef);
+                log('logMensagens', '🗑️ Mensagens deletadas', 'ok');
+            } catch (error) {
+                log('logMensagens', `❌ Erro: ${error.message}`, 'error');
+            }
+        };
+
+        window.mostrarDiagnostico = function() {
+            console.log('=== DIAGNÓSTICO ===');
+            console.log('Firebase Config:', firebaseConfig);
+            console.log('App:', app);
+            console.log('Database:', db);
+            console.log('Listener Ativo:', listenerAtivo);
+            console.log('URL do site:', window.location.href);
+            console.log('Navigator:', navigator.userAgent);
+            alert('Veja o console (F12) para diagnóstico completo!');
+        };
+
+        window.abrirConsole = function() {
+            alert('Abra o Console: F12 ou Ctrl+Shift+I');
+        };
+
+        // Auto-inicializar
+        window.iniciarListener();
+    </script>
+</body>
+</html>
