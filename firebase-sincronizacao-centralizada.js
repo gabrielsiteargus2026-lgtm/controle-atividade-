@@ -118,83 +118,104 @@ async function salvarNoFirebase(emAndamento, concluidas, kanban) {
  * 🔄 SINCRONIZAÇÃO EM TEMPO REAL
  * Qualquer mudança no Firebase é propagada para TODOS os PCs
  */
-function inicializarSincronizacaoTempo Real() {
+function inicializarSincronizacaoTempoReal() {
     console.log("👂 [SYNC] Configurando listener em tempo real...");
 
     onValue(dadosRef, async (snapshot) => {
         const dados = snapshot.val();
+
+        console.log("🔔 [SYNC] Listener ativado - dados do Firebase:", {
+            emAndamento: dados?.atividadesEmAndamento?.length || 0,
+            concluidas: dados?.atividades?.length || 0
+        });
 
         if (!dados) {
             console.log("⚠️ [SYNC] Nenhum dado no Firebase");
             return;
         }
 
-        // NÃO atualizar se foi EU que salvei (evita loops)
-        const agora = new Date().toISOString();
-        const diffTempo = new Date(agora) - new Date(window.firebaseSync.ultimaSincronizacao || 0);
-        
-        if (diffTempo < 500) {
-            console.log("⏭️ [SYNC] Ignorando atualização própria");
-            return;
-        }
+        // SEMPRE atualizar com dados do Firebase (força sincronização)
+        console.log("🔄 [SYNC] Atualizando com dados do Firebase...");
 
-        console.log("🔄 [SYNC] Dados sincronizados do Firebase (outro PC?)");
-
-        // Atualizar com dados do Firebase
-        window.atividadesEmAndamento = dados.atividadesEmAndamento || [];
+        window.atividadesEmAndamento = (dados.atividadesEmAndamento || []).map(a => ({
+            ...a,
+            intervaloTimer: window.atividadesEmAndamento?.find(x => x.id === a.id)?.intervaloTimer || null
+        }));
         window.atividades = dados.atividades || [];
         window.kanbanState = dados.kanbanState || {};
 
-        // Atualizar localStorage
+        // Atualizar localStorage imediatamente
         localStorage.setItem('atividadesEmAndamento', JSON.stringify(window.atividadesEmAndamento));
         localStorage.setItem('atividades', JSON.stringify(window.atividades));
         localStorage.setItem('kanbanState', JSON.stringify(window.kanbanState));
 
+        window.firebaseSync.conectado = true;
+        window.firebaseSync.ultimaSincronizacao = new Date().toISOString();
+
+        console.log("✅ [SYNC] Dados sincronizados com sucesso");
+
         // Reiniciar timers das atividades
         window.atividadesEmAndamento.forEach(atividade => {
-            if (atividade.intervaloTimer) {
-                clearInterval(atividade.intervaloTimer);
-            }
-            if (typeof window.iniciarCronometro === 'function') {
-                window.iniciarCronometro(atividade.id);
+            if (!atividade.intervaloTimer && atividade.tempoInicio) {
+                if (typeof window.iniciarCronometro === 'function') {
+                    window.iniciarCronometro(atividade.id);
+                }
             }
         });
 
-        // Atualizar interface
-        if (typeof window.atualizarTabela === 'function') {
-            window.atualizarTabela();
-        }
-        if (typeof window.atualizarKanban === 'function') {
-            window.atualizarKanban();
+        // Atualizar interface de FORMA SEGURA (sem recontratar)
+        try {
+            if (typeof window.atualizarTabela === 'function') {
+                window.atualizarTabela();
+            }
+            if (typeof window.atualizarKanban === 'function') {
+                window.atualizarKanban();
+            }
+        } catch (error) {
+            console.error("⚠️ [SYNC] Erro ao atualizar UI:", error.message);
         }
 
-        window.firebaseSync.conectado = true;
     }, (error) => {
         console.error("❌ [SYNC] Erro no listener:", error.message);
         window.firebaseSync.conectado = false;
     });
+
+    console.log("✅ [SYNC] Listener configurado e ativo");
 }
 
 /**
  * 🎯 INTERCEPTAR a função salvarDados() original
  * Agora salva tanto em localStorage quanto em Firebase
  */
-const salvarDadosOriginal = window.salvarDados;
+let salvarDadosOriginal = null;
 
-window.salvarDados = function() {
-    // Chamar original (localStorage)
-    if (salvarDadosOriginal) {
-        salvarDadosOriginal.call(window);
+// Aguardar a definição de salvarDados no index.html
+setTimeout(() => {
+    if (typeof window.salvarDados === 'function') {
+        salvarDadosOriginal = window.salvarDados;
+        console.log("✅ [SYNC] Função salvarDados capturada");
+        
+        // Substituir pela versão que sincroniza com Firebase
+        window.salvarDados = function() {
+            // Chamar original (localStorage)
+            if (salvarDadosOriginal) {
+                salvarDadosOriginal.call(window);
+            }
+
+            // Adicionar: salvar também no Firebase (com delay para garantir que localStorage foi atualizado)
+            setTimeout(() => {
+                console.log("💾 [SYNC] Salvando em Firebase...");
+                salvarNoFirebase(
+                    window.atividadesEmAndamento || [],
+                    window.atividades || [],
+                    window.kanbanState || {}
+                );
+            }, 50);
+        };
+    } else {
+        console.warn("⚠️ [SYNC] salvarDados não encontrada ainda");
     }
-
-    // Adicionar: salvar também no Firebase
-    console.log("💾 [SYNC] Salvando em Firebase...");
-    salvarNoFirebase(
-        window.atividadesEmAndamento,
-        window.atividades,
-        window.kanbanState
-    );
-};
+}, 1000);
 
 /**
  * 🚀 INICIALIZAR
@@ -224,7 +245,7 @@ window.inicializarSincronizacaoCentralizada = async function() {
 
     // 3. Ativar listener em tempo real
     setTimeout(() => {
-        inicializarSincronizacaoTempo Real();
+        inicializarSincronizacaoTempoReal();
     }, 200);
 
     console.log("✅ [SYNC] Sincronização centralizada pronta!");
