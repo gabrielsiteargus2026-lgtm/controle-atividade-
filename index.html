@@ -1573,9 +1573,16 @@ atualizarTabela();
 atualizarKanban();
     </script>
 
-<!-- 🔥 FIREBASE SDK (Compatível) -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-compat/app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-compat/database.js"></script>
+<!-- 🔥 FIREBASE SDK (Compatível) - SEM CACHE -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-compat/app.js?t=" + new Date().getTime()></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-compat/database.js?t=" + new Date().getTime()></script>
 
-<!-- 🔥 SINCRONIZAÇÃO -->
-<script src="sync.js"></script>
+<!-- 🔥 SINCRONIZAÇÃO - COM DELAY PARA FIREBASE CARREGAR -->
+<script>
+setTimeout(() => {
+    const script = document.createElement('script');
+    script.src = 'sync.js?t=' + new Date().getTime();
+    script.async = false;
+    document.head.appendChild(script);
+}, 1000);
+</script>
