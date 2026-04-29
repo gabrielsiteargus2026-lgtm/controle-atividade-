@@ -1,6 +1,8 @@
 /**
- * 🔥 SINCRONIZAÇÃO FIREBASE - VERSÃO CORRIGIDA
- * Sem erros, sem dependências, funciona GARANTIDAMENTE
+ * 🔥 SINCRONIZAÇÃO FIREBASE - VERSÃO COMPAT (Funciona em TUDO)
+ * 
+ * Compatível com browsers tradicionais, sem ES6 modules
+ * 
  * Data: 29/04/2026
  */
 
@@ -31,8 +33,11 @@ function inicializarFirebase() {
     };
 
     try {
-        // Inicializar Firebase
-        const app = firebase.initializeApp(config);
+        // Inicializar Firebase (compat)
+        if (!firebase.apps.length) {
+            firebase.initializeApp(config);
+        }
+        
         const db = firebase.database();
 
         console.log("✅ Firebase inicializado com sucesso!");
@@ -41,7 +46,7 @@ function inicializarFirebase() {
         const dadosRef = db.ref("controle-atividade/dados");
 
         // Carregar dados ao iniciar
-        carregarDados(dadosRef);
+        carregarDados(db, dadosRef);
 
         // Listener para sincronização em tempo real
         dadosRef.on('value', (snapshot) => {
@@ -54,7 +59,17 @@ function inicializarFirebase() {
                 localStorage.setItem('atividades', JSON.stringify(dados.atividades || []));
                 localStorage.setItem('kanbanState', JSON.stringify(dados.kanbanState || {}));
 
-                // Atualizar variáveis globais
+                // Atualizar variáveis globais (preservar timers)
+                if (window.atividadesEmAndamento) {
+                    dados.atividadesEmAndamento = (dados.atividadesEmAndamento || []).map(novaAtiv => {
+                        const atualAtiv = window.atividadesEmAndamento.find(a => a.id === novaAtiv.id);
+                        return {
+                            ...novaAtiv,
+                            intervaloTimer: atualAtiv ? atualAtiv.intervaloTimer : null
+                        };
+                    });
+                }
+
                 window.atividadesEmAndamento = dados.atividadesEmAndamento || [];
                 window.atividades = dados.atividades || [];
                 window.kanbanState = dados.kanbanState || {};
@@ -106,7 +121,7 @@ function inicializarFirebase() {
 }
 
 // Carregar dados iniciais
-function carregarDados(dadosRef) {
+function carregarDados(db, dadosRef) {
     dadosRef.once('value', (snapshot) => {
         const dados = snapshot.val();
         if (dados) {
