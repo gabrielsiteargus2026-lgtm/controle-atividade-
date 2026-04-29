@@ -937,12 +937,7 @@
             // Adicionar ao estado do kanban
             kanbanState[novaAtividade.id] = { status: 'em_andamento', motivoPausa: '' };
 
-            salvarDados();
-            
-            // 🔥 SINCRONIZAR COM FIREBASE (para outros computadores verem)
-            if (window.salvarAtividadeEmAndamentoNoFirebase && typeof window.salvarAtividadeEmAndamentoNoFirebase === 'function') {
-                setTimeout(() => window.salvarAtividadeEmAndamentoNoFirebase(novaAtividade), 100);
-            }
+            salvarDados(); // Agora salva em Firebase automaticamente
             
             atualizarKanban();
             iniciarCronometro(novaAtividade.id);
@@ -1001,18 +996,7 @@
             // Remover do estado do kanban
             delete kanbanState[atividade.id];
             
-            salvarDados();
-            
-            // 🔥 SINCRONIZAR COM FIREBASE
-            if (window.finalizarAtividadeNoFirebase && typeof window.finalizarAtividadeNoFirebase === 'function') {
-                const atividadeComDados = {
-                    ...atividade,
-                    duracao: formatarTempo(duracao),
-                    horaFim: horaFim,
-                    justificativa: justificativa
-                };
-                setTimeout(() => window.finalizarAtividadeNoFirebase(atividadeComDados), 100);
-            }
+            salvarDados(); // Sincroniza automaticamente com Firebase
             
             atualizarTabela();
             atualizarKanban();
@@ -1207,12 +1191,7 @@
                 atividade.observacao = motivo; // Salvar motivo
             }
 
-            salvarDados();
-            
-            // 🔥 SINCRONIZAR COM FIREBASE
-            if (atividade && window.atualizarAtividadeEmAndamentoNoFirebase && typeof window.atualizarAtividadeEmAndamentoNoFirebase === 'function') {
-                setTimeout(() => window.atualizarAtividadeEmAndamentoNoFirebase(atividade, 'pausado'), 100);
-            }
+            salvarDados(); // Sincroniza automaticamente com Firebase
             
             atualizarKanban();
             fecharModalPausarAtividade();
@@ -1224,14 +1203,7 @@
             kanbanState[atividadeId].status = 'em_andamento';
             kanbanState[atividadeId].motivoPausa = '';
             
-            const atividade = atividadesEmAndamento.find(a => a.id === atividadeId);
-            
-            salvarDados();
-            
-            // 🔥 SINCRONIZAR COM FIREBASE
-            if (atividade && window.atualizarAtividadeEmAndamentoNoFirebase && typeof window.atualizarAtividadeEmAndamentoNoFirebase === 'function') {
-                setTimeout(() => window.atualizarAtividadeEmAndamentoNoFirebase(atividade, 'em_andamento'), 100);
-            }
+            salvarDados(); // Sincroniza automaticamente com Firebase
             
             atualizarKanban();
             mostrarAlerta('sucesso', 'Atividade retomada!');
@@ -1600,5 +1572,5 @@ carregarDados();
 atualizarTabela();
 atualizarKanban();
     </script>
-<!-- 🔥 FIREBASE: Sincronização para Múltiplos Computadores -->
-<script type="module" src="firebase-multiplos-pcs.js"></script>
+<!-- 🔥 FIREBASE: Sistema de Sincronização Centralizado (Solução Definitiva) -->
+<script type="module" src="firebase-sincronizacao-centralizada.js"></script>
