@@ -1,12 +1,21 @@
-# 📊 Sistema de Controle de Atividades com Dashboard
+# 📊 Sistema de Controle de Atividades Online
+
+## 🌐 Agora com Sincronização em Tempo Real!
+
+Aplicação web para rastreamento de atividades com múltiplos usuários usando **Firebase Realtime Database**.
+
+---
 
 ## 📁 Arquivos Principais
 
 ### 1. **index.html** - Aplicação Principal
-- Registre atividades com nome, ticket e observações
-- Cronômetro em tempo real
-- Histórico completo de atividades
-- Ranking integrado
+- ✅ Registre atividades com nome, ticket e descrição
+- ✅ Cronômetro em tempo real para cada atividade
+- ✅ Histórico completo sincronizado
+- ✅ Kanban visual (Em Andamento → Pausado → Concluído)
+- ✅ Pausa com justificativa
+- ✅ Exportar para CSV
+- ✅ Filtros por colaborador, data e status
 
 ### 2. **dashboard-ranking.html** - Dashboard Dedicado
 - Visualização em tempo real do ranking
@@ -21,24 +30,55 @@
 
 ---
 
-## 🚀 Como Usar
+## 🚀 Como Usar Localmente
 
-### **Abra os arquivos em abas separadas:**
-
-```
-Aba 1: index.html (Sistema Principal)
-Aba 2: dashboard-ranking.html (Dashboard)
-```
-
-### **O que acontece:**
-
-1. ✅ Quando você **inicia uma atividade** no `index.html`
-2. 📊 O `dashboard-ranking.html` **atualiza automaticamente** a cada 2 segundos
-3. 🔄 Não precisa recarregar nada - tudo é sincronizado via localStorage
+1. Abra `index.html` no navegador
+2. Selecione um colaborador e ticket
+3. Clique em "Iniciar" para começar a contar o tempo
+4. Os dados sincronizam com Firebase automaticamente
 
 ---
 
-## 📱 Integração com Dashboards Externos
+## 🌍 Usar Online (Firebase Hosting)
+
+### Veja o arquivo [DEPLOY.md](./DEPLOY.md) para instruções completas de deploy
+
+**TL;DR:**
+```bash
+npm install -g firebase-tools
+firebase login
+firebase deploy
+```
+
+**URL Online:** https://controle-atividade-a6b6d.web.app
+
+---
+
+## ✨ Funcionalidades
+
+- 📱 **Responsivo**: Funciona em celular, tablet e desktop
+- 🔄 **Sincronização em Tempo Real**: Múltiplos usuários, dados atualizados simultaneamente
+- 💾 **Offline-First**: Funciona offline e sincroniza quando voltar online
+- 🔐 **Sem Login Necessário**: Acesso aberto para todos
+- 📊 **Kanban Visual**: Visualize o status de todas as atividades
+- ⏱️ **Cronômetro Preciso**: Atualiza a cada segundo
+- 🎯 **Filtros Avançados**: Por colaborador, data e status
+- 📥 **Exportar para CSV**: Baixe relatórios
+
+---
+
+## 📱 Colaboradores Pré-cadastrados
+
+- Gabriel Oliveira
+- Francielly Cristina
+- Edson Michellon
+- Angelica Luz
+- Brandon Spinoza
+- Ellen Ferreira
+
+---
+
+## 💾 Integração com Dashboards Externos
 
 ### **Opção 1: iframe no seu Dashboard**
 ```html

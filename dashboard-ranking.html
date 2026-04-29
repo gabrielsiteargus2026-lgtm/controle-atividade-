@@ -1,11 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <!-- 🔧 Anti-Cache Headers -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Ranking de Colaboradores</title>
@@ -18,9 +13,14 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #f0f4f8 0%, #e8f1f7 100%);
+            background: #f5f5f5;
             min-height: 100vh;
             padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
         }
 
         .header {
@@ -36,18 +36,18 @@
 
         .header-logo {
             position: fixed;
-            width: 120px;
-            height: 120px;
+            top: 10px;
+            left: 10px;
+            width: 150px;
+            height: 150px;
             object-fit: contain;
-            z-index: 999;
-            right: 20px;
-            top: 20px;
+            z-index: 10000;
         }
 
         .header h1 {
             font-size: 2.5em;
             margin-bottom: 10px;
-            color: #2C5282;
+            color: #333;
             text-align: center;
         }
 
@@ -66,7 +66,7 @@
         }
 
         .card h2 {
-            color: #5BA3D1;
+            color: #667eea;
             margin-bottom: 20px;
             text-align: center;
             font-size: 1.5em;
@@ -93,7 +93,7 @@
 
         .form-group input[type="date"]:focus {
             outline: none;
-            border-color: #5BA3D1;
+            border-color: #667eea;
         }
 
         .ranking-list {
@@ -104,8 +104,8 @@
             padding: 18px;
             margin-bottom: 12px;
             border-radius: 10px;
-            background: rgba(91, 163, 209, 0.08);
-            border-left: 5px solid #5BA3D1;
+            background: #f5f5f5;
+            border-left: 5px solid #667eea;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -172,7 +172,7 @@
         }
 
         .ranking-count {
-            background: #5BA3D1;
+            background: #667eea;
             color: white;
             padding: 8px 16px;
             border-radius: 20px;
@@ -201,17 +201,17 @@
         }
 
         .stat-box {
-            background: rgba(91, 163, 209, 0.12);
+            background: #f0f4ff;
             padding: 15px;
             border-radius: 10px;
             text-align: center;
-            border-left: 4px solid #5BA3D1;
+            border-left: 4px solid #667eea;
         }
 
         .stat-value {
             font-size: 1.8em;
             font-weight: bold;
-            color: #5BA3D1;
+            color: #667eea;
         }
 
         .stat-label {
@@ -228,136 +228,12 @@
         }
 
         .last-update {
-            color: #5BA3D1;
+            color: #667eea;
             font-weight: bold;
         }
-
-        /* Menu Lateral */
-        .sidebar {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 260px;
-            height: 100vh;
-            background: linear-gradient(180deg, #2C5282 0%, #1e3a5f 100%);
-            padding: 20px;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
-            overflow-y: auto;
-        }
-
-        .sidebar-header {
-            text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .sidebar-header h2 {
-            color: white;
-            font-size: 1.2em;
-            margin-bottom: 5px;
-        }
-
-        .sidebar-header p {
-            color: #b0d4f1;
-            font-size: 0.85em;
-        }
-
-        .sidebar-menu {
-            list-style: none;
-        }
-
-        .sidebar-menu li {
-            margin-bottom: 10px;
-        }
-
-        .sidebar-menu a {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 15px;
-            color: rgba(255, 255, 255, 0.8);
-            text-decoration: none;
-            border-radius: 8px;
-            transition: all 0.3s;
-            font-weight: 500;
-        }
-
-        .sidebar-menu a:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            padding-left: 20px;
-        }
-
-        .sidebar-menu a.active {
-            background: #5BA3D1;
-            color: white;
-        }
-
-        .sidebar-menu a.active::before {
-            content: '▶';
-            margin-left: -8px;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            margin-left: 280px;
-        }
-
-        @media (max-width: 1024px) {
-            .sidebar {
-                width: 220px;
-            }
-
-            .container {
-                margin-left: 240px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 100%;
-                height: auto;
-                position: relative;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-            }
-
-            .container {
-                margin-left: 0;
-            }
-        }
     </style>
-    <!-- ⚙️ Configuração Centralizada do Firebase -->
-    <script src="firebase-config.js"></script>
-    <script>
-        // Carregar credenciais salvas no localStorage (se houver)
-        const savedConfig = localStorage.getItem('firebaseConfig');
-        if (savedConfig) {
-            window.firebaseConfig = JSON.parse(savedConfig);
-        }
-        // Se não estiver configurado, redirecionar para setup
-        if (!window.firebaseConfig || !window.firebaseConfig.apiKey || window.firebaseConfig.apiKey.includes('SUA_')) {
-            window.location.href = 'setup-firebase.html';
-        }
-    </script>
 </head>
 <body>
-    <!-- Menu Lateral -->
-    <nav class="sidebar">
-        <div class="sidebar-header">
-            <h2>Controle</h2>
-            <p>Atividades</p>
-        </div>
-        <ul class="sidebar-menu">
-            <li><a href="index.html">📊 Dashboard</a></li>
-            <li><a href="historico.html">📋 Histórico</a></li>
-            <li><a href="dashboard-ranking.html" class="active">🥇 Ranking</a></li>
-            <li><a href="api-ranking.html">⚙️ API</a></li>
-        </ul>
-    </nav>
-
     <div class="container">
         <div class="header">
             <img src="argus-logo 1.png" alt="Argus" class="header-logo">
@@ -391,39 +267,33 @@
         </div>
     </div>
 
-    <script type="module">
-        // ⚡ FIREBASE CONFIG
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
-        // ✅ Usando configuração centralizada de firebase-config.js
-        if (!window.firebaseConfig) {
-            throw new Error('⚠️ firebaseConfig não encontrado! Redirecione para setup-firebase.html');
-        }
-
-        const app = initializeApp(window.firebaseConfig);
-        const db = getDatabase(app);
-
+    <script>
+        // Elementos do DOM
         const filtroData = document.getElementById('filtroData');
         const rankingList = document.getElementById('rankingList');
         const statsContainer = document.getElementById('statsContainer');
         const ultimaAtualizacao = document.getElementById('ultimaAtualizacao');
 
-        // ================= LISTENER DO FIREBASE =================
-        onValue(ref(db, 'atividades'), (snapshot) => {
-            const dados = snapshot.val() || {};
-            const atividades = Object.values(dados);
-            atualizarRanking(atividades);
-        });
+        let atividades = [];
+        let atividadesEmAndamento = [];
 
-        onValue(ref(db, 'atividades_em_andamento'), (snapshot) => {
-            const dados = snapshot.val() || {};
-            const emAndamento = Object.values(dados);
-            atualizarRankingComEmAndamento(emAndamento);
-        });
+        // Carregar dados do localStorage
+        function carregarDados() {
+            const dadosSalvos = localStorage.getItem('atividades');
+            const emAndamentoSalvos = localStorage.getItem('atividadesEmAndamento');
+            
+            if (dadosSalvos) {
+                atividades = JSON.parse(dadosSalvos);
+            }
 
-        // ================= ATUALIZAR RANKING =================
-        function atualizarRanking(atividades = []) {
+            // Atividades em andamento não são salvas, mas podemos tentar carregar
+            if (emAndamentoSalvos) {
+                atividadesEmAndamento = JSON.parse(emAndamentoSalvos);
+            }
+        }
+
+        // Atualizar ranking
+        function atualizarRanking() {
             const dataSelecionada = filtroData.value;
             if (!dataSelecionada) {
                 rankingList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><p>Selecione uma data</p></div>';
@@ -431,38 +301,46 @@
                 return;
             }
 
-            // Filtrar por data
-            const atividadesFiltradas = atividades.filter(a => a.data_inicio === dataSelecionada);
+            // Converter data do input (YYYY-MM-DD) para formato DD/MM/YYYY
+            const [ano, mes, dia] = dataSelecionada.split('-');
+            const dataFormatada = `${dia}/${mes}/${ano}`;
 
-            // Contar atividades por colaborador
+            // Contar atividades finalizadas por colaborador nesta data (apenas do histórico)
             const ranking = {};
-            atividadesFiltradas.forEach(atividade => {
-                if (!ranking[atividade.colaborador]) {
-                    ranking[atividade.colaborador] = {
-                        total: 0,
-                        finalizadas: 0,
-                        duracao_total_segundos: 0
-                    };
-                }
-                ranking[atividade.colaborador].total++;
-                ranking[atividade.colaborador].finalizadas++;
 
-                // Somar duração em segundos
-                if (atividade.duracao) {
-                    const [h, m, s] = atividade.duracao.split(':').map(Number);
-                    ranking[atividade.colaborador].duracao_total_segundos += (h * 3600) + (m * 60) + s;
+            atividades.forEach(atividade => {
+                if (atividade.dataInicio === dataFormatada) {
+                    if (!ranking[atividade.colaborador]) {
+                        ranking[atividade.colaborador] = {
+                            total: 0,
+                            finalizadas: 0
+                        };
+                    }
+                    ranking[atividade.colaborador].total++;
+                    ranking[atividade.colaborador].finalizadas++;
+                }
+            });
+
+            atividadesEmAndamento.forEach(atividade => {
+                if (atividade.dataInicio === dataFormatada) {
+                    if (!ranking[atividade.nome]) {
+                        ranking[atividade.nome] = {
+                            total: 0,
+                            finalizadas: 0
+                        };
+                    }
+                    ranking[atividade.nome].total++;
                 }
             });
 
             // Converter para array e ordenar
             const rankingArray = Object.entries(ranking)
-                .map(([colaborador, dados]) => ({
-                    colaborador,
+                .map(([colaborador, dados]) => ({ 
+                    colaborador, 
                     total: dados.total,
-                    finalizadas: dados.finalizadas,
-                    duracao_total: formatarSegundos(dados.duracao_total_segundos)
+                    finalizadas: dados.finalizadas
                 }))
-                .sort((a, b) => b.finalizadas - a.finalizadas);
+                .sort((a, b) => b.total - a.total);
 
             if (rankingArray.length === 0) {
                 rankingList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>Nenhuma atividade registrada neste dia</p></div>';
@@ -470,46 +348,7 @@
                 return;
             }
 
-            renderizarRanking(rankingArray);
-        }
-
-        function atualizarRankingComEmAndamento(emAndamento = []) {
-            const dataSelecionada = filtroData.value;
-            if (!dataSelecionada) return;
-
-            // Adicionar em_andamento ao ranking
-            const ranking = {};
-            emAndamento
-                .filter(a => a.data_inicio === dataSelecionada)
-                .forEach(atividade => {
-                    if (!ranking[atividade.colaborador]) {
-                        ranking[atividade.colaborador] = {
-                            total: 0,
-                            em_andamento: 0
-                        };
-                    }
-                    ranking[atividade.colaborador].total++;
-                    ranking[atividade.colaborador].em_andamento++;
-                });
-
-            // Atualizar UI com status
-            const items = document.querySelectorAll('.ranking-item');
-            items.forEach(item => {
-                const nomeColaborador = item.querySelector('.ranking-name').textContent;
-                if (ranking[nomeColaborador]) {
-                    const statusText = ranking[nomeColaborador].em_andamento > 0 
-                        ? `<span style="font-size: 0.8em; color: #ff9800;">🔄 ${ranking[nomeColaborador].em_andamento} em andamento</span>`
-                        : '';
-                    
-                    const details = item.querySelector('.ranking-details');
-                    if (details) {
-                        details.innerHTML = details.innerHTML.split('|')[0] + '| ' + statusText;
-                    }
-                }
-            });
-        }
-
-        function renderizarRanking(rankingArray) {
+            // Gerar HTML do ranking
             rankingList.innerHTML = rankingArray.map((item, index) => {
                 let classe = '';
                 const medalhas = ['🥇', '🥈', '🥉'];
@@ -519,13 +358,18 @@
                 else if (index === 1) classe = 'second';
                 else if (index === 2) classe = 'third';
 
+                const emAndamento = item.total - item.finalizadas;
+                const statusText = emAndamento > 0 
+                    ? `<span style="font-size: 0.8em;">🔄 ${emAndamento} em andamento</span>`
+                    : '';
+
                 return `
                     <li class="ranking-item ${classe}">
                         <span class="ranking-position">${icone}</span>
                         <div class="ranking-info">
                             <div class="ranking-name">${item.colaborador}</div>
                             <div class="ranking-details">
-                                ✅ ${item.finalizadas} finalizadas | ⏱️ ${item.duracao_total}
+                                ✅ ${item.finalizadas} finalizadas ${statusText}
                             </div>
                         </div>
                         <span class="ranking-count">${item.total}</span>
@@ -536,7 +380,7 @@
             // Atualizar estatísticas
             const totalAtividades = rankingArray.reduce((sum, item) => sum + item.total, 0);
             const totalFinalizadas = rankingArray.reduce((sum, item) => sum + item.finalizadas, 0);
-            const emAndamento_total = totalAtividades - totalFinalizadas;
+            const emAndamento = totalAtividades - totalFinalizadas;
 
             statsContainer.innerHTML = `
                 <div class="stat-box">
@@ -548,7 +392,7 @@
                     <div class="stat-label">Finalizadas</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-value">${emAndamento_total}</div>
+                    <div class="stat-value">${emAndamento}</div>
                     <div class="stat-label">Em Andamento</div>
                 </div>
                 <div class="stat-box">
@@ -562,26 +406,27 @@
             ultimaAtualizacao.textContent = agora.toLocaleTimeString('pt-BR');
         }
 
-        // ================= HELPER =================
-        function formatarSegundos(segundos) {
-            const h = Math.floor(segundos / 3600);
-            const m = Math.floor((segundos % 3600) / 60);
-            const s = segundos % 60;
-            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-        }
+        // Event listeners
+        filtroData.addEventListener('change', atualizarRanking);
 
-        // ================= INICIALIZAR =================
-        document.addEventListener('DOMContentLoaded', () => {
-            const hoje = new Date();
-            const ano = hoje.getFullYear();
-            const mes = String(hoje.getMonth() + 1).padStart(2, '0');
-            const dia = String(hoje.getDate()).padStart(2, '0');
-            filtroData.value = `${ano}-${mes}-${dia}`;
-        });
+        // Atualizar a cada 2 segundos
+        setInterval(() => {
+            carregarDados();
+            atualizarRanking();
+        }, 2000);
 
-        filtroData.addEventListener('change', () => {
-            // Triggerar listeners para atualizar
-        });
+        // Inicializar
+        carregarDados();
+
+        // Definir data padrão como hoje
+        const hoje = new Date();
+        const ano = hoje.getFullYear();
+        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+        const dia = String(hoje.getDate()).padStart(2, '0');
+        filtroData.value = `${ano}-${mes}-${dia}`;
+
+        // Primeira atualização
+        atualizarRanking();
     </script>
 </body>
 </html>

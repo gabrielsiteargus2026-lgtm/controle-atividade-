@@ -1,11 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <!-- 🔧 Anti-Cache Headers -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle de Atividade</title>
@@ -18,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #f0f4f8 0%, #e8f1f7 100%);
+            background: #f5f5f5;
             min-height: 100vh;
             padding: 20px;
         }
@@ -37,19 +32,20 @@
         }
 
         .header-logo {
-            position: fixed;
-            width: 120px;
-            height: 120px;
+            position: relative;
+            width: 250px;
+            height: 250px;
             object-fit: contain;
-            z-index: 999;
-            right: 20px;
-            top: 20px;
+            z-index: 10000;
+            margin-bottom: -200px;
+            margin-left: -260px;
+            top: -30px;
         }
 
         .header h1 {
             font-size: 2.5em;
             margin-bottom: 10px;
-            color: #2C5282;
+            color: #333;
             text-align: center;
             margin-left: 0;
             margin-top: -30px;
@@ -91,7 +87,7 @@
         input[type="date"]:focus,
         select:focus {
             outline: none;
-            border-color: #5BA3D1;
+            border-color: #667eea;
         }
 
         .form-row {
@@ -118,14 +114,14 @@
         }
 
         .btn-primary {
-            background: #5BA3D1;
+            background: #667eea;
             color: white;
         }
 
         .btn-primary:hover {
-            background: #4A8DC1;
+            background: #5568d3;
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(91, 163, 209, 0.4);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
 
         .btn-primary:disabled {
@@ -165,17 +161,17 @@
         .timer-display {
             font-size: 3em;
             text-align: center;
-            color: #5BA3D1;
+            color: #667eea;
             font-weight: bold;
             font-family: 'Courier New', monospace;
             margin: 30px 0;
             padding: 20px;
-            background: rgba(91, 163, 209, 0.1);
+            background: #f5f5f5;
             border-radius: 5px;
         }
 
         .status-info {
-            background: rgba(91, 163, 209, 0.08);
+            background: #f0f0f0;
             padding: 20px;
             border-radius: 5px;
             margin-bottom: 20px;
@@ -201,7 +197,7 @@
         }
 
         thead {
-            background: #5BA3D1;
+            background: #667eea;
             color: white;
         }
 
@@ -249,19 +245,19 @@
 
         .form-group textarea:focus {
             outline: none;
-            border-color: #5BA3D1;
+            border-color: #667eea;
         }
 
         .atividade-card {
-            background: rgba(91, 163, 209, 0.05);
-            border: 2px solid #5BA3D1;
+            background: #f9f9f9;
+            border: 2px solid #667eea;
             border-radius: 8px;
             padding: 15px;
             margin-bottom: 15px;
         }
 
         .atividade-card h3 {
-            color: #5BA3D1;
+            color: #667eea;
             margin-bottom: 10px;
         }
 
@@ -322,7 +318,7 @@
 
         .modal-body textarea:focus {
             outline: none;
-            border-color: #5BA3D1;
+            border-color: #667eea;
         }
 
         .modal-footer {
@@ -406,13 +402,13 @@
             border-radius: 10px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             padding: 8px;
-            border-left: 5px solid #5BA3D1;
+            border-left: 5px solid #667eea;
             max-height: 260px;
             overflow-y: auto;
         }
 
         .dados-colaborador-kanban h2 {
-            color: #5BA3D1;
+            color: #667eea;
             margin-bottom: 6px;
             font-size: 0.9em;
         }
@@ -436,10 +432,7 @@
         }
 
         .dados-form-group label {
-            display: block;
-            color: #000;
-            font-weight: 600;
-            margin-bottom: 5px;
+            display: none;
         }
 
         .dados-form-group input,
@@ -451,12 +444,6 @@
             border-radius: 5px;
             font-size: 0.8em;
             transition: border-color 0.3s;
-            color: #000;
-        }
-
-        .dados-form-group select option {
-            color: #000;
-            background-color: white;
         }
 
         .dados-form-group textarea {
@@ -474,7 +461,7 @@
         .dados-form-group select:focus,
         .dados-form-group textarea:focus {
             outline: none;
-            border-color: #5BA3D1;
+            border-color: #667eea;
         }
 
         .dados-button-container {
@@ -518,25 +505,25 @@
         }
 
         .kanban-column {
-            background: rgba(91, 163, 209, 0.05);
+            background: #f9f9f9;
             border-radius: 8px;
             padding: 12px;
             min-height: 300px;
-            border: 2px solid #C4D9E8;
+            border: 2px solid #e0e0e0;
         }
 
         .kanban-column h4 {
-            color: #5BA3D1;
+            color: #667eea;
             margin-bottom: 12px;
             text-align: center;
             font-size: 0.95em;
             padding-bottom: 8px;
-            border-bottom: 2px solid #5BA3D1;
+            border-bottom: 2px solid #667eea;
         }
 
         .kanban-card {
             background: white;
-            border: 2px solid #5BA3D1;
+            border: 2px solid #667eea;
             border-radius: 6px;
             padding: 12px;
             margin-bottom: 12px;
@@ -545,7 +532,7 @@
         }
 
         .kanban-card:hover {
-            box-shadow: 0 4px 12px rgba(91, 163, 209, 0.3);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
             transform: translateY(-2px);
         }
 
@@ -608,128 +595,9 @@
                 grid-template-columns: 1fr;
             }
         }
-
-        /* Menu Lateral */
-        .sidebar {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 260px;
-            height: 100vh;
-            background: linear-gradient(180deg, #2C5282 0%, #1e3a5f 100%);
-            padding: 20px;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
-            overflow-y: auto;
-        }
-
-        .sidebar-header {
-            text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .sidebar-header h2 {
-            color: white;
-            font-size: 1.2em;
-            margin-bottom: 5px;
-        }
-
-        .sidebar-header p {
-            color: #b0d4f1;
-            font-size: 0.85em;
-        }
-
-        .sidebar-menu {
-            list-style: none;
-        }
-
-        .sidebar-menu li {
-            margin-bottom: 10px;
-        }
-
-        .sidebar-menu a {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 15px;
-            color: rgba(255, 255, 255, 0.8);
-            text-decoration: none;
-            border-radius: 8px;
-            transition: all 0.3s;
-            font-weight: 500;
-        }
-
-        .sidebar-menu a:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            padding-left: 20px;
-        }
-
-        .sidebar-menu a.active {
-            background: #5BA3D1;
-            color: white;
-        }
-
-        .sidebar-menu a.active::before {
-            content: '▶';
-            margin-left: -8px;
-        }
-
-        @media (max-width: 1024px) {
-            .sidebar {
-                width: 220px;
-            }
-
-            .container {
-                margin-left: 240px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 100%;
-                height: auto;
-                position: relative;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-            }
-
-            .container {
-                margin-left: 0;
-            }
-        }
     </style>
-    <!-- ⚙️ Configuração Centralizada do Firebase -->
-    <!-- 🔧 Versão Firebase - 28/04/2026 13:15 (FORÇA UPDATE) -->
-    <script src="firebase-config.js"></script>
-    <script>
-        // Carregar credenciais salvas no localStorage (se houver)
-        const savedConfig = localStorage.getItem('firebaseConfig');
-        if (savedConfig) {
-            window.firebaseConfig = JSON.parse(savedConfig);
-        }
-        // Se não estiver configurado, redirecionar para setup
-        if (!window.firebaseConfig || !window.firebaseConfig.apiKey || window.firebaseConfig.apiKey.includes('SUA_')) {
-            window.location.href = 'setup-firebase.html';
-        }
-    </script>
 </head>
 <body>
-    <!-- Menu Lateral -->
-    <nav class="sidebar">
-        <div class="sidebar-header">
-            <h2>Controle</h2>
-            <p>Atividades</p>
-        </div>
-        <ul class="sidebar-menu">
-            <li><a href="index.html" class="active">📊 Dashboard</a></li>
-            <li><a href="historico.html">📋 Histórico</a></li>
-            <li><a href="dashboard-ranking.html">🥇 Ranking</a></li>
-            <li><a href="api-ranking.html">⚙️ API</a></li>
-        </ul>
-    </nav>
-
     <div class="container">
         <img src="argus-logo 1.png" alt="Argus" class="header-logo">
         <div class="header">
@@ -828,37 +696,7 @@
                     </div>
                 </div>
 
-                <!-- Histórico de Atividades -->
-                <div class="card">
-                    <h2 style="color: #667eea; margin-bottom: 20px;">📋 Histórico de Atividades</h2>
-                    <div class="action-buttons">
-                        <button class="btn-export" id="btnExportarCSV">📥 Exportar para CSV</button>
-                        <button class="btn-limpar-historico" id="btnLimparHistorico">🗑️ Limpar Histórico</button>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Colaborador</th>
-                                    <th>Ticket</th>
-                                    <th>Data de Início</th>
-                                    <th>Hora de Início</th>
-                                    <th>Hora de Fim</th>
-                                    <th>Duração</th>
-                                    <th>Observação</th>
-                                    <th>Justificativa</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td colspan="8" style="text-align: center; padding: 40px; color: #999;">Nenhuma atividade registrada ainda</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- Modal para Justificativa -->
         <div id="modalJustificativa" class="modal">
             <div class="modal-content">
                 <div class="modal-header">Atividade Excedeu 12 Horas</div>
@@ -917,456 +755,909 @@
                 </div>
             </div>
         </div>
+
+        <!-- Histórico de Atividades -->
+        <div class="card">
+            <h2>Histórico de Atividades</h2>
+            <div class="action-buttons">
+                <button class="btn-export" id="btnExportar">📥 Exportar para CSV</button>
+                <button class="btn-limpar-historico" id="btnLimparHistorico">🗑️ Limpar Histórico</button>
+            </div>
+            <div class="table-container">
+                <table id="tabelaAtividades">
+                    <thead>
+                        <tr>
+                            <th>Colaborador</th>
+                            <th>Ticket</th>
+                            <th>Data de Início</th>
+                            <th>Hora de Início</th>
+                            <th>Hora de Fim</th>
+                            <th>Duração</th>
+                            <th>Observação</th>
+                            <th>Justificativa</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bodyTabela">
+                        <tr>
+                            <td colspan="7" class="empty-state">Nenhuma atividade registrada ainda</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
             </div>
         </div>
     </div>
 
-<script type="module">
-// ⚡ FIREBASE CONFIG - Sincronização Online em Tempo Real
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, push, set, update, remove, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    <script>
+        // Estado da aplicação
+        let atividadesEmAndamento = [];
+        let atividades = [];
+        let atividadeEmFinalizacao = null;
+        let kanbanState = {}; // { id: { status: 'em_andamento'|'pausado'|'concluido', motivoPausa: '' } }
+        let atividadePausando = null;
+        let atividadeConcluindo = null;
+        let filtroAtivo = false;
+        let atividadesFiltradas = [];
+        let firebaseRef = null;
+        let syncTimeout = null;
+        let isUpdatingFromFirebase = false;
 
-// ✅ Usando configuração centralizada de firebase-config.js
-// Verificação de segurança
-if (!window.firebaseConfig) {
-    throw new Error('⚠️ firebaseConfig não encontrado! Redirecione para setup-firebase.html');
-}
+        // Elementos do DOM
+        const inputNome = document.getElementById('nome');
+        const inputTicket = document.getElementById('ticket');
+        const btnIniciar = document.getElementById('btnIniciar');
+        const bodyTabela = document.getElementById('bodyTabela');
+        const btnExportar = document.getElementById('btnExportar');
+        const btnLimparHistorico = document.getElementById('btnLimparHistorico');
+        const modalJustificativa = document.getElementById('modalJustificativa');
+        const txtJustificativa = document.getElementById('txtJustificativa');
+        const btnConfirmarJustificativa = document.getElementById('btnConfirmarJustificativa');
+        const modalLimparHistorico = document.getElementById('modalLimparHistorico');
+        const inputSenhaLimpar = document.getElementById('inputSenhaLimpar');
+        const btnCancelarLimpar = document.getElementById('btnCancelarLimpar');
+        const btnConfirmarLimpar = document.getElementById('btnConfirmarLimpar');
+        const modalPausarAtividade = document.getElementById('modalPausarAtividade');
+        const txtMotivoPausa = document.getElementById('txtMotivoPausa');
+        const btnCancelarPausa = document.getElementById('btnCancelarPausa');
+        const btnConfirmarPausa = document.getElementById('btnConfirmarPausa');
+        const kanbanEmAndamento = document.getElementById('kanbanEmAndamento');
+        const kanbanPausado = document.getElementById('kanbanPausado');
+        const kanbanConcluido = document.getElementById('kanbanConcluido');
+        const modalObservacaoConcluir = document.getElementById('modalObservacaoConcluir');
+        const txtObservacaoConcluir = document.getElementById('txtObservacaoConcluir');
+        const btnCancelarObsConcluir = document.getElementById('btnCancelarObsConcluir');
+        const btnConfirmarObsConcluir = document.getElementById('btnConfirmarObsConcluir');
+        const btnConfirmarComObs = document.getElementById('btnConfirmarComObs');
+        const filtroColaborador = document.getElementById('filtroColaborador');
+        const filtroData = document.getElementById('filtroData');
+        const filtroStatus = document.getElementById('filtroStatus');
+        const filtroTicket = document.getElementById('filtroTicket');
+        const btnAplicarFiltros = document.getElementById('btnAplicarFiltros');
+        const btnLimparFiltros = document.getElementById('btnLimparFiltros');
 
-const app = initializeApp(window.firebaseConfig);
-const db = getDatabase(app);
+        // Carregar dados do localStorage
+        function carregarDados() {
+            const dadosSalvos = localStorage.getItem('atividades');
+            if (dadosSalvos) {
+                atividades = JSON.parse(dadosSalvos);
+                atualizarTabela();
+            }
 
-// ================= ESTADO =================
-let atividadesEmAndamento = [];
-let timers = {};
-let atividades_em_andamento_ids = new Set();
+            // Carregar atividades em andamento
+            const emAndamentoSalvas = localStorage.getItem('atividadesEmAndamento');
+            if (emAndamentoSalvas) {
+                const parsed = JSON.parse(emAndamentoSalvas);
+                atividadesEmAndamento = parsed.map(a => ({
+                    ...a,
+                    tempoInicio: a.tempoInicio // Restaura o tempo original
+                }));
+                
+                // Reiniciar cronômetros para todas as atividades
+                atividadesEmAndamento.forEach(atividade => {
+                    iniciarCronometro(atividade.id);
+                });
+            }
 
-// ================= ELEMENTOS =================
-const inputNome = document.getElementById('nome');
-const inputTicket = document.getElementById('ticket');
-const descricaoInput = document.getElementById('descricaoAtividade');
-const btnIniciar = document.getElementById('btnIniciar');
+            // Carregar estado do kanban
+            const kanbanSalvo = localStorage.getItem('kanbanState');
+            if (kanbanSalvo) {
+                kanbanState = JSON.parse(kanbanSalvo);
+            }
+        }
 
-const kanbanEmAndamento = document.getElementById('kanbanEmAndamento');
-const kanbanPausado = document.getElementById('kanbanPausado');
-const kanbanConcluido = document.getElementById('kanbanConcluido');
-
-// ================= CARREGAR DADOS DO FIREBASE (REALTIME) =================
-onValue(ref(db, 'atividades_em_andamento'), (snapshot) => {
-    const dados = snapshot.val() || {};
-    atividadesEmAndamento = Object.entries(dados).map(([id, atividade]) => ({
-        id,
-        ...atividade
+        // Salvar dados no localStorage
+  function salvarDados() {
+    // Preparar dados sem funções
+    const emAndamentoParaSalvar = atividadesEmAndamento.map(a => ({
+        id: a.id,
+        nome: a.nome,
+        ticket: a.ticket,
+        dataInicio: a.dataInicio,
+        horaInicio: a.horaInicio,
+        observacao: a.observacao,
+        tempoInicio: a.tempoInicio,
+        descricao: a.descricao
     }));
-    renderizarKanban();
-    iniciarTimers();
-});
 
-// ================= RENDERIZAR KANBAN =================
-function renderizarKanban() {
-    kanbanEmAndamento.innerHTML = '';
-    kanbanPausado.innerHTML = '';
-    kanbanConcluido.innerHTML = '';
+    // Salvar LOCAL
+    localStorage.setItem('atividades', JSON.stringify(atividades));
+    localStorage.setItem('atividadesEmAndamento', JSON.stringify(emAndamentoParaSalvar));
+    localStorage.setItem('kanbanState', JSON.stringify(kanbanState));
 
-    atividadesEmAndamento.forEach(atividade => {
-        const card = criarCartaoAtividade(atividade);
-        
-        if (atividade.status === 'em_andamento') {
-            kanbanEmAndamento.innerHTML += card;
-        } else if (atividade.status === 'pausado') {
-            kanbanPausado.innerHTML += card;
-        } else if (atividade.status === 'concluido') {
-            kanbanConcluido.innerHTML += card;
-        }
-    });
-
-    if (!kanbanEmAndamento.innerHTML) kanbanEmAndamento.innerHTML = '<div class="kanban-empty">Nenhuma atividade em andamento</div>';
-    if (!kanbanPausado.innerHTML) kanbanPausado.innerHTML = '<div class="kanban-empty">Nenhuma atividade pausada</div>';
-    if (!kanbanConcluido.innerHTML) kanbanConcluido.innerHTML = '<div class="kanban-empty">Nenhuma atividade concluída</div>';
-}
-
-function criarCartaoAtividade(a) {
-    const tempo = timers[a.id] || '00:00:00';
-    const corCola = a.colaborador === inputNome.value ? '#c8e6c9' : 'white';
-    
-    return `
-        <div class="kanban-card" style="background: ${corCola}; border-left: 4px solid ${corCola === '#c8e6c9' ? '#4caf50' : '#5BA3D1'};">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <strong style="color: #2C5282;">👤 ${a.colaborador}</strong>
-                    <br><strong style="color: #667eea;">🎟️ ${a.ticket}</strong>
-                </div>
-            </div>
-            <div style="margin-top: 8px; font-size: 0.9em; color: #666;">${a.descricao || 'Sem descrição'}</div>
-            <div style="margin-top: 8px; color: #d32f2f; font-weight: bold; font-size: 1.1em;">⏱️ ${tempo}</div>
-            
-            ${a.motivo_pausa ? `<div class="kanban-pause-reason">💬 Pausa: ${a.motivo_pausa}</div>` : ''}
-            
-            <div class="kanban-card-actions">
-                ${a.status === 'em_andamento' ? `
-                    <button onclick="pausarAtividade('${a.id}')">⏸️ Pausar</button>
-                    <button onclick="concluirAtividade('${a.id}')">✓ Concluir</button>
-                ` : ''}
-                ${a.status === 'pausado' ? `
-                    <button onclick="retomarAtividade('${a.id}')">▶️ Retomar</button>
-                    <button onclick="concluirAtividade('${a.id}')">✓ Concluir</button>
-                ` : ''}
-            </div>
-        </div>
-    `;
-}
-
-// ================= INICIAR TIMERS =================
-function iniciarTimers() {
-    Object.keys(timers).forEach(id => {
-        if (typeof timers[id + '_intervalo'] === 'number') clearInterval(timers[id + '_intervalo']);
-    });
-    timers = {};
-
-    atividadesEmAndamento.forEach(atividade => {
-        if (atividade.status === 'em_andamento' || atividade.status === 'pausado') {
-            atualizarTimer(atividade);
-        }
-    });
-}
-
-function atualizarTimer(atividade) {
-    const intervalo = setInterval(() => {
-        const agora = Date.now();
-        const decorrido = Math.floor((agora - atividade.tempo_inicio) / 1000);
-        const h = Math.floor(decorrido / 3600);
-        const m = Math.floor((decorrido % 3600) / 60);
-        const s = decorrido % 60;
-        
-        timers[atividade.id] = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    }, 1000);
-    
-    timers[atividade.id + '_intervalo'] = intervalo;
-}
-
-// ================= INICIAR ATIVIDADE =================
-btnIniciar.addEventListener('click', () => {
-    const nome = inputNome.value.trim();
-    const ticket = inputTicket.value.trim();
-    const descricao = descricaoInput.value.trim();
-
-    if (!nome || !ticket) {
-        alert('❌ Preencha Nome e Ticket');
-        return;
+    // Salvar FIREBASE (apenas se houver referência disponível)
+    if (window.salvarNoFirebase && typeof window.salvarNoFirebase === 'function') {
+        clearTimeout(syncTimeout);
+        syncTimeout = setTimeout(() => {
+            window.salvarNoFirebase();
+        }, 500); // Debounce de 500ms para evitar múltiplas requisições
     }
+}
+        // Formatar tempo
+        function formatarTempo(ms) {
+            const totalSegundos = Math.floor(ms / 1000);
+            const horas = Math.floor(totalSegundos / 3600);
+            const minutos = Math.floor((totalSegundos % 3600) / 60);
+            const segundos = totalSegundos % 60;
 
-    const agora = new Date();
-    const [data, hora] = agora.toISOString().split('T');
-    
-    const novaAtividade = {
-        colaborador: nome,
-        ticket: ticket,
-        descricao: descricao,
-        data_inicio: data,
-        hora_inicio: hora.slice(0, 8),
-        tempo_inicio: Date.now(),
-        status: 'em_andamento',
-        motivo_pausa: null
-    };
+            return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+        }
 
-    // Firebase vai gerar ID automaticamente
-    push(ref(db, 'atividades_em_andamento'), novaAtividade)
-        .then(() => {
+        // Iniciar atividade
+        function iniciarAtividade() {
+            const nome = inputNome.value.trim();
+            const ticket = inputTicket.value.trim();
+            const descricao = document.getElementById('descricaoAtividade').value.trim();
+
+            if (!nome || nome === '') {
+                mostrarAlerta('erro', 'Por favor, selecione um colaborador');
+                return;
+            }
+
+            if (!ticket) {
+                mostrarAlerta('erro', 'Por favor, insira o número do ticket');
+                return;
+            }
+
+            const agora = new Date();
+            const novaAtividade = {
+                id: Date.now(),
+                nome: nome,
+                ticket: ticket,
+                descricao: descricao,
+                dataInicio: agora.toLocaleDateString('pt-BR'),
+                horaInicio: agora.toLocaleTimeString('pt-BR'),
+                tempoInicio: agora.getTime(),
+                observacao: '',
+                intervaloTimer: null
+            };
+
+            atividadesEmAndamento.push(novaAtividade);
+            
+            // Adicionar ao estado do kanban
+            kanbanState[novaAtividade.id] = { status: 'em_andamento', motivoPausa: '' };
+
+            salvarDados();
+            atualizarKanban();
+            iniciarCronometro(novaAtividade.id);
+
+            mostrarAlerta('sucesso', `Atividade iniciada para o ticket ${ticket}`);
+            
+            // Limpar campos após iniciar
             inputNome.value = '';
             inputTicket.value = '';
-            descricaoInput.value = '';
-            alert('✅ Atividade iniciada!');
-        })
-        .catch(e => {
-            alert('❌ Erro ao iniciar: ' + e.message);
+            document.getElementById('descricaoAtividade').value = '';
+        }
+
+        // Finalizar atividade
+        function finalizarAtividade(atividadeId) {
+            const index = atividadesEmAndamento.findIndex(a => a.id === atividadeId);
+            if (index === -1) return;
+
+            const atividade = atividadesEmAndamento[index];
+            const agora = new Date();
+            const duracao = agora.getTime() - atividade.tempoInicio;
+            
+            // Verificar se passou 12 horas
+            const dozeHoras = 12 * 60 * 60 * 1000; // 12 horas em ms
+            if (duracao > dozeHoras) {
+                atividadeEmFinalizacao = {
+                    atividade: atividade,
+                    index: index,
+                    duracao: duracao,
+                    horaFim: agora.toLocaleTimeString('pt-BR')
+                };
+                modalJustificativa.style.display = 'block';
+                return;
+            }
+
+            // Se não passou 12 horas, finalizar normalmente
+            finalizarComDados(index, atividade, duracao, agora.toLocaleTimeString('pt-BR'), '');
+        }
+
+        // Finalizar com dados completos
+        function finalizarComDados(index, atividade, duracao, horaFim, justificativa) {
+            clearInterval(atividade.intervaloTimer);
+
+            atividades.unshift({
+                colaborador: atividade.nome,
+                ticket: atividade.ticket,
+                dataInicio: atividade.dataInicio,
+                horaInicio: atividade.horaInicio,
+                horaFim: horaFim,
+                duracao: formatarTempo(duracao),
+                observacao: atividade.descricao || atividade.observacao,
+                justificativa: justificativa
+            });
+
+            atividadesEmAndamento.splice(index, 1);
+            
+            // Remover do estado do kanban
+            delete kanbanState[atividade.id];
+            
+            salvarDados();
+            atualizarTabela();
+            atualizarKanban();
+
+            mostrarAlerta('sucesso', 'Atividade registrada com sucesso!');
+        }
+
+        // Iniciar cronômetro
+        function iniciarCronometro(atividadeId) {
+            const atividade = atividadesEmAndamento.find(a => a.id === atividadeId);
+            if (!atividade) return;
+
+            atividade.intervaloTimer = setInterval(() => {
+                atualizarDuracaoCronometro(atividadeId);
+            }, 1000);
+        }
+
+        // Atualizar apenas a duração do cronômetro
+        function atualizarDuracaoCronometro(atividadeId) {
+            const atividade = atividadesEmAndamento.find(a => a.id === atividadeId);
+            if (!atividade) return;
+
+            const duracao = new Date().getTime() - atividade.tempoInicio;
+            
+            // Atualizar Kanban "Em Andamento"
+            const kanbanCardElement = document.querySelector(`[data-kanban-atividade-id="${atividadeId}"]`);
+            if (kanbanCardElement) {
+                const kanbanDuracaoElement = kanbanCardElement.querySelector('.kanban-duracao-display');
+                if (kanbanDuracaoElement) {
+                    kanbanDuracaoElement.textContent = formatarTempo(duracao);
+                }
+            }
+        }
+
+        // Atualizar tabela
+        function atualizarTabela() {
+            if (atividades.length === 0) {
+                bodyTabela.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhuma atividade registrada ainda</td></tr>';
+                return;
+            }
+
+            bodyTabela.innerHTML = atividades.map((atividade, index) => `
+                <tr>
+                    <td>${atividade.colaborador}</td>
+                    <td>${atividade.ticket}</td>
+                    <td>${atividade.dataInicio}</td>
+                    <td>${atividade.horaInicio}</td>
+                    <td>${atividade.horaFim}</td>
+                    <td><strong>${atividade.duracao}</strong></td>
+                    <td>${atividade.observacao || '-'}</td>
+                    <td>${atividade.justificativa || '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Atualizar ranking
+        function atualizarRanking() {
+            // Função removida - ranking foi excluído
+        }
+
+        function mostrarAlerta(tipo, mensagem) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${tipo}`;
+            alertDiv.textContent = mensagem;
+
+            const card = document.querySelector('.card');
+            card.insertBefore(alertDiv, card.firstChild);
+
+            setTimeout(() => alertDiv.remove(), 4000);
+        }
+
+        // Exportar para CSV
+        function exportarCSV() {
+            if (atividades.length === 0) {
+                mostrarAlerta('erro', 'Não há atividades para exportar');
+                return;
+            }
+
+            let csv = 'Colaborador,Ticket,Data de Início,Hora de Início,Hora de Fim,Duração,Observação,Justificativa\n';
+            atividades.forEach(atividade => {
+                const observacao = atividade.observacao ? `"${atividade.observacao}"` : '-';
+                const justificativa = atividade.justificativa ? `"${atividade.justificativa}"` : '-';
+                csv += `${atividade.colaborador},${atividade.ticket},${atividade.dataInicio},${atividade.horaInicio},${atividade.horaFim},${atividade.duracao},${observacao},${justificativa}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', `atividades-${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            mostrarAlerta('sucesso', 'Arquivo exportado com sucesso!');
+        }
+
+        // Abrir modal de limpar histórico
+        function abrirModalLimparHistorico() {
+            inputSenhaLimpar.value = '';
+            modalLimparHistorico.style.display = 'block';
+            inputSenhaLimpar.focus();
+        }
+
+        // Fechar modal de limpar histórico
+        function fecharModalLimparHistorico() {
+            modalLimparHistorico.style.display = 'none';
+            inputSenhaLimpar.value = '';
+        }
+
+        // Validar senha e limpar histórico
+        function confirmarLimparHistorico() {
+            const senhaDigitada = inputSenhaLimpar.value;
+            const senhaCorreta = 'Argus2026@';
+
+            if (senhaDigitada !== senhaCorreta) {
+                mostrarAlerta('erro', 'Senha incorreta!');
+                inputSenhaLimpar.value = '';
+                inputSenhaLimpar.focus();
+                return;
+            }
+
+            // Limpar histórico e kanban concluído
+            atividades = [];
+            
+            // Remover concluídos do kanban
+            Object.keys(kanbanState).forEach(id => {
+                if (kanbanState[id].status === 'concluido') {
+                    delete kanbanState[id];
+                }
+            });
+            
+            salvarDados();
+            atualizarTabela();
+            atualizarKanban();
+            fecharModalLimparHistorico();
+            mostrarAlerta('sucesso', 'Histórico de atividades e concluídos do kanban foram limpos com sucesso!');
+        }
+
+        // Confirmar justificativa
+        function confirmarJustificativa() {
+            if (!atividadeEmFinalizacao) return;
+
+            const justificativa = txtJustificativa.value.trim();
+            if (!justificativa) {
+                mostrarAlerta('erro', 'Por favor, forneça uma justificativa');
+                return;
+            }
+
+            const { atividade, index, duracao, horaFim } = atividadeEmFinalizacao;
+            finalizarComDados(index, atividade, duracao, horaFim, justificativa);
+
+            modalJustificativa.style.display = 'none';
+            txtJustificativa.value = '';
+            atividadeEmFinalizacao = null;
+        }
+
+        // Pausar atividade
+        function abrirModalPausarAtividade(atividadeId) {
+            atividadePausando = atividadeId;
+            txtMotivoPausa.value = '';
+            modalPausarAtividade.style.display = 'block';
+            txtMotivoPausa.focus();
+        }
+
+        // Fechar modal de pausa
+        function fecharModalPausarAtividade() {
+            modalPausarAtividade.style.display = 'none';
+            atividadePausando = null;
+            txtMotivoPausa.value = '';
+        }
+
+        // Confirmar pausa
+        function confirmarPausarAtividade() {
+            if (!atividadePausando) return;
+
+            const motivo = txtMotivoPausa.value.trim();
+            if (!motivo) {
+                mostrarAlerta('erro', 'Por favor, forneça um motivo para a pausa');
+                return;
+            }
+
+            // Atualizar estado do kanban
+            kanbanState[atividadePausando].status = 'pausado';
+            kanbanState[atividadePausando].motivoPausa = motivo;
+
+            salvarDados();
+            atualizarKanban();
+            fecharModalPausarAtividade();
+            mostrarAlerta('sucesso', 'Atividade pausada com sucesso!');
+        }
+
+        // Retomar atividade
+        function retomarAtividade(atividadeId) {
+            kanbanState[atividadeId].status = 'em_andamento';
+            kanbanState[atividadeId].motivoPausa = '';
+            salvarDados();
+            atualizarKanban();
+            mostrarAlerta('sucesso', 'Atividade retomada!');
+        }
+
+        // Abrir modal para observação ao concluir
+        function abrirModalObservacao(atividadeId) {
+            atividadeConcluindo = atividadeId;
+            txtObservacaoConcluir.value = '';
+            modalObservacaoConcluir.style.display = 'block';
+            txtObservacaoConcluir.focus();
+        }
+
+        // Fechar modal de observação
+        function fecharModalObservacao() {
+            modalObservacaoConcluir.style.display = 'none';
+            atividadeConcluindo = null;
+            txtObservacaoConcluir.value = '';
+        }
+
+        // Concluir com observação
+        function confirmarConcluirComObs() {
+            if (!atividadeConcluindo) return;
+
+            const observacao = txtObservacaoConcluir.value.trim();
+            const atividade = atividadesEmAndamento.find(a => a.id === atividadeConcluindo);
+            
+            if (atividade && observacao) {
+                atividade.observacao = observacao;
+            }
+            
+            finalizarAtividade(atividadeConcluindo);
+            fecharModalObservacao();
+        }
+
+        // Concluir sem observação
+        function confirmarConcluirSemObs() {
+            if (!atividadeConcluindo) return;
+            finalizarAtividade(atividadeConcluindo);
+            fecharModalObservacao();
+        }
+
+        // Marcar como concluído no kanban (agora abre modal de observação)
+        function marcarComoConcluido(atividadeId) {
+            abrirModalObservacao(atividadeId);
+        }
+
+        // Atualizar kanban
+        function atualizarKanban() {
+            kanbanEmAndamento.innerHTML = '';
+            kanbanPausado.innerHTML = '';
+            kanbanConcluido.innerHTML = '';
+
+            const atividadesGrupadasPorStatus = {
+                em_andamento: [],
+                pausado: [],
+                concluido: []
+            };
+
+            // Agrupar atividades por status no kanban
+            atividadesEmAndamento.forEach(atividade => {
+                const status = kanbanState[atividade.id]?.status || 'em_andamento';
+                if (atividadesGrupadasPorStatus[status] !== undefined) {
+                    atividadesGrupadasPorStatus[status].push(atividade);
+                }
+            });
+
+            // Renderizar Em Andamento
+            if (atividadesGrupadasPorStatus.em_andamento.length === 0) {
+                kanbanEmAndamento.innerHTML = '<div class="kanban-empty">Nenhuma atividade em andamento</div>';
+            } else {
+                kanbanEmAndamento.innerHTML = atividadesGrupadasPorStatus.em_andamento.map(atividade => {
+                    const duracao = new Date().getTime() - atividade.tempoInicio;
+                    return `
+                        <div class="kanban-card" data-kanban-atividade-id="${atividade.id}">
+                            <div class="kanban-card-header">
+                                <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
+                            </div>
+                            <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.nome}</div>
+                            <div class="kanban-card-subtitle"><strong>Data:</strong> ${atividade.dataInicio}</div>
+                            <div class="kanban-card-subtitle"><strong>Início:</strong> ${atividade.horaInicio}</div>
+                            <div class="kanban-card-subtitle kanban-duracao-display" style="color: #667eea; font-weight: bold; margin-top: 8px;">⏱️ ${formatarTempo(duracao)}</div>
+                            <div class="kanban-card-actions">
+                                <button class="btn-danger btn-small" onclick="abrirModalPausarAtividade(${atividade.id})">⏸️ Pausar</button>
+                                <button class="btn-success btn-small" onclick="marcarComoConcluido(${atividade.id})">✓ Concluir</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');            }
+
+            // Renderizar Pausado
+            if (atividadesGrupadasPorStatus.pausado.length === 0) {
+                kanbanPausado.innerHTML = '<div class="kanban-empty">Nenhuma atividade pausada</div>';
+            } else {
+                kanbanPausado.innerHTML = atividadesGrupadasPorStatus.pausado.map(atividade => {
+                    return `
+                        <div class="kanban-card">
+                            <div class="kanban-card-header">
+                                <span class="kanban-card-title">${atividade.ticket}</span>
+                            </div>
+                            <div class="kanban-card-subtitle">${atividade.nome}</div>
+                            <div class="kanban-pause-reason">💬 ${kanbanState[atividade.id]?.motivoPausa || ''}</div>
+                            <div class="kanban-card-actions">
+                                <button class="btn-primary btn-small" onclick="retomarAtividade(${atividade.id})">▶️ Retomar</button>
+                                <button class="btn-success btn-small" onclick="marcarComoConcluido(${atividade.id})">✓ Concluir</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Renderizar Concluído (apenas 4 últimos)
+            const hoje = new Date().toLocaleDateString('pt-BR');
+            const atividadesConcluídasHoje = atividades.filter(a => a.dataInicio === hoje);
+            const todasConcluídas = [...atividadesGrupadasPorStatus.concluido];
+            
+            // Adicionar atividades finalizadas hoje que não estão em atividadesEmAndamento
+            atividadesConcluídasHoje.forEach(atividadeHoje => {
+                const jaExiste = todasConcluídas.some(a => a.id === atividadeHoje.id);
+                if (!jaExiste) {
+                    todasConcluídas.push({
+                        id: atividadeHoje.id || Math.random(),
+                        ticket: atividadeHoje.ticket,
+                        nome: atividadeHoje.colaborador,
+                        horaFim: atividadeHoje.horaFim,
+                        duracao: atividadeHoje.duracao
+                    });
+                }
+            });
+
+            // Limitar aos 4 últimos concluídos
+            const ultimosConcluidos = todasConcluídas.slice(0, 4);
+
+            if (ultimosConcluidos.length === 0) {
+                kanbanConcluido.innerHTML = '<div class="kanban-empty">Nenhuma atividade concluída</div>';
+            } else {
+                kanbanConcluido.innerHTML = ultimosConcluidos.map(atividade => {
+                    return `
+                        <div class="kanban-card" style="opacity: 0.7;">
+                            <div class="kanban-card-header">
+                                <span class="kanban-card-title">${atividade.ticket}</span>
+                            </div>
+                            <div class="kanban-card-subtitle"><strong>Por:</strong> ${atividade.nome}</div>
+                            <div class="kanban-card-subtitle" style="font-size: 0.85em; color: #888;\">Duração: ${atividade.duracao || 'N/A'}</div>
+                            <div style="text-align: center; color: #51cf66; font-weight: bold; margin-top: 8px;">✓ Concluído</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Fechar modal ao clicar fora
+        window.addEventListener('click', function(event) {
+            if (event.target === modalJustificativa) {
+                modalJustificativa.style.display = 'none';
+                atividadeEmFinalizacao = null;
+                txtJustificativa.value = '';
+            }
+            if (event.target === modalLimparHistorico) {
+                fecharModalLimparHistorico();
+            }
+            if (event.target === modalPausarAtividade) {
+                fecharModalPausarAtividade();
+            }
+            if (event.target === modalObservacaoConcluir) {
+                fecharModalObservacao();
+            }
         });
-});
 
-// ================= AÇÕES =================
-window.pausarAtividade = (id) => {
-    const motivo = prompt('Qual o motivo da pausa?');
-    if (!motivo) return;
+        // Funções de Filtro
+        function obterTodasAsAtividades() {
+            // Coleta todas as atividades de todos os contextos
+            let todasAsAtividades = [];
 
-    update(ref(db, 'atividades_em_andamento/' + id), {
-        status: 'pausado',
-        motivo_pausa: motivo
-    }).catch(e => alert('❌ Erro: ' + e.message));
+            // Adicionar atividades em andamento
+            atividadesEmAndamento.forEach(atividade => {
+                const status = kanbanState[atividade.id]?.status || 'em_andamento';
+                todasAsAtividades.push({
+                    id: atividade.id,
+                    colaborador: atividade.nome,
+                    ticket: atividade.ticket,
+                    data: atividade.dataInicio,
+                    hora: atividade.horaInicio,
+                    status: status,
+                    observacao: atividade.observacao,
+                    motivoPausa: kanbanState[atividade.id]?.motivoPausa || ''
+                });
+            });
+
+            // Adicionar atividades concluídas
+            atividades.forEach(atividade => {
+                todasAsAtividades.push({
+                    id: atividade.id,
+                    colaborador: atividade.colaborador,
+                    ticket: atividade.ticket,
+                    data: atividade.dataInicio,
+                    hora: atividade.horaInicio,
+                    status: 'concluido',
+                    observacao: atividade.observacao,
+                    justificativa: atividade.justificativa
+                });
+            });
+
+            return todasAsAtividades;
+        }
+
+        function aplicarFiltros() {
+            const colaborador = filtroColaborador.value;
+            const data = filtroData.value;
+            const status = filtroStatus.value;
+            const ticket = filtroTicket.value;
+
+            let todasAsAtividades = obterTodasAsAtividades();
+
+            // Aplicar filtros
+            atividadesFiltradas = todasAsAtividades.filter(atividade => {
+                let passa = true;
+
+                if (colaborador && atividade.colaborador !== colaborador) {
+                    passa = false;
+                }
+
+                if (data && atividade.data !== data) {
+                    passa = false;
+                }
+
+                if (status && atividade.status !== status) {
+                    passa = false;
+                }
+
+                if (ticket && atividade.ticket != ticket) {
+                    passa = false;
+                }
+
+                return passa;
+            });
+
+            filtroAtivo = true;
+            atualizarKanbanFiltrado();
+            mostrarAlerta('sucesso', `${atividadesFiltradas.length} atividade(s) encontrada(s)`);
+        }
+
+        function limparFiltros() {
+            filtroColaborador.value = '';
+            filtroData.value = '';
+            filtroStatus.value = '';
+            filtroTicket.value = '';
+            atividadesFiltradas = [];
+            filtroAtivo = false;
+            atualizarKanban();
+            mostrarAlerta('sucesso', 'Filtros limpos! Exibindo todas as atividades');
+        }
+
+        function atualizarKanbanFiltrado() {
+            kanbanEmAndamento.innerHTML = '';
+            kanbanPausado.innerHTML = '';
+            kanbanConcluido.innerHTML = '';
+
+            const atividadesGrupadasPorStatus = {
+                em_andamento: [],
+                pausado: [],
+                concluido: []
+            };
+
+            // Agrupar atividades filtradas por status
+            atividadesFiltradas.forEach(atividade => {
+                if (atividadesGrupadasPorStatus[atividade.status] !== undefined) {
+                    atividadesGrupadasPorStatus[atividade.status].push(atividade);
+                }
+            });
+
+            // Renderizar Em Andamento
+            if (atividadesGrupadasPorStatus.em_andamento.length === 0) {
+                kanbanEmAndamento.innerHTML = '<div class="kanban-empty">Nenhuma atividade em andamento com os filtros</div>';
+            } else {
+                kanbanEmAndamento.innerHTML = atividadesGrupadasPorStatus.em_andamento.map(atividade => {
+                    return `
+                        <div class="kanban-card">
+                            <div class="kanban-card-header">
+                                <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
+                            </div>
+                            <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.colaborador}</div>
+                            <div class="kanban-card-subtitle"><strong>Data:</strong> ${atividade.data}</div>
+                            <div class="kanban-card-subtitle"><strong>Início:</strong> ${atividade.hora}</div>
+                            <div class="kanban-card-subtitle" style="color: #667eea; font-weight: bold; margin-top: 8px;">
+                                ${atividade.observacao ? `📝 Obs: ${atividade.observacao.substring(0, 30)}...` : 'Sem observação'}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Renderizar Pausado
+            if (atividadesGrupadasPorStatus.pausado.length === 0) {
+                kanbanPausado.innerHTML = '<div class="kanban-empty">Nenhuma atividade pausada com os filtros</div>';
+            } else {
+                kanbanPausado.innerHTML = atividadesGrupadasPorStatus.pausado.map(atividade => {
+                    return `
+                        <div class="kanban-card">
+                            <div class="kanban-card-header">
+                                <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
+                            </div>
+                            <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.colaborador}</div>
+                            <div class="kanban-pause-reason">💬 ${atividade.motivoPausa || ''}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Renderizar Concluído
+            if (atividadesGrupadasPorStatus.concluido.length === 0) {
+                kanbanConcluido.innerHTML = '<div class="kanban-empty">Nenhuma atividade concluída com os filtros</div>';
+            } else {
+                kanbanConcluido.innerHTML = atividadesGrupadasPorStatus.concluido.map(atividade => {
+                    return `
+                        <div class="kanban-card" style="opacity: 0.7;">
+                            <div class="kanban-card-header">
+                                <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
+                            </div>
+                            <div class="kanban-card-subtitle"><strong>Por:</strong> ${atividade.colaborador}</div>
+                            <div style="text-align: center; color: #51cf66; font-weight: bold; margin-top: 8px;">✓ Concluído</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Event Listeners
+        btnIniciar.addEventListener('click', iniciarAtividade);
+        btnConfirmarJustificativa.addEventListener('click', confirmarJustificativa);
+        btnExportar.addEventListener('click', exportarCSV);
+        btnLimparHistorico.addEventListener('click', abrirModalLimparHistorico);
+        btnCancelarLimpar.addEventListener('click', fecharModalLimparHistorico);
+        btnConfirmarLimpar.addEventListener('click', confirmarLimparHistorico);
+        btnCancelarPausa.addEventListener('click', fecharModalPausarAtividade);
+        btnConfirmarPausa.addEventListener('click', confirmarPausarAtividade);
+        btnCancelarObsConcluir.addEventListener('click', fecharModalObservacao);
+        btnConfirmarObsConcluir.addEventListener('click', confirmarConcluirSemObs);
+        btnConfirmarComObs.addEventListener('click', confirmarConcluirComObs);
+        txtMotivoPausa.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                confirmarPausarAtividade();
+            }
+        });
+        txtObservacaoConcluir.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                confirmarConcluirComObs();
+            }
+        });
+
+        // Permitir Enter no input de senha
+        inputSenhaLimpar.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                confirmarLimparHistorico();
+            }
+        });
+
+       // Event Listeners dos Filtros
+btnAplicarFiltros.addEventListener('click', aplicarFiltros);
+btnLimparFiltros.addEventListener('click', limparFiltros);
+
+// 🔥 CARREGAR DADOS AO INICIAR
+carregarDados();
+
+// Atualizar interface
+atualizarTabela();
+atualizarKanban();
+    </script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, update, onValue, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+console.log("🔥 FIREBASE INICIANDO...");
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBoLGZgImxHrg_n8Lq12Ppv80m5HLXQKjs",
+  authDomain: "controle-atividade-a6b6d.firebaseapp.com",
+  databaseURL: "https://controle-atividade-a6b6d-default-rtdb.firebaseio.com",
+  projectId: "controle-atividade-a6b6d",
+  storageBucket: "controle-atividade-a6b6d.appspot.com",
+  messagingSenderId: "449852839157",
+  appId: "1:449852839157:web:da90aec3840427f375e1bc"
 };
 
-window.retomarAtividade = (id) => {
-    update(ref(db, 'atividades_em_andamento/' + id), {
-        status: 'em_andamento',
-        motivo_pausa: null
-    }).catch(e => alert('❌ Erro: ' + e.message));
-};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-window.concluirAtividade = (id) => {
-    const atividade = atividadesEmAndamento.find(a => a.id == id);
-    if (!atividade) return;
+const atividadesRef = ref(db, "sistema");
 
-    const agora = new Date();
-    const data_fim = agora.toISOString().split('T')[0];
-    const hora_fim = agora.toISOString().split('T')[1].slice(0, 8);
-    const duracao = Math.floor((Date.now() - atividade.tempo_inicio) / 1000);
-    const h = Math.floor(duracao / 3600);
-    const m = Math.floor((duracao % 3600) / 60);
-    const s = duracao % 60;
-    const duracao_formatada = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-
-    const atividade_concluida = {
-        colaborador: atividade.colaborador,
-        ticket: atividade.ticket,
-        data_inicio: atividade.data_inicio,
-        hora_inicio: atividade.hora_inicio,
-        hora_fim: hora_fim,
-        duracao: duracao_formatada,
-        descricao: atividade.descricao,
-        observacao: '',
-        justificativa: '',
-        data_conclusao: data_fim
-    };
-
-    // Salvar no histórico
-    push(ref(db, 'atividades'), atividade_concluida)
-        .then(() => {
-            // Deletar de em_andamento
-            remove(ref(db, 'atividades_em_andamento/' + id))
-                .then(() => {
-                    salvarCache(); // Salvar cache local
-                    alert('✅ Atividade concluída!');
-                })
-                .catch(e => alert('❌ Erro ao deletar: ' + e.message));
-        })
-        .catch(e => alert('❌ Erro ao concluir: ' + e.message));
-};
-
-// ================= CARREGAR HISTÓRICO (ATIVIDADES CONCLUÍDAS) =================
-let atividades_concluidas = [];
-
-onValue(ref(db, 'atividades'), (snapshot) => {
-    const dados = snapshot.val() || {};
-    atividades_concluidas = Object.entries(dados).map(([id, atividade]) => ({
-        id,
-        ...atividade
+// Exponibilizar função de salva globalmente
+window.salvarNoFirebase = function() {
+    // Preparar dados para enviar
+    const emAndamentoParaSalvar = window.atividadesEmAndamento.map(a => ({
+        id: a.id,
+        nome: a.nome,
+        ticket: a.ticket,
+        dataInicio: a.dataInicio,
+        horaInicio: a.horaInicio,
+        observacao: a.observacao,
+        tempoInicio: a.tempoInicio,
+        descricao: a.descricao
     }));
-    renderizarHistorico();
-    salvarCache();
-});
 
-function renderizarHistorico() {
-    const tbody = document.querySelector('table tbody');
-    if (!tbody) return;
+    update(atividadesRef, {
+        atividades: window.atividades || [],
+        atividadesEmAndamento: emAndamentoParaSalvar || [],
+        kanbanState: window.kanbanState || {},
+        ultimaAtualizacao: new Date().toISOString(),
+        usuarioUltimo: "app-web"
+    }).catch(error => {
+        console.error("❌ Erro ao salvar no Firebase:", error);
+    });
 
-    tbody.innerHTML = '';
-    
-    if (atividades_concluidas.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">Nenhuma atividade registrada ainda</td></tr>';
+    console.log("✅ DADOS SINCRONIZADOS COM FIREBASE");
+};
+
+// Listener em tempo real
+let primeiraVez = true;
+onValue(atividadesRef, (snapshot) => {
+    const dados = snapshot.val();
+    if (!dados) {
+        console.log("⚠️ Nenhum dado no Firebase ainda");
         return;
     }
 
-    atividades_concluidas.forEach(a => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${a.colaborador || ''}</td>
-            <td>${a.ticket || ''}</td>
-            <td>${a.data_inicio || ''}</td>
-            <td>${a.hora_inicio || ''}</td>
-            <td>${a.hora_fim || ''}</td>
-            <td>${a.duracao || ''}</td>
-            <td>${a.observacao || ''}</td>
-            <td>${a.justificativa || ''}</td>
-        `;
-        tbody.appendChild(row);
+    window.isUpdatingFromFirebase = true;
+
+    // Atualizar dados globais
+    window.atividades = dados.atividades || [];
+    window.atividadesEmAndamento = (dados.atividadesEmAndamento || []).map(a => ({
+        ...a,
+        intervaloTimer: null // Restaurar timers
+    }));
+    window.kanbanState = dados.kanbanState || {};
+
+    console.log("🔄 DADOS SINCRONIZADOS DO FIREBASE", {
+        atividadesCompletas: window.atividades.length,
+        emAndamento: window.atividadesEmAndamento.length,
+        kanban: Object.keys(window.kanbanState).length
     });
-}
 
-// ================= CACHE LOCAL (localStorage) =================
-function salvarCache() {
-    const cache = {
-        em_andamento: atividadesEmAndamento,
-        concluidas: atividades_concluidas,
-        timestamp: Date.now()
-    };
-    localStorage.setItem('controle_atividade_cache', JSON.stringify(cache));
-}
-
-function restaurarCache() {
-    const cache = localStorage.getItem('controle_atividade_cache');
-    if (cache) {
-        try {
-            const dados = JSON.parse(cache);
-            atividadesEmAndamento = dados.em_andamento || [];
-            atividades_concluidas = dados.concluidas || [];
-            renderizarKanban();
-            renderizarHistorico();
-            iniciarTimers();
-            console.log('✅ Cache restaurado do localStorage');
-        } catch (e) {
-            console.error('❌ Erro ao restaurar cache:', e);
-        }
+    // Atualizar interface
+    if (typeof window.atualizarTabela === 'function') {
+        window.atualizarTabela();
     }
-}
-
-// Restaurar cache ao carregar
-restaurarCache();
-
-// Salvar cache a cada 30 segundos (backup automático)
-setInterval(salvarCache, 30000);
-
-// ================= EXPORTAR PARA CSV =================
-document.getElementById('btnExportarCSV')?.addEventListener('click', () => {
-    if (atividades_concluidas.length === 0) {
-        alert('❌ Nenhuma atividade para exportar');
-        return;
-    }
-
-    let csv = 'Colaborador,Ticket,Data de Início,Hora de Início,Hora de Fim,Duração,Observação,Justificativa\n';
     
-    atividades_concluidas.forEach(a => {
-        csv += `"${a.colaborador || ''}","${a.ticket || ''}","${a.data_inicio || ''}","${a.hora_inicio || ''}","${a.hora_fim || ''}","${a.duracao || ''}","${a.observacao || ''}","${a.justificativa || ''}"\n`;
-    });
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `atividades_${new Date().toISOString().slice(0, 10)}.csv`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    alert('✅ CSV exportado com sucesso!');
-});
-
-// ================= LIMPAR HISTÓRICO =================
-document.getElementById('btnLimparHistorico')?.addEventListener('click', () => {
-    document.getElementById('modalLimparHistorico').style.display = 'block';
-});
-
-document.getElementById('btnCancelarLimpar')?.addEventListener('click', () => {
-    document.getElementById('modalLimparHistorico').style.display = 'none';
-});
-
-document.getElementById('btnConfirmarLimpar')?.addEventListener('click', () => {
-    const senha = document.getElementById('inputSenhaLimpar').value;
-    if (senha !== 'Argus2026@') {
-        alert('❌ Senha incorreta!');
-        return;
+    if (typeof window.atualizarKanban === 'function') {
+        window.atualizarKanban();
     }
 
-    // Limpar Firebase
-    remove(ref(db, 'atividades')).then(() => {
-        atividades_concluidas = [];
-        renderizarHistorico();
-        localStorage.removeItem('controle_atividade_cache');
-        document.getElementById('modalLimparHistorico').style.display = 'none';
-        document.getElementById('inputSenhaLimpar').value = '';
-        alert('✅ Histórico limpo com sucesso!');
-    }).catch(e => {
-        alert('❌ Erro ao limpar: ' + e.message);
-    });
-});
-
-// ================= FILTROS =================
-let filtroAplicado = false;
-
-document.getElementById('btnAplicarFiltros')?.addEventListener('click', () => {
-    aplicarFiltros();
-});
-
-document.getElementById('btnLimparFiltros')?.addEventListener('click', () => {
-    document.getElementById('filtroColaborador').value = '';
-    document.getElementById('filtroData').value = '';
-    document.getElementById('filtroStatus').value = '';
-    filtroAplicado = false;
-    renderizarKanban();
-    renderizarHistorico();
-});
-
-function aplicarFiltros() {
-    const colaborador = document.getElementById('filtroColaborador').value;
-    const data = document.getElementById('filtroData').value;
-    const status = document.getElementById('filtroStatus').value;
-
-    if (!colaborador && !data && !status) {
-        alert('⚠️ Selecione pelo menos um filtro');
-        return;
-    }
-
-    filtroAplicado = true;
-
-    // Filtrar Kanban
-    const atividadesFiltradas = atividadesEmAndamento.filter(a => {
-        if (colaborador && a.colaborador !== colaborador) return false;
-        if (data && a.data_inicio !== data) return false;
-        if (status && a.status !== status) return false;
-        return true;
-    });
-
-    kanbanEmAndamento.innerHTML = '';
-    kanbanPausado.innerHTML = '';
-    kanbanConcluido.innerHTML = '';
-
-    atividadesFiltradas.forEach(atividade => {
-        const card = criarCartaoAtividade(atividade);
-        if (atividade.status === 'em_andamento') {
-            kanbanEmAndamento.innerHTML += card;
-        } else if (atividade.status === 'pausado') {
-            kanbanPausado.innerHTML += card;
-        } else if (atividade.status === 'concluido') {
-            kanbanConcluido.innerHTML += card;
-        }
-    });
-
-    if (!kanbanEmAndamento.innerHTML) kanbanEmAndamento.innerHTML = '<div class="kanban-empty">Nenhuma atividade em andamento</div>';
-    if (!kanbanPausado.innerHTML) kanbanPausado.innerHTML = '<div class="kanban-empty">Nenhuma atividade pausada</div>';
-    if (!kanbanConcluido.innerHTML) kanbanConcluido.innerHTML = '<div class="kanban-empty">Nenhuma atividade concluída</div>';
-
-    // Filtrar Histórico
-    const historicoFiltrado = atividades_concluidas.filter(a => {
-        if (colaborador && a.colaborador !== colaborador) return false;
-        if (data && a.data_inicio !== data) return false;
-        return true;
-    });
-
-    const tbody = document.querySelector('table tbody');
-    if (tbody) {
-        tbody.innerHTML = '';
-        historicoFiltrado.forEach(a => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${a.colaborador || ''}</td>
-                <td>${a.ticket || ''}</td>
-                <td>${a.data_inicio || ''}</td>
-                <td>${a.hora_inicio || ''}</td>
-                <td>${a.hora_fim || ''}</td>
-                <td>${a.duracao || ''}</td>
-                <td>${a.observacao || ''}</td>
-                <td>${a.justificativa || ''}</td>
-            `;
-            tbody.appendChild(row);
+    // Reiniciar cronômetros para atividades em andamento
+    if (primeiraVez) {
+        window.atividadesEmAndamento.forEach(atividade => {
+            if (typeof window.iniciarCronometro === 'function') {
+                window.iniciarCronometro(atividade.id);
+            }
         });
+        primeiraVez = false;
     }
-}
 
-// ================= SINCRONIZAR A CADA 5 SEGUNDOS (BACKUP) =================
-setInterval(() => {
-    console.log('🔄 Backup sincronizando...');
-    salvarCache();
-}, 5000);
-
-// Sincronizar quando a página ficar visível (tab ativa)
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-        console.log('👁️ Página ativa - restaurando dados do Firebase');
-        // Force reload dos dados
-        location.reload();
-    }
+    window.isUpdatingFromFirebase = false;
+}, (error) => {
+    console.error("❌ Erro ao sincronizar com Firebase:", error);
 });
 
-console.log('✅ Sistema de sincronização iniciado com sucesso!');
+console.log("✅ FIREBASE CONECTADO E SINCRONIZANDO EM TEMPO REAL");
 </script>
-</body>
-</html>
