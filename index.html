@@ -938,6 +938,12 @@
             kanbanState[novaAtividade.id] = { status: 'em_andamento', motivoPausa: '' };
 
             salvarDados();
+            
+            // 🔥 SINCRONIZAR COM FIREBASE (para outros computadores verem)
+            if (window.salvarAtividadeEmAndamentoNoFirebase && typeof window.salvarAtividadeEmAndamentoNoFirebase === 'function') {
+                setTimeout(() => window.salvarAtividadeEmAndamentoNoFirebase(novaAtividade), 100);
+            }
+            
             atualizarKanban();
             iniciarCronometro(novaAtividade.id);
 
@@ -996,6 +1002,18 @@
             delete kanbanState[atividade.id];
             
             salvarDados();
+            
+            // 🔥 SINCRONIZAR COM FIREBASE
+            if (window.finalizarAtividadeNoFirebase && typeof window.finalizarAtividadeNoFirebase === 'function') {
+                const atividadeComDados = {
+                    ...atividade,
+                    duracao: formatarTempo(duracao),
+                    horaFim: horaFim,
+                    justificativa: justificativa
+                };
+                setTimeout(() => window.finalizarAtividadeNoFirebase(atividadeComDados), 100);
+            }
+            
             atualizarTabela();
             atualizarKanban();
 
@@ -1184,7 +1202,18 @@
             kanbanState[atividadePausando].status = 'pausado';
             kanbanState[atividadePausando].motivoPausa = motivo;
 
+            const atividade = atividadesEmAndamento.find(a => a.id === atividadePausando);
+            if (atividade) {
+                atividade.observacao = motivo; // Salvar motivo
+            }
+
             salvarDados();
+            
+            // 🔥 SINCRONIZAR COM FIREBASE
+            if (atividade && window.atualizarAtividadeEmAndamentoNoFirebase && typeof window.atualizarAtividadeEmAndamentoNoFirebase === 'function') {
+                setTimeout(() => window.atualizarAtividadeEmAndamentoNoFirebase(atividade, 'pausado'), 100);
+            }
+            
             atualizarKanban();
             fecharModalPausarAtividade();
             mostrarAlerta('sucesso', 'Atividade pausada com sucesso!');
@@ -1194,7 +1223,16 @@
         function retomarAtividade(atividadeId) {
             kanbanState[atividadeId].status = 'em_andamento';
             kanbanState[atividadeId].motivoPausa = '';
+            
+            const atividade = atividadesEmAndamento.find(a => a.id === atividadeId);
+            
             salvarDados();
+            
+            // 🔥 SINCRONIZAR COM FIREBASE
+            if (atividade && window.atualizarAtividadeEmAndamentoNoFirebase && typeof window.atualizarAtividadeEmAndamentoNoFirebase === 'function') {
+                setTimeout(() => window.atualizarAtividadeEmAndamentoNoFirebase(atividade, 'em_andamento'), 100);
+            }
+            
             atualizarKanban();
             mostrarAlerta('sucesso', 'Atividade retomada!');
         }
@@ -1562,102 +1600,5 @@ carregarDados();
 atualizarTabela();
 atualizarKanban();
     </script>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, update, onValue, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-console.log("🔥 FIREBASE INICIANDO...");
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBoLGZgImxHrg_n8Lq12Ppv80m5HLXQKjs",
-  authDomain: "controle-atividade-a6b6d.firebaseapp.com",
-  databaseURL: "https://controle-atividade-a6b6d-default-rtdb.firebaseio.com",
-  projectId: "controle-atividade-a6b6d",
-  storageBucket: "controle-atividade-a6b6d.appspot.com",
-  messagingSenderId: "449852839157",
-  appId: "1:449852839157:web:da90aec3840427f375e1bc"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-const atividadesRef = ref(db, "sistema");
-
-// Exponibilizar função de salva globalmente
-window.salvarNoFirebase = function() {
-    // Preparar dados para enviar
-    const emAndamentoParaSalvar = window.atividadesEmAndamento.map(a => ({
-        id: a.id,
-        nome: a.nome,
-        ticket: a.ticket,
-        dataInicio: a.dataInicio,
-        horaInicio: a.horaInicio,
-        observacao: a.observacao,
-        tempoInicio: a.tempoInicio,
-        descricao: a.descricao
-    }));
-
-    update(atividadesRef, {
-        atividades: window.atividades || [],
-        atividadesEmAndamento: emAndamentoParaSalvar || [],
-        kanbanState: window.kanbanState || {},
-        ultimaAtualizacao: new Date().toISOString(),
-        usuarioUltimo: "app-web"
-    }).catch(error => {
-        console.error("❌ Erro ao salvar no Firebase:", error);
-    });
-
-    console.log("✅ DADOS SINCRONIZADOS COM FIREBASE");
-};
-
-// Listener em tempo real
-let primeiraVez = true;
-onValue(atividadesRef, (snapshot) => {
-    const dados = snapshot.val();
-    if (!dados) {
-        console.log("⚠️ Nenhum dado no Firebase ainda");
-        return;
-    }
-
-    window.isUpdatingFromFirebase = true;
-
-    // Atualizar dados globais
-    window.atividades = dados.atividades || [];
-    window.atividadesEmAndamento = (dados.atividadesEmAndamento || []).map(a => ({
-        ...a,
-        intervaloTimer: null // Restaurar timers
-    }));
-    window.kanbanState = dados.kanbanState || {};
-
-    console.log("🔄 DADOS SINCRONIZADOS DO FIREBASE", {
-        atividadesCompletas: window.atividades.length,
-        emAndamento: window.atividadesEmAndamento.length,
-        kanban: Object.keys(window.kanbanState).length
-    });
-
-    // Atualizar interface
-    if (typeof window.atualizarTabela === 'function') {
-        window.atualizarTabela();
-    }
-    
-    if (typeof window.atualizarKanban === 'function') {
-        window.atualizarKanban();
-    }
-
-    // Reiniciar cronômetros para atividades em andamento
-    if (primeiraVez) {
-        window.atividadesEmAndamento.forEach(atividade => {
-            if (typeof window.iniciarCronometro === 'function') {
-                window.iniciarCronometro(atividade.id);
-            }
-        });
-        primeiraVez = false;
-    }
-
-    window.isUpdatingFromFirebase = false;
-}, (error) => {
-    console.error("❌ Erro ao sincronizar com Firebase:", error);
-});
-
-console.log("✅ FIREBASE CONECTADO E SINCRONIZANDO EM TEMPO REAL");
-</script>
+<!-- 🔥 FIREBASE: Sincronização para Múltiplos Computadores -->
+<script type="module" src="firebase-multiplos-pcs.js"></script>
