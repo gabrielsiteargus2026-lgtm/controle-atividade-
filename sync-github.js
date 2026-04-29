@@ -103,7 +103,11 @@ async function sincronizarComGitHub() {
             if (window.syncChannel) {
                 window.syncChannel.postMessage({
                     tipo: 'atualizacao',
-                    dados: { window.atividadesEmAndamento, window.atividades, window.kanbanState }
+                    dados: {
+                        atividadesEmAndamento: window.atividadesEmAndamento,
+                        atividades: window.atividades,
+                        kanbanState: window.kanbanState
+                    }
                 });
             }
         }
@@ -177,7 +181,11 @@ window.salvarNoFirebase = async function() {
     if (window.syncChannel) {
         window.syncChannel.postMessage({
             tipo: 'atualizacao',
-            dados: { window.atividadesEmAndamento, window.atividades, window.kanbanState }
+            dados: {
+                atividadesEmAndamento: window.atividadesEmAndamento,
+                atividades: window.atividades,
+                kanbanState: window.kanbanState
+            }
         });
     }
 
