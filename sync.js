@@ -1,8 +1,7 @@
 /**
- * 🔥 SINCRONIZAÇÃO FIREBASE - VERSÃO COMPAT (Compatível com index.html)
+ * 🔥 SINCRONIZAÇÃO FIREBASE - VERSÃO COMPAT
  * 
  * Sincroniza dados entre localStorage e Firebase em tempo real
- * 
  * Data: 29/04/2026
  */
 
@@ -12,23 +11,180 @@ console.log("✅ sync.js carregado");
 let db = null;
 let dadosRef = null;
 let tentativasVerificacao = 0;
+let MAX_TENTATIVAS = 50; // 50 segundos
 
 // Aguardar Firebase SDK estar disponível
 function verificarFirebase() {
-    if (typeof firebase === 'undefined') {
-        tentativasVerificacao++;
-        if (tentativasVerificacao <= 30) { // Tentar por até 30 segundos
-            console.log("⏳ Aguardando Firebase SDK... (" + tentativasVerificacao + "s)");
-            setTimeout(verificarFirebase, 1000); // Verificar a cada 1 segundo
-        } else {
-            console.error("❌ CRÍTICO: Firebase SDK não carregou após 30 segundos!");
-        }
+    tentativasVerificacao++;
+    
+    // Verificar se firebase está disponível
+    if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+        console.log("✅ Firebase SDK disponível!");
+        inicializarFirebase();
         return;
     }
 
-    console.log("✅ Firebase SDK disponível!");
-    inicializarFirebase();
+    if (typeof firebase === 'undefined') {
+        console.log("⏳ Aguardando Firebase SDK... (" + tentativasVerificacao + "s)");
+    } else {
+        console.log("⏳ Firebase carregando... (" + tentativasVerificacao + "s)");
+    }
+
+    if (tentativasVerificacao >= MAX_TENTATIVAS) {
+        console.error("❌ CRÍTICO: Firebase SDK não carregou após " + MAX_TENTATIVAS + " segundos!");
+        console.error("Firebase definido?", typeof firebase !== 'undefined');
+        console.error("Firebase apps:", firebase ? firebase.apps : "firebase não existe");
+        return;
+    }
+
+    setTimeout(verificarFirebase, 1000);
 }
+
+// Inicializar Firebase
+function inicializarFirebase() {
+    const config = {
+        apiKey: "AIzaSyBoLGZgImxHrg_n8Lq12Ppv80m5HLXQKjs",
+        authDomain: "controle-atividade-a6b6d.firebaseapp.com",
+        databaseURL: "https://controle-atividade-a6b6d-default-rtdb.firebaseio.com",
+        projectId: "controle-atividade-a6b6d",
+        storageBucket: "controle-atividade-a6b6d.appspot.com",
+        messagingSenderId: "449852839157",
+        appId: "1:449852839157:web:da90aec3840427f375e1bc"
+    };
+
+    try {
+        // Inicializar Firebase (compat)
+        if (firebase.apps.length === 0) {
+            firebase.initializeApp(config);
+            console.log("🔧 Firebase.initializeApp() chamado");
+        }
+        
+        db = firebase.database();
+        dadosRef = db.ref("controle-atividade/dados");
+
+        console.log("✅ Firebase inicializado com sucesso!");
+
+        // Carregar dados ao iniciar
+        carregarDadosInicial();
+
+        // Listener para sincronização em tempo real
+        dadosRef.on('value', (snapshot) => {
+            const dados = snapshot.val();
+            console.log("🔔 Dados do Firebase recebidos:", dados);
+
+            if (dados && dados.atividadesEmAndamento) {
+                // Atualizar localStorage
+                localStorage.setItem('atividadesEmAndamento', JSON.stringify(dados.atividadesEmAndamento || []));
+                localStorage.setItem('atividades', JSON.stringify(dados.atividades || []));
+                localStorage.setItem('kanbanState', JSON.stringify(dados.kanbanState || {}));
+
+                // Atualizar variáveis globais (SEM sobrescrever se forem as mesmas)
+                if (JSON.stringify(window.atividadesEmAndamento) !== JSON.stringify(dados.atividadesEmAndamento)) {
+                    // Preservar timers
+                    dados.atividadesEmAndamento = (dados.atividadesEmAndamento || []).map(novaAtiv => {
+                        const atualAtiv = (window.atividadesEmAndamento || []).find(a => a.id === novaAtiv.id);
+                        return {
+                            ...novaAtiv,
+                            intervaloTimer: atualAtiv ? atualAtiv.intervaloTimer : null
+                        };
+                    });
+
+                    window.atividadesEmAndamento = dados.atividadesEmAndamento || [];
+                    window.atividades = dados.atividades || [];
+                    window.kanbanState = dados.kanbanState || {};
+
+                    // Atualizar interface APENAS se os dados mudarem
+                    if (typeof window.atualizarTabela === 'function') {
+                        try { window.atualizarTabela(); } catch (e) { console.error("Erro ao atualizar tabela:", e); }
+                    }
+                    if (typeof window.atualizarKanban === 'function') {
+                        try { window.atualizarKanban(); } catch (e) { console.error("Erro ao atualizar kanban:", e); }
+                    }
+
+                    console.log("✅ Interface atualizada");
+                }
+            }
+        }, (error) => {
+            console.error("❌ Erro no listener:", error);
+        });
+
+        console.log("✅ Listener ativo!");
+
+    } catch (error) {
+        console.error("❌ Erro ao inicializar Firebase:", error);
+    }
+}
+
+// Carregar dados iniciais
+function carregarDadosInicial() {
+    dadosRef.once('value', (snapshot) => {
+        const dados = snapshot.val();
+        if (dados && dados.atividadesEmAndamento) {
+            console.log("✅ Dados carregados do Firebase ao iniciar");
+            window.atividadesEmAndamento = dados.atividadesEmAndamento || [];
+            window.atividades = dados.atividades || [];
+            window.kanbanState = dados.kanbanState || {};
+
+            localStorage.setItem('atividadesEmAndamento', JSON.stringify(window.atividadesEmAndamento));
+            localStorage.setItem('atividades', JSON.stringify(window.atividades));
+            localStorage.setItem('kanbanState', JSON.stringify(window.kanbanState));
+        } else {
+            console.log("⚠️ Nenhum dado no Firebase, usando localStorage");
+            window.atividadesEmAndamento = JSON.parse(localStorage.getItem('atividadesEmAndamento') || '[]');
+            window.atividades = JSON.parse(localStorage.getItem('atividades') || '[]');
+            window.kanbanState = JSON.parse(localStorage.getItem('kanbanState') || '{}');
+
+            // Enviar dados do localStorage para Firebase
+            if (window.atividadesEmAndamento.length > 0 || window.atividades.length > 0) {
+                console.log("📤 Enviando dados do localStorage para Firebase");
+                const dados = {
+                    atividadesEmAndamento: window.atividadesEmAndamento,
+                    atividades: window.atividades,
+                    kanbanState: window.kanbanState,
+                    ultimaAtualizacao: new Date().toISOString(),
+                    computador: window.location.hostname || 'desconhecido'
+                };
+                dadosRef.set(dados).catch(error => {
+                    console.error("❌ Erro ao enviar dados do localStorage:", error);
+                });
+            }
+        }
+    });
+}
+
+// Função para salvar no Firebase (chamada pelo index.html)
+window.salvarNoFirebase = async function() {
+    if (!dadosRef) {
+        console.warn("⚠️ Firebase não está inicializado, saltando salvar");
+        return;
+    }
+
+    try {
+        const dados = {
+            atividadesEmAndamento: window.atividadesEmAndamento || [],
+            atividades: window.atividades || [],
+            kanbanState: window.kanbanState || {},
+            ultimaAtualizacao: new Date().toISOString(),
+            computador: window.location.hostname || 'desconhecido'
+        };
+
+        console.log("📤 Salvando no Firebase:", {
+            emAndamento: dados.atividadesEmAndamento.length,
+            atividades: dados.atividades.length
+        });
+
+        await dadosRef.set(dados);
+        console.log("✅ Dados salvos no Firebase com sucesso!");
+
+    } catch (error) {
+        console.error("❌ Erro ao salvar no Firebase:", error);
+    }
+};
+
+// Iniciar verificação
+verificarFirebase();
+
+console.log("✅ sync.js iniciado com sucesso");
 
 // Inicializar Firebase
 function inicializarFirebase() {
