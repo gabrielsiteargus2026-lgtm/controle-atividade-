@@ -572,6 +572,8 @@
             grid-template-columns: repeat(3, 1fr);
             gap: 15px;
             margin-top: 15px;
+            max-height: 700px;
+            overflow-y: auto;
         }
 
         .kanban-column {
@@ -597,11 +599,6 @@
             gap: 10px;
         }
 
-        .kanban-column:nth-child(2) .kanban-tasks,
-        .kanban-column:nth-child(3) .kanban-tasks {
-            grid-template-columns: 1fr;
-        }
-
         .kanban-card {
             background: white;
             border: 2px solid #5b8ec6;
@@ -616,6 +613,24 @@
         }
 
         .kanban-column:nth-child(1) .kanban-card {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 10px;
+            min-height: auto;
+        }
+
+        .kanban-column:nth-child(2) .kanban-card {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 10px;
+            min-height: auto;
+        }
+
+        .kanban-column:nth-child(3) .kanban-card {
             aspect-ratio: 1;
             display: flex;
             flex-direction: column;
@@ -640,6 +655,11 @@
             margin-bottom: 4px;
         }
 
+        .kanban-column:nth-child(2) .kanban-card-header,
+        .kanban-column:nth-child(3) .kanban-card-header {
+            margin-bottom: 4px;
+        }
+
         .kanban-card-title {
             font-weight: bold;
             color: #333;
@@ -650,6 +670,11 @@
             font-size: 0.95em;
         }
 
+        .kanban-column:nth-child(2) .kanban-card-title,
+        .kanban-column:nth-child(3) .kanban-card-title {
+            font-size: 0.95em;
+        }
+
         .kanban-card-subtitle {
             font-size: 0.85em;
             color: #666;
@@ -657,6 +682,11 @@
         }
 
         .kanban-column:nth-child(1) .kanban-card-subtitle {
+            font-size: 0.8em;
+        }
+
+        .kanban-column:nth-child(2) .kanban-card-subtitle,
+        .kanban-column:nth-child(3) .kanban-card-subtitle {
             font-size: 0.8em;
         }
 
@@ -672,6 +702,12 @@
             margin-top: 4px;
         }
 
+        .kanban-column:nth-child(2) .kanban-card-actions,
+        .kanban-column:nth-child(3) .kanban-card-actions {
+            gap: 4px;
+            margin-top: 4px;
+        }
+
         .kanban-card-actions button {
             flex: 1;
             padding: 6px 8px;
@@ -679,6 +715,12 @@
         }
 
         .kanban-column:nth-child(1) .kanban-card-actions button {
+            padding: 5px 6px;
+            font-size: 0.8em;
+        }
+
+        .kanban-column:nth-child(2) .kanban-card-actions button,
+        .kanban-column:nth-child(3) .kanban-card-actions button {
             padding: 5px 6px;
             font-size: 0.8em;
         }
@@ -1499,13 +1541,13 @@
                 }
             });
 
-            // Limitar aos 4 últimos concluídos
-            const ultimosConcluidos = todasConcluídas.slice(0, 4);
+            // Mostrar todas as atividades concluídas
+            const todasConcluidas = todasConcluídas;
 
-            if (ultimosConcluidos.length === 0) {
+            if (todasConcluidas.length === 0) {
                 kanbanConcluido.innerHTML = '<div class="kanban-empty">Nenhuma atividade concluída</div>';
             } else {
-                kanbanConcluido.innerHTML = ultimosConcluidos.map(atividade => {
+                kanbanConcluido.innerHTML = todasConcluidas.map(atividade => {
                     return `
                         <div class="kanban-card" style="opacity: 0.7;">
                             <div class="kanban-card-header">
