@@ -596,6 +596,21 @@
             }
         }
     </style>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        // Inicializar Firebase
+        if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('COLE_AQUI')) {
+            firebase.initializeApp(FIREBASE_CONFIG);
+            window.db = firebase.database();
+            window.FIREBASE_OK = true;
+        } else {
+            window.FIREBASE_OK = false;
+            console.warn('⚠️ Firebase não configurado. Usando localStorage temporariamente.');
+        }
+    </script>
 </head>
 <body>
     <div class="container">
@@ -799,9 +814,6 @@
         let atividadeConcluindo = null;
         let filtroAtivo = false;
         let atividadesFiltradas = [];
-        let firebaseRef = null;
-        let syncTimeout = null;
-        let isUpdatingFromFirebase = false;
 
         // Elementos do DOM
         const inputNome = document.getElementById('nome');
@@ -836,63 +848,80 @@
         const btnAplicarFiltros = document.getElementById('btnAplicarFiltros');
         const btnLimparFiltros = document.getElementById('btnLimparFiltros');
 
-        // Carregar dados do localStorage
+        // ✅ Carregar dados do Firebase (com fallback para localStorage)
         function carregarDados() {
-            const dadosSalvos = localStorage.getItem('atividades');
-            if (dadosSalvos) {
-                atividades = JSON.parse(dadosSalvos);
-                atualizarTabela();
-            }
+            if (window.FIREBASE_OK) {
+                // Listener em tempo real — sincroniza automaticamente entre computadores
+                db.ref('/').on('value', (snapshot) => {
+                    const dados = snapshot.val() || {};
 
-            // Carregar atividades em andamento
-            const emAndamentoSalvas = localStorage.getItem('atividadesEmAndamento');
-            if (emAndamentoSalvas) {
-                const parsed = JSON.parse(emAndamentoSalvas);
-                atividadesEmAndamento = parsed.map(a => ({
-                    ...a,
-                    tempoInicio: a.tempoInicio // Restaura o tempo original
-                }));
-                
-                // Reiniciar cronômetros para todas as atividades
-                atividadesEmAndamento.forEach(atividade => {
-                    iniciarCronometro(atividade.id);
+                    atividades = dados.atividades || [];
+                    atualizarTabela();
+
+                    const emAndamentoSalvas = dados.atividadesEmAndamento || [];
+                    const novosIds = emAndamentoSalvas.map(a => a.id);
+
+                    // Limpar cronômetros removidos
+                    atividadesEmAndamento.forEach(a => {
+                        if (!novosIds.includes(a.id) && a.intervaloTimer) {
+                            clearInterval(a.intervaloTimer);
+                        }
+                    });
+
+                    atividadesEmAndamento = emAndamentoSalvas.map(a => {
+                        const existente = atividadesEmAndamento.find(e => e.id === a.id);
+                        return { ...a, intervaloTimer: existente ? existente.intervaloTimer : null };
+                    });
+
+                    // Reiniciar cronômetros para atividades sem timer
+                    atividadesEmAndamento.forEach(atividade => {
+                        if (!atividade.intervaloTimer) {
+                            iniciarCronometro(atividade.id);
+                        }
+                    });
+
+                    kanbanState = dados.kanbanState || {};
+                    atualizarKanban();
                 });
-            }
-
-            // Carregar estado do kanban
-            const kanbanSalvo = localStorage.getItem('kanbanState');
-            if (kanbanSalvo) {
-                kanbanState = JSON.parse(kanbanSalvo);
+            } else {
+                // Fallback: localStorage
+                const dadosSalvos = localStorage.getItem('atividades');
+                if (dadosSalvos) { atividades = JSON.parse(dadosSalvos); atualizarTabela(); }
+                const emAndamentoSalvas = localStorage.getItem('atividadesEmAndamento');
+                if (emAndamentoSalvas) {
+                    atividadesEmAndamento = JSON.parse(emAndamentoSalvas).map(a => ({ ...a, tempoInicio: a.tempoInicio }));
+                    atividadesEmAndamento.forEach(a => iniciarCronometro(a.id));
+                }
+                const kanbanSalvo = localStorage.getItem('kanbanState');
+                if (kanbanSalvo) { kanbanState = JSON.parse(kanbanSalvo); }
             }
         }
 
-        // Salvar dados no localStorage
-  function salvarDados() {
-    // Preparar dados sem funções
-    const emAndamentoParaSalvar = atividadesEmAndamento.map(a => ({
-        id: a.id,
-        nome: a.nome,
-        ticket: a.ticket,
-        dataInicio: a.dataInicio,
-        horaInicio: a.horaInicio,
-        observacao: a.observacao,
-        tempoInicio: a.tempoInicio,
-        descricao: a.descricao
-    }));
+        // ✅ Salvar dados no Firebase (com fallback para localStorage)
+        function salvarDados() {
+            const emAndamentoParaSalvar = atividadesEmAndamento.map(a => ({
+                id: a.id,
+                nome: a.nome,
+                ticket: a.ticket,
+                dataInicio: a.dataInicio,
+                horaInicio: a.horaInicio,
+                observacao: a.observacao,
+                tempoInicio: a.tempoInicio
+            }));
 
-    // Salvar LOCAL
-    localStorage.setItem('atividades', JSON.stringify(atividades));
-    localStorage.setItem('atividadesEmAndamento', JSON.stringify(emAndamentoParaSalvar));
-    localStorage.setItem('kanbanState', JSON.stringify(kanbanState));
+            if (window.FIREBASE_OK) {
+                db.ref('/').set({
+                    atividades: atividades,
+                    atividadesEmAndamento: emAndamentoParaSalvar,
+                    kanbanState: kanbanState
+                }).catch(err => console.error('Erro ao salvar no Firebase:', err));
+            } else {
+                localStorage.setItem('atividades', JSON.stringify(atividades));
+                localStorage.setItem('atividadesEmAndamento', JSON.stringify(emAndamentoParaSalvar));
+                localStorage.setItem('kanbanState', JSON.stringify(kanbanState));
+            }
+        }
 
-    // Salvar FIREBASE (apenas se houver referência disponível)
-    if (window.salvarNoFirebase && typeof window.salvarNoFirebase === 'function') {
-        clearTimeout(syncTimeout);
-        syncTimeout = setTimeout(() => {
-            window.salvarNoFirebase();
-        }, 500); // Debounce de 500ms para evitar múltiplas requisições
-    }
-}
         // Formatar tempo
         function formatarTempo(ms) {
             const totalSegundos = Math.floor(ms / 1000);
@@ -937,8 +966,7 @@
             // Adicionar ao estado do kanban
             kanbanState[novaAtividade.id] = { status: 'em_andamento', motivoPausa: '' };
 
-            salvarDados(); // Agora salva em Firebase automaticamente
-            
+            salvarDados();
             atualizarKanban();
             iniciarCronometro(novaAtividade.id);
 
@@ -996,8 +1024,7 @@
             // Remover do estado do kanban
             delete kanbanState[atividade.id];
             
-            salvarDados(); // Sincroniza automaticamente com Firebase
-            
+            salvarDados();
             atualizarTabela();
             atualizarKanban();
 
@@ -1186,13 +1213,7 @@
             kanbanState[atividadePausando].status = 'pausado';
             kanbanState[atividadePausando].motivoPausa = motivo;
 
-            const atividade = atividadesEmAndamento.find(a => a.id === atividadePausando);
-            if (atividade) {
-                atividade.observacao = motivo; // Salvar motivo
-            }
-
-            salvarDados(); // Sincroniza automaticamente com Firebase
-            
+            salvarDados();
             atualizarKanban();
             fecharModalPausarAtividade();
             mostrarAlerta('sucesso', 'Atividade pausada com sucesso!');
@@ -1202,9 +1223,7 @@
         function retomarAtividade(atividadeId) {
             kanbanState[atividadeId].status = 'em_andamento';
             kanbanState[atividadeId].motivoPausa = '';
-            
-            salvarDados(); // Sincroniza automaticamente com Firebase
-            
+            salvarDados();
             atualizarKanban();
             mostrarAlerta('sucesso', 'Atividade retomada!');
         }
@@ -1396,7 +1415,7 @@
             // Adicionar atividades concluídas
             atividades.forEach(atividade => {
                 todasAsAtividades.push({
-                    id: atividade.id,
+                    id: Math.random(),
                     colaborador: atividade.colaborador,
                     ticket: atividade.ticket,
                     data: atividade.dataInicio,
@@ -1561,17 +1580,15 @@
             }
         });
 
-       // Event Listeners dos Filtros
-btnAplicarFiltros.addEventListener('click', aplicarFiltros);
-btnLimparFiltros.addEventListener('click', limparFiltros);
+        // Event Listeners dos Filtros
+        btnAplicarFiltros.addEventListener('click', aplicarFiltros);
+        btnLimparFiltros.addEventListener('click', limparFiltros);
 
-// 🔥 CARREGAR DADOS AO INICIAR
-carregarDados();
+        // Carregar dados ao iniciar
+        carregarDados();
 
-// Atualizar interface
-atualizarTabela();
-atualizarKanban();
+        // Atualizar kanban inicial
+        atualizarKanban();
     </script>
-
-<!-- 🔥 SINCRONIZAÇÃO - JSONBin para múltiplos PCs (FUNCIONA!) -->
-<script src="sync-real.js"></script>
+</body>
+</html>

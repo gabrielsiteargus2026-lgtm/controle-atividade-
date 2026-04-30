@@ -232,6 +232,19 @@
             font-weight: bold;
         }
     </style>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('COLE_AQUI')) {
+            firebase.initializeApp(FIREBASE_CONFIG);
+            window.db = firebase.database();
+            window.FIREBASE_OK = true;
+        } else {
+            window.FIREBASE_OK = false;
+        }
+    </script>
 </head>
 <body>
     <div class="container">
@@ -277,18 +290,22 @@
         let atividades = [];
         let atividadesEmAndamento = [];
 
-        // Carregar dados do localStorage
+        // ✅ Carregar dados do Firebase com atualização em tempo real
         function carregarDados() {
-            const dadosSalvos = localStorage.getItem('atividades');
-            const emAndamentoSalvos = localStorage.getItem('atividadesEmAndamento');
-            
-            if (dadosSalvos) {
-                atividades = JSON.parse(dadosSalvos);
-            }
-
-            // Atividades em andamento não são salvas, mas podemos tentar carregar
-            if (emAndamentoSalvos) {
-                atividadesEmAndamento = JSON.parse(emAndamentoSalvos);
+            if (window.FIREBASE_OK) {
+                db.ref('/').on('value', (snapshot) => {
+                    const dados = snapshot.val() || {};
+                    atividades = dados.atividades || [];
+                    atividadesEmAndamento = dados.atividadesEmAndamento || [];
+                    atualizarRanking();
+                    ultimaAtualizacao.textContent = new Date().toLocaleTimeString('pt-BR');
+                });
+            } else {
+                // Fallback localStorage
+                const dadosSalvos = localStorage.getItem('atividades');
+                const emAndamentoSalvos = localStorage.getItem('atividadesEmAndamento');
+                if (dadosSalvos) atividades = JSON.parse(dadosSalvos);
+                if (emAndamentoSalvos) atividadesEmAndamento = JSON.parse(emAndamentoSalvos);
             }
         }
 
@@ -410,13 +427,12 @@
         filtroData.addEventListener('change', atualizarRanking);
 
         // Atualizar a cada 2 segundos
-        setInterval(() => {
-            carregarDados();
-            atualizarRanking();
-        }, 2000);
-
-        // Inicializar
+        // Inicializar (Firebase já faz atualização em tempo real, sem necessidade de polling)
         carregarDados();
+        // Fallback: polling a cada 2s apenas se Firebase não estiver configurado
+        if (!window.FIREBASE_OK) {
+            setInterval(() => { carregarDados(); atualizarRanking(); }, 2000);
+        }
 
         // Definir data padrão como hoje
         const hoje = new Date();

@@ -136,6 +136,19 @@
             font-weight: bold;
         }
     </style>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('COLE_AQUI')) {
+            firebase.initializeApp(FIREBASE_CONFIG);
+            window.db = firebase.database();
+            window.FIREBASE_OK = true;
+        } else {
+            window.FIREBASE_OK = false;
+        }
+    </script>
 </head>
 <body>
     <div class="container">
@@ -177,16 +190,20 @@
         let atividades = [];
         let atividadesEmAndamento = [];
 
+        // ✅ Carregar dados do Firebase com atualização em tempo real
         function carregarDados() {
-            const dadosSalvos = localStorage.getItem('atividades');
-            const emAndamentoSalvos = localStorage.getItem('atividadesEmAndamento');
-            
-            if (dadosSalvos) {
-                atividades = JSON.parse(dadosSalvos);
-            }
-
-            if (emAndamentoSalvos) {
-                atividadesEmAndamento = JSON.parse(emAndamentoSalvos);
+            if (window.FIREBASE_OK) {
+                db.ref('/').on('value', (snapshot) => {
+                    const dados = snapshot.val() || {};
+                    atividades = dados.atividades || [];
+                    atividadesEmAndamento = dados.atividadesEmAndamento || [];
+                    formatarJSON();
+                });
+            } else {
+                const dadosSalvos = localStorage.getItem('atividades');
+                const emAndamentoSalvos = localStorage.getItem('atividadesEmAndamento');
+                if (dadosSalvos) atividades = JSON.parse(dadosSalvos);
+                if (emAndamentoSalvos) atividadesEmAndamento = JSON.parse(emAndamentoSalvos);
             }
         }
 
@@ -280,13 +297,11 @@
             formatarJSON();
         }
 
-        // Atualizar a cada 2 segundos
-        setInterval(() => {
-            formatarJSON();
-        }, 2000);
-
         // Inicialização
-        formatarJSON();
+        carregarDados();
+        if (!window.FIREBASE_OK) {
+            setInterval(() => { carregarDados(); formatarJSON(); }, 2000);
+        }
     </script>
 </body>
 </html>
