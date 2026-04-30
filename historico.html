@@ -317,6 +317,7 @@
                             <th>Ticket</th>
                             <th>Data de Início</th>
                             <th>Hora de Início</th>
+                            <th>Data de Fim</th>
                             <th>Hora de Fim</th>
                             <th>Duração</th>
                             <th>Observação</th>
@@ -325,7 +326,7 @@
                     </thead>
                     <tbody id="bodyTabela">
                         <tr>
-                            <td colspan="8" class="empty-state">Nenhuma atividade registrada ainda</td>
+                            <td colspan="9" class="empty-state">Nenhuma atividade registrada ainda</td>
                         </tr>
                     </tbody>
                 </table>
@@ -378,7 +379,7 @@
         // Renderizar tabela
         function renderizarTabela() {
             if (atividades.length === 0) {
-                bodyTabela.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhuma atividade registrada ainda</td></tr>';
+                bodyTabela.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhuma atividade registrada ainda</td></tr>';
                 return;
             }
 
@@ -388,6 +389,7 @@
                     <td>${atividade.ticket}</td>
                     <td>${atividade.dataInicio}</td>
                     <td>${atividade.horaInicio}</td>
+                    <td>${atividade.dataFim || '-'}</td>
                     <td>${atividade.horaFim}</td>
                     <td>${atividade.duracao}</td>
                     <td>${atividade.observacao || '-'}</td>
@@ -403,10 +405,10 @@
                 return;
             }
 
-            const headers = ['Colaborador', 'Ticket', 'Data de Início', 'Hora de Início', 'Hora de Fim', 'Duração', 'Observação', 'Justificativa'];
+            const headers = ['Colaborador', 'Ticket', 'Data de Início', 'Hora de Início', 'Data de Fim', 'Hora de Fim', 'Duração', 'Observação', 'Justificativa'];
             const csv = [
                 headers.join(','),
-                ...atividades.map(a => [a.colaborador, a.ticket, a.dataInicio, a.horaInicio, a.horaFim, a.duracao, a.observacao || '', a.justificativa || ''].join(','))
+                ...atividades.map(a => [a.colaborador, a.ticket, a.dataInicio, a.horaInicio, a.dataFim || '', a.horaFim, a.duracao, a.observacao || '', a.justificativa || ''].join(','))
             ].join('\n');
 
             const blob = new Blob([csv], { type: 'text/csv' });
@@ -431,7 +433,7 @@
 
         // Confirmar limpar histórico
         btnConfirmarLimpar.addEventListener('click', () => {
-            if (inputSenhaLimpar.value === 'argus2024') {
+            if (inputSenhaLimpar.value === 'Argus2026@') {
                 if (window.FIREBASE_OK) {
                     window.db.ref('atividades').remove();
                 } else {

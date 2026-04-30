@@ -1028,6 +1028,7 @@
                     atividade: atividade,
                     index: index,
                     duracao: duracao,
+                    dataFim: agora.toLocaleDateString('pt-BR'),
                     horaFim: agora.toLocaleTimeString('pt-BR')
                 };
                 modalJustificativa.style.display = 'block';
@@ -1035,11 +1036,11 @@
             }
 
             // Se não passou 12 horas, finalizar normalmente
-            finalizarComDados(index, atividade, duracao, agora.toLocaleTimeString('pt-BR'), '');
+            finalizarComDados(index, atividade, duracao, agora.toLocaleDateString('pt-BR'), agora.toLocaleTimeString('pt-BR'), '');
         }
 
         // Finalizar com dados completos
-        function finalizarComDados(index, atividade, duracao, horaFim, justificativa) {
+        function finalizarComDados(index, atividade, duracao, dataFim, horaFim, justificativa) {
             clearInterval(atividade.intervaloTimer);
 
             atividades.unshift({
@@ -1047,6 +1048,7 @@
                 ticket: atividade.ticket,
                 dataInicio: atividade.dataInicio,
                 horaInicio: atividade.horaInicio,
+                dataFim: dataFim,
                 horaFim: horaFim,
                 duracao: formatarTempo(duracao),
                 observacao: atividade.descricao || atividade.observacao,
@@ -1126,8 +1128,8 @@
                 return;
             }
 
-            const { atividade, index, duracao, horaFim } = atividadeEmFinalizacao;
-            finalizarComDados(index, atividade, duracao, horaFim, justificativa);
+            const { atividade, index, duracao, dataFim, horaFim } = atividadeEmFinalizacao;
+            finalizarComDados(index, atividade, duracao, dataFim, horaFim, justificativa);
 
             modalJustificativa.style.display = 'none';
             txtJustificativa.value = '';
