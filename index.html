@@ -1058,7 +1058,6 @@
         const filtroColaborador = document.getElementById('filtroColaborador');
         const filtroData = document.getElementById('filtroData');
         const filtroStatus = document.getElementById('filtroStatus');
-        const filtroTicket = document.getElementById('filtroTicket');
         const btnAplicarFiltros = document.getElementById('btnAplicarFiltros');
         const btnLimparFiltros = document.getElementById('btnLimparFiltros');
 
@@ -1624,7 +1623,6 @@
             const colaborador = filtroColaborador.value;
             const data = filtroData.value;
             const status = filtroStatus.value;
-            const ticket = filtroTicket.value;
 
             let todasAsAtividades = obterTodasAsAtividades();
 
@@ -1644,10 +1642,6 @@
                     passa = false;
                 }
 
-                if (ticket && atividade.ticket != ticket) {
-                    passa = false;
-                }
-
                 return passa;
             });
 
@@ -1660,7 +1654,6 @@
             filtroColaborador.value = '';
             filtroData.value = '';
             filtroStatus.value = '';
-            filtroTicket.value = '';
             atividadesFiltradas = [];
             filtroAtivo = false;
             atualizarKanban();
