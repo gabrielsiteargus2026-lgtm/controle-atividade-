@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico de Atividades - Controle</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Menu Lateral */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: #2c3e50;
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .sidebar-logo {
+            width: 100%;
+            height: 80px;
+            object-fit: contain;
+            margin-bottom: 30px;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 10px;
+        }
+
+        .sidebar-menu a {
+            display: block;
+            padding: 12px 15px;
+            color: #ecf0f1;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .sidebar-menu a:hover {
+            background: #5b8ec6;
+            color: white;
+            padding-left: 20px;
+        }
+
+        .sidebar-menu a.active {
+            background: #5b8ec6;
+            color: white;
+            border-left: 4px solid #fff;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            margin-left: 280px;
+        }
+
+        .header {
+            position: relative;
+            margin-bottom: 30px;
+            padding-top: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 5px;
+            color: #2c3e50;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        thead {
+            background: #5b8ec6;
+            color: white;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tbody tr:hover {
+            background: #f5f5f5;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 14px 20px;
+            font-size: 1em;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-export {
+            background: #4dabf7;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-export:hover {
+            background: #339af0;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(77, 171, 247, 0.4);
+        }
+
+        .btn-limpar-historico {
+            background: #ff8c00;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-limpar-historico:hover {
+            background: #e67e00;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 140, 0, 0.4);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-body input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 1em;
+            margin-top: 10px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-footer button {
+            padding: 10px 20px;
+            font-size: 1em;
+        }
+
+        .btn-primary {
+            background: #5b8ec6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #4a75b0;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(91, 142, 198, 0.4);
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin-left: 0;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+
+            table {
+                font-size: 0.9em;
+            }
+
+            th, td {
+                padding: 10px;
+            }
+        }
+    </style>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        // Inicializar Firebase
+        if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('COLE_AQUI')) {
+            firebase.initializeApp(FIREBASE_CONFIG);
+            window.db = firebase.database();
+            window.FIREBASE_OK = true;
+        } else {
+            window.FIREBASE_OK = false;
+            console.warn('⚠️ Firebase não configurado. Usando localStorage temporariamente.');
+        }
+    </script>
+</head>
+<body>
+    <!-- Menu Lateral -->
+    <aside class="sidebar">
+        <img src="argus-logo 1.png" alt="Argus" class="sidebar-logo">
+        <nav>
+            <ul class="sidebar-menu">
+                <li><a href="index.html">📊 Controle de Atividade</a></li>
+                <li><a href="historico.html" class="active">📋 Histórico</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <div class="container">
+        <div class="header">
+            <h1>Histórico de Atividades</h1>
+        </div>
+
+        <!-- Histórico de Atividades -->
+        <div class="card">
+            <h2>📊 Relatório de Atividades</h2>
+            <div class="action-buttons">
+                <button class="btn-export" id="btnExportar">📥 Exportar para CSV</button>
+                <button class="btn-limpar-historico" id="btnLimparHistorico">🗑️ Limpar Histórico</button>
+            </div>
+            <div class="table-container">
+                <table id="tabelaAtividades">
+                    <thead>
+                        <tr>
+                            <th>Colaborador</th>
+                            <th>Ticket</th>
+                            <th>Data de Início</th>
+                            <th>Hora de Início</th>
+                            <th>Hora de Fim</th>
+                            <th>Duração</th>
+                            <th>Observação</th>
+                            <th>Justificativa</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bodyTabela">
+                        <tr>
+                            <td colspan="8" class="empty-state">Nenhuma atividade registrada ainda</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Confirmar Limpar Histórico -->
+    <div id="modalLimparHistorico" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">⚠️ Limpar Histórico</div>
+            <div class="modal-body">
+                <p>Para limpar o histórico de atividades, digite a senha:</p>
+                <input type="password" id="inputSenhaLimpar" placeholder="Digite a senha">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-danger" id="btnCancelarLimpar" style="background: #999;">Cancelar</button>
+                <button class="btn-danger" id="btnConfirmarLimpar">Limpar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Elementos do DOM
+        const bodyTabela = document.getElementById('bodyTabela');
+        const btnExportar = document.getElementById('btnExportar');
+        const btnLimparHistorico = document.getElementById('btnLimparHistorico');
+        const modalLimparHistorico = document.getElementById('modalLimparHistorico');
+        const inputSenhaLimpar = document.getElementById('inputSenhaLimpar');
+        const btnCancelarLimpar = document.getElementById('btnCancelarLimpar');
+        const btnConfirmarLimpar = document.getElementById('btnConfirmarLimpar');
+
+        let atividades = [];
+
+        // Carregar dados do Firebase ou localStorage
+        function carregarAtividades() {
+            if (window.FIREBASE_OK) {
+                window.db.ref('atividades').on('value', (snapshot) => {
+                    const dados = snapshot.val();
+                    atividades = dados ? Object.values(dados) : [];
+                    renderizarTabela();
+                });
+            } else {
+                const dados = localStorage.getItem('atividades');
+                atividades = dados ? JSON.parse(dados) : [];
+                renderizarTabela();
+            }
+        }
+
+        // Renderizar tabela
+        function renderizarTabela() {
+            if (atividades.length === 0) {
+                bodyTabela.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhuma atividade registrada ainda</td></tr>';
+                return;
+            }
+
+            bodyTabela.innerHTML = atividades.map((atividade, index) => `
+                <tr>
+                    <td>${atividade.colaborador}</td>
+                    <td>${atividade.ticket}</td>
+                    <td>${atividade.dataInicio}</td>
+                    <td>${atividade.horaInicio}</td>
+                    <td>${atividade.horaFim}</td>
+                    <td>${atividade.duracao}</td>
+                    <td>${atividade.observacao || '-'}</td>
+                    <td>${atividade.justificativa || '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Exportar para CSV
+        btnExportar.addEventListener('click', () => {
+            if (atividades.length === 0) {
+                alert('Não há atividades para exportar!');
+                return;
+            }
+
+            const headers = ['Colaborador', 'Ticket', 'Data de Início', 'Hora de Início', 'Hora de Fim', 'Duração', 'Observação', 'Justificativa'];
+            const csv = [
+                headers.join(','),
+                ...atividades.map(a => [a.colaborador, a.ticket, a.dataInicio, a.horaInicio, a.horaFim, a.duracao, a.observacao || '', a.justificativa || ''].join(','))
+            ].join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `historico_atividades_${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        });
+
+        // Abrir modal de limpar histórico
+        btnLimparHistorico.addEventListener('click', () => {
+            modalLimparHistorico.style.display = 'block';
+        });
+
+        // Cancelar limpar histórico
+        btnCancelarLimpar.addEventListener('click', () => {
+            modalLimparHistorico.style.display = 'none';
+            inputSenhaLimpar.value = '';
+        });
+
+        // Confirmar limpar histórico
+        btnConfirmarLimpar.addEventListener('click', () => {
+            if (inputSenhaLimpar.value === 'argus2024') {
+                if (window.FIREBASE_OK) {
+                    window.db.ref('atividades').remove();
+                } else {
+                    localStorage.removeItem('atividades');
+                }
+                atividades = [];
+                renderizarTabela();
+                modalLimparHistorico.style.display = 'none';
+                inputSenhaLimpar.value = '';
+                alert('✅ Histórico limpo com sucesso!');
+            } else {
+                alert('❌ Senha incorreta!');
+                inputSenhaLimpar.value = '';
+            }
+        });
+
+        // Fechar modal ao clicar fora
+        window.addEventListener('click', (e) => {
+            if (e.target === modalLimparHistorico) {
+                modalLimparHistorico.style.display = 'none';
+                inputSenhaLimpar.value = '';
+            }
+        });
+
+        // Carregar atividades ao abrir a página
+        carregarAtividades();
+    </script>
+</body>
+</html>

@@ -18,6 +18,57 @@
             padding: 20px;
         }
 
+        /* Menu Lateral */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: #2c3e50;
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .sidebar-logo {
+            width: 100%;
+            height: 80px;
+            object-fit: contain;
+            margin-bottom: 30px;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 10px;
+        }
+
+        .sidebar-menu a {
+            display: block;
+            padding: 12px 15px;
+            color: #ecf0f1;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .sidebar-menu a:hover {
+            background: #5b8ec6;
+            color: white;
+            padding-left: 20px;
+        }
+
+        .sidebar-menu a.active {
+            background: #5b8ec6;
+            color: white;
+            border-left: 4px solid #fff;
+        }
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
@@ -632,8 +683,18 @@
     </script>
 </head>
 <body>
+    <!-- Menu Lateral -->
+    <aside class="sidebar">
+        <img src="argus-logo 1.png" alt="Argus" class="sidebar-logo">
+        <nav>
+            <ul class="sidebar-menu">
+                <li><a href="index.html" class="active">📊 Controle de Atividade</a></li>
+                <li><a href="historico.html">📋 Histórico</a></li>
+            </ul>
+        </nav>
+    </aside>
+
     <div class="container">
-        <img src="argus-logo 1.png" alt="Argus" class="header-logo">
         <div class="header">
             <h1>Controle de Atividade</h1>
         </div>
@@ -776,49 +837,10 @@
         </div>
 
         <!-- Modal para Confirmar Limpar Histórico -->
-        <div id="modalLimparHistorico" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">⚠️ Limpar Histórico</div>
-                <div class="modal-body">
-                    <p>Para limpar o histórico de atividades, digite a senha:</p>
-                    <input type="password" id="inputSenhaLimpar" placeholder="Digite a senha" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 1em; margin-top: 10px;">
-                </div>
-                <div class="modal-footer">
-                    <button class="btn-danger" id="btnCancelarLimpar" style="background: #999;">Cancelar</button>
-                    <button class="btn-danger" id="btnConfirmarLimpar">Limpar</button>
-                </div>
-            </div>
-        </div>
+        <!-- Movido para historico.html -->
 
         <!-- Histórico de Atividades -->
-        <div class="card">
-            <h2>Histórico de Atividades</h2>
-            <div class="action-buttons">
-                <button class="btn-export" id="btnExportar">📥 Exportar para CSV</button>
-                <button class="btn-limpar-historico" id="btnLimparHistorico">🗑️ Limpar Histórico</button>
-            </div>
-            <div class="table-container">
-                <table id="tabelaAtividades">
-                    <thead>
-                        <tr>
-                            <th>Colaborador</th>
-                            <th>Ticket</th>
-                            <th>Data de Início</th>
-                            <th>Hora de Início</th>
-                            <th>Hora de Fim</th>
-                            <th>Duração</th>
-                            <th>Observação</th>
-                            <th>Justificativa</th>
-                        </tr>
-                    </thead>
-                    <tbody id="bodyTabela">
-                        <tr>
-                            <td colspan="7" class="empty-state">Nenhuma atividade registrada ainda</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <!-- Movido para historico.html -->
             </div>
         </div>
     </div>
@@ -838,16 +860,9 @@
         const inputNome = document.getElementById('nome');
         const inputTicket = document.getElementById('ticket');
         const btnIniciar = document.getElementById('btnIniciar');
-        const bodyTabela = document.getElementById('bodyTabela');
-        const btnExportar = document.getElementById('btnExportar');
-        const btnLimparHistorico = document.getElementById('btnLimparHistorico');
         const modalJustificativa = document.getElementById('modalJustificativa');
         const txtJustificativa = document.getElementById('txtJustificativa');
         const btnConfirmarJustificativa = document.getElementById('btnConfirmarJustificativa');
-        const modalLimparHistorico = document.getElementById('modalLimparHistorico');
-        const inputSenhaLimpar = document.getElementById('inputSenhaLimpar');
-        const btnCancelarLimpar = document.getElementById('btnCancelarLimpar');
-        const btnConfirmarLimpar = document.getElementById('btnConfirmarLimpar');
         const modalPausarAtividade = document.getElementById('modalPausarAtividade');
         const txtMotivoPausa = document.getElementById('txtMotivoPausa');
         const btnCancelarPausa = document.getElementById('btnCancelarPausa');
@@ -1077,25 +1092,9 @@
             }
         }
 
-        // Atualizar tabela
+        // Atualizar tabela - Removido (histórico moved to historico.html)
         function atualizarTabela() {
-            if (atividades.length === 0) {
-                bodyTabela.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhuma atividade registrada ainda</td></tr>';
-                return;
-            }
-
-            bodyTabela.innerHTML = atividades.map((atividade, index) => `
-                <tr>
-                    <td>${atividade.colaborador}</td>
-                    <td>${atividade.ticket}</td>
-                    <td>${atividade.dataInicio}</td>
-                    <td>${atividade.horaInicio}</td>
-                    <td>${atividade.horaFim}</td>
-                    <td><strong>${atividade.duracao}</strong></td>
-                    <td>${atividade.observacao || '-'}</td>
-                    <td>${atividade.justificativa || '-'}</td>
-                </tr>
-            `).join('');
+            // Apenas mantém o sincronismo de dados
         }
 
         // Atualizar ranking
@@ -1114,76 +1113,8 @@
             setTimeout(() => alertDiv.remove(), 4000);
         }
 
-        // Exportar para CSV
-        function exportarCSV() {
-            if (atividades.length === 0) {
-                mostrarAlerta('erro', 'Não há atividades para exportar');
-                return;
-            }
-
-            let csv = 'Colaborador,Ticket,Data de Início,Hora de Início,Hora de Fim,Duração,Observação,Justificativa\n';
-            atividades.forEach(atividade => {
-                const observacao = atividade.observacao ? `"${atividade.observacao}"` : '-';
-                const justificativa = atividade.justificativa ? `"${atividade.justificativa}"` : '-';
-                csv += `${atividade.colaborador},${atividade.ticket},${atividade.dataInicio},${atividade.horaInicio},${atividade.horaFim},${atividade.duracao},${observacao},${justificativa}\n`;
-            });
-
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-
-            link.setAttribute('href', url);
-            link.setAttribute('download', `atividades-${new Date().toISOString().split('T')[0]}.csv`);
-            link.style.visibility = 'hidden';
-
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            mostrarAlerta('sucesso', 'Arquivo exportado com sucesso!');
-        }
-
-        // Abrir modal de limpar histórico
-        function abrirModalLimparHistorico() {
-            inputSenhaLimpar.value = '';
-            modalLimparHistorico.style.display = 'block';
-            inputSenhaLimpar.focus();
-        }
-
-        // Fechar modal de limpar histórico
-        function fecharModalLimparHistorico() {
-            modalLimparHistorico.style.display = 'none';
-            inputSenhaLimpar.value = '';
-        }
-
-        // Validar senha e limpar histórico
-        function confirmarLimparHistorico() {
-            const senhaDigitada = inputSenhaLimpar.value;
-            const senhaCorreta = 'Argus2026@';
-
-            if (senhaDigitada !== senhaCorreta) {
-                mostrarAlerta('erro', 'Senha incorreta!');
-                inputSenhaLimpar.value = '';
-                inputSenhaLimpar.focus();
-                return;
-            }
-
-            // Limpar histórico e kanban concluído
-            atividades = [];
-            
-            // Remover concluídos do kanban
-            Object.keys(kanbanState).forEach(id => {
-                if (kanbanState[id].status === 'concluido') {
-                    delete kanbanState[id];
-                }
-            });
-            
-            salvarDados();
-            atualizarTabela();
-            atualizarKanban();
-            fecharModalLimparHistorico();
-            mostrarAlerta('sucesso', 'Histórico de atividades e concluídos do kanban foram limpos com sucesso!');
-        }
+        // Exportar para CSV - Movido para historico.html
+        // Abrir/Fechar modal de limpar histórico - Movido para historico.html
 
         // Confirmar justificativa
         function confirmarJustificativa() {
@@ -1572,10 +1503,6 @@
         // Event Listeners
         btnIniciar.addEventListener('click', iniciarAtividade);
         btnConfirmarJustificativa.addEventListener('click', confirmarJustificativa);
-        btnExportar.addEventListener('click', exportarCSV);
-        btnLimparHistorico.addEventListener('click', abrirModalLimparHistorico);
-        btnCancelarLimpar.addEventListener('click', fecharModalLimparHistorico);
-        btnConfirmarLimpar.addEventListener('click', confirmarLimparHistorico);
         btnCancelarPausa.addEventListener('click', fecharModalPausarAtividade);
         btnConfirmarPausa.addEventListener('click', confirmarPausarAtividade);
         btnCancelarObsConcluir.addEventListener('click', fecharModalObservacao);
@@ -1589,13 +1516,6 @@
         txtObservacaoConcluir.addEventListener('keypress', function(e) {
             if (e.key === 'Enter' && e.ctrlKey) {
                 confirmarConcluirComObs();
-            }
-        });
-
-        // Permitir Enter no input de senha
-        inputSenhaLimpar.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                confirmarLimparHistorico();
             }
         });
 
