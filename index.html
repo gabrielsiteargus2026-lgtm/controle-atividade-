@@ -591,14 +591,32 @@
             border-bottom: 2px solid #5b8ec6;
         }
 
+        .kanban-tasks {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .kanban-column:nth-child(2) .kanban-tasks,
+        .kanban-column:nth-child(3) .kanban-tasks {
+            grid-template-columns: 1fr;
+        }
+
         .kanban-card {
             background: white;
             border: 2px solid #5b8ec6;
             border-radius: 6px;
             padding: 12px;
-            margin-bottom: 12px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             transition: all 0.3s;
+        }
+
+        .kanban-column:nth-child(1) .kanban-card {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 10px;
         }
 
         .kanban-card:hover {
@@ -610,7 +628,11 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
+        }
+
+        .kanban-column:nth-child(1) .kanban-card-header {
+            margin-bottom: 4px;
         }
 
         .kanban-card-title {
@@ -619,22 +641,41 @@
             flex: 1;
         }
 
+        .kanban-column:nth-child(1) .kanban-card-title {
+            font-size: 0.95em;
+        }
+
         .kanban-card-subtitle {
-            font-size: 0.9em;
+            font-size: 0.85em;
             color: #666;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
+        }
+
+        .kanban-column:nth-child(1) .kanban-card-subtitle {
+            font-size: 0.8em;
         }
 
         .kanban-card-actions {
             display: flex;
+            flex-direction: column;
             gap: 5px;
             margin-top: 8px;
+        }
+
+        .kanban-column:nth-child(1) .kanban-card-actions {
+            gap: 4px;
+            margin-top: 4px;
         }
 
         .kanban-card-actions button {
             flex: 1;
             padding: 6px 8px;
             font-size: 0.85em;
+        }
+
+        .kanban-column:nth-child(1) .kanban-card-actions button {
+            padding: 5px 6px;
+            font-size: 0.8em;
         }
 
         .kanban-pause-reason {
@@ -745,7 +786,7 @@
                         <div class="dados-form-grid">
                             <div class="dados-form-group">
                                 <label for="nome">Nome</label>
-                                <select id="nome">
+                                <select id="nome" autocomplete="off">
                                     <option value="">-- Selecione --</option>
                                     <option value="Gabriel Oliveira">Gabriel Oliveira</option>
                                     <option value="Francielly Cristina">Francielly Cristina</option>
@@ -757,11 +798,11 @@
                             </div>
                             <div class="dados-form-group">
                                 <label for="ticket">Ticket</label>
-                                <input type="number" id="ticket" placeholder="Número">
+                                <input type="number" id="ticket" placeholder="Número" autocomplete="off">
                             </div>
                             <div class="dados-form-group">
                                 <label for="descricaoAtividade">Descrição</label>
-                                <textarea id="descricaoAtividade" placeholder="Descreva..."></textarea>
+                                <textarea id="descricaoAtividade" placeholder="Descreva..." autocomplete="off"></textarea>
                             </div>
                         </div>
                         <div id="statusContainer"></div>
@@ -916,6 +957,9 @@
 
                     kanbanState = dados.kanbanState || {};
                     atualizarKanban();
+                    
+                    // Limpar campos de input após sincronização
+                    limparCamposAtividade();
                 });
             } else {
                 // Fallback: localStorage
@@ -928,6 +972,27 @@
                 }
                 const kanbanSalvo = localStorage.getItem('kanbanState');
                 if (kanbanSalvo) { kanbanState = JSON.parse(kanbanSalvo); }
+                
+                // Limpar campos após carregar do localStorage
+                limparCamposAtividade();
+            }
+        }
+        
+        // Função para limpar campos de atividade
+        function limparCamposAtividade() {
+            const nomeSelect = document.getElementById('nome');
+            const ticketInput = document.getElementById('ticket');
+            const descricaoInput = document.getElementById('descricaoAtividade');
+            
+            if (nomeSelect) {
+                nomeSelect.value = '';
+                nomeSelect.selectedIndex = 0;
+            }
+            if (ticketInput) {
+                ticketInput.value = '';
+            }
+            if (descricaoInput) {
+                descricaoInput.value = '';
             }
         }
 
@@ -1007,9 +1072,7 @@
             mostrarAlerta('sucesso', `Atividade iniciada para o ticket ${ticket}`);
             
             // Limpar campos após iniciar
-            inputNome.value = '';
-            inputTicket.value = '';
-            document.getElementById('descricaoAtividade').value = '';
+            limparCamposAtividade();
         }
 
         // Finalizar atividade
@@ -1065,6 +1128,9 @@
             atualizarKanban();
 
             mostrarAlerta('sucesso', 'Atividade registrada com sucesso!');
+            
+            // Limpar campos após finalizar
+            limparCamposAtividade();
         }
 
         // Iniciar cronômetro
@@ -1206,15 +1272,36 @@
                 atividade.observacao = observacao;
             }
             
-            finalizarAtividade(atividadeConcluindo);
+            const atividadeId = atividadeConcluindo;
             fecharModalObservacao();
+            
+            const index = atividadesEmAndamento.findIndex(a => a.id === atividadeId);
+            if (index === -1) return;
+
+            const ativ = atividadesEmAndamento[index];
+            const agora = new Date();
+            const duracao = agora.getTime() - ativ.tempoInicio;
+            
+            // Finalizar normalmente sem passar por finalizarAtividade
+            finalizarComDados(index, ativ, duracao, agora.toLocaleDateString('pt-BR'), agora.toLocaleTimeString('pt-BR'), '');
         }
 
         // Concluir sem observação
         function confirmarConcluirSemObs() {
             if (!atividadeConcluindo) return;
-            finalizarAtividade(atividadeConcluindo);
+            
+            const atividadeId = atividadeConcluindo;
             fecharModalObservacao();
+            
+            const index = atividadesEmAndamento.findIndex(a => a.id === atividadeId);
+            if (index === -1) return;
+
+            const atividade = atividadesEmAndamento[index];
+            const agora = new Date();
+            const duracao = agora.getTime() - atividade.tempoInicio;
+            
+            // Finalizar normalmente sem passar por finalizarAtividade que verifica 12h
+            finalizarComDados(index, atividade, duracao, agora.toLocaleDateString('pt-BR'), agora.toLocaleTimeString('pt-BR'), '');
         }
 
         // Marcar como concluído no kanban (agora abre modal de observação)
@@ -1246,7 +1333,7 @@
             if (atividadesGrupadasPorStatus.em_andamento.length === 0) {
                 kanbanEmAndamento.innerHTML = '<div class="kanban-empty">Nenhuma atividade em andamento</div>';
             } else {
-                kanbanEmAndamento.innerHTML = atividadesGrupadasPorStatus.em_andamento.map(atividade => {
+                const cardsEmAndamento = atividadesGrupadasPorStatus.em_andamento.map(atividade => {
                     const duracao = new Date().getTime() - atividade.tempoInicio;
                     return `
                         <div class="kanban-card" data-kanban-atividade-id="${atividade.id}">
@@ -1256,14 +1343,16 @@
                             <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.nome}</div>
                             <div class="kanban-card-subtitle"><strong>Data:</strong> ${atividade.dataInicio}</div>
                             <div class="kanban-card-subtitle"><strong>Início:</strong> ${atividade.horaInicio}</div>
-                            <div class="kanban-card-subtitle kanban-duracao-display" style="color: #667eea; font-weight: bold; margin-top: 8px;">⏱️ ${formatarTempo(duracao)}</div>
+                            <div class="kanban-card-subtitle kanban-duracao-display" style="color: #667eea; font-weight: bold; margin-top: 4px;">⏱️ ${formatarTempo(duracao)}</div>
                             <div class="kanban-card-actions">
                                 <button class="btn-danger btn-small" onclick="abrirModalPausarAtividade(${atividade.id})">⏸️ Pausar</button>
                                 <button class="btn-success btn-small" onclick="marcarComoConcluido(${atividade.id})">✓ Concluir</button>
                             </div>
                         </div>
                     `;
-                }).join('');            }
+                }).join('');
+                kanbanEmAndamento.innerHTML = `<div class="kanban-tasks">${cardsEmAndamento}</div>`;
+            }
 
             // Renderizar Pausado
             if (atividadesGrupadasPorStatus.pausado.length === 0) {
