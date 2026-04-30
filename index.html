@@ -609,6 +609,10 @@
             padding: 12px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             transition: all 0.3s;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
 
         .kanban-column:nth-child(1) .kanban-card {
@@ -617,6 +621,7 @@
             flex-direction: column;
             justify-content: space-between;
             padding: 10px;
+            min-height: auto;
         }
 
         .kanban-card:hover {
@@ -695,15 +700,101 @@
             font-style: italic;
         }
 
+        .btn-iniciar-flutuante {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            background: #5b8ec6;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 15px 30px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(91, 142, 198, 0.4);
+            transition: all 0.3s;
+            z-index: 1001;
+        }
+
+        .btn-iniciar-flutuante:hover {
+            background: #4a75b0;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(91, 142, 198, 0.6);
+        }
+
+        .dados-form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .dados-form-group {
+            margin-bottom: 0;
+        }
+
+        .dados-form-group label {
+            display: block;
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .dados-form-group input,
+        .dados-form-group select,
+        .dados-form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .dados-form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .dados-form-group input::placeholder,
+        .dados-form-group select,
+        .dados-form-group textarea::placeholder {
+            color: #999;
+        }
+
+        .dados-form-group input:focus,
+        .dados-form-group select:focus,
+        .dados-form-group textarea:focus {
+            outline: none;
+            border-color: #5b8ec6;
+        }
+
         @media (max-width: 1200px) {
             .kanban-container {
                 grid-template-columns: repeat(2, 1fr);
+            }
+
+            .btn-iniciar-flutuante {
+                bottom: 20px;
+                left: 20px;
+                padding: 12px 25px;
+                font-size: 0.95em;
             }
         }
 
         @media (max-width: 768px) {
             .kanban-container {
                 grid-template-columns: 1fr;
+            }
+
+            .btn-iniciar-flutuante {
+                bottom: 15px;
+                left: 15px;
+                padding: 10px 20px;
+                font-size: 0.9em;
             }
         }
     </style>
@@ -778,41 +869,7 @@
                     </div>
                 </div>
 
-            <!-- Inicie Uma Atividade + Kanban -->
-                <div class="container-inicie-kanban">
-                    <!-- Inicie Uma Atividade (Sidebar) -->
-                    <div class="dados-colaborador-kanban">
-                        <h2>⚡ Inicie Uma Atividade</h2>
-                        <div class="dados-form-grid">
-                            <div class="dados-form-group">
-                                <label for="nome">Nome</label>
-                                <select id="nome" autocomplete="off">
-                                    <option value="">-- Selecione --</option>
-                                    <option value="Gabriel Oliveira">Gabriel Oliveira</option>
-                                    <option value="Francielly Cristina">Francielly Cristina</option>
-                                    <option value="Edson Michellon">Edson Michellon</option>
-                                    <option value="Angelica Luz">Angelica Luz</option>
-                                    <option value="Brandon Spinoza">Brandon Spinoza</option>
-                                    <option value="Ellen Ferreira">Ellen Ferreira</option>
-                                </select>
-                            </div>
-                            <div class="dados-form-group">
-                                <label for="ticket">Ticket</label>
-                                <input type="number" id="ticket" placeholder="Número" autocomplete="off">
-                            </div>
-                            <div class="dados-form-group">
-                                <label for="descricaoAtividade">Descrição</label>
-                                <textarea id="descricaoAtividade" placeholder="Descreva..." autocomplete="off"></textarea>
-                            </div>
-                        </div>
-                        <div id="statusContainer"></div>
-                        <div id="infoContainer"></div>
-                        <div class="dados-button-container">
-                            <button class="btn-primary" id="btnIniciar" style="width: 100%; font-weight: bold;">Iniciar</button>
-                        </div>
-                    </div>
-
-                    <!-- Kanban de Atividades -->
+            <!-- Kanban de Atividades -->
                     <div class="kanban-wrapper" style="background: white; border-radius: 10px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); padding: 15px;">
                         <h3 style="color: #5b8ec6; margin-bottom: 15px; font-size: 1.05em; font-weight: 600;">📋 Kanban</h3>
                         <div class="kanban-container">
@@ -830,7 +887,9 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                
+                <!-- Botão Flutuante para Iniciar Atividade -->
+                <button id="btnIniciarFlutante" class="btn-iniciar-flutuante" title="Iniciar Nova Atividade">⚡ Iniciar Atividade</button>
 
         <!-- Modal para Justificativa -->
         <div id="modalJustificativa" class="modal">
@@ -877,6 +936,41 @@
             </div>
         </div>
 
+        <!-- Modal para Iniciar Atividade -->
+        <div id="modalIniciarAtividade" class="modal">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">⚡ Inicie Uma Atividade</div>
+                <div class="modal-body">
+                    <div class="dados-form-grid">
+                        <div class="dados-form-group">
+                            <label for="nomeModal">Nome</label>
+                            <select id="nomeModal" autocomplete="off">
+                                <option value="">-- Selecione --</option>
+                                <option value="Gabriel Oliveira">Gabriel Oliveira</option>
+                                <option value="Francielly Cristina">Francielly Cristina</option>
+                                <option value="Edson Michellon">Edson Michellon</option>
+                                <option value="Angelica Luz">Angelica Luz</option>
+                                <option value="Brandon Spinoza">Brandon Spinoza</option>
+                                <option value="Ellen Ferreira">Ellen Ferreira</option>
+                            </select>
+                        </div>
+                        <div class="dados-form-group">
+                            <label for="ticketModal">Ticket</label>
+                            <input type="number" id="ticketModal" placeholder="Número" autocomplete="off">
+                        </div>
+                        <div class="dados-form-group">
+                            <label for="descricaoModal">Descrição</label>
+                            <textarea id="descricaoModal" placeholder="Descreva..." autocomplete="off"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-danger" id="btnCancelarIniciar" style="background: #999;">Cancelar</button>
+                    <button class="btn-primary" id="btnConfirmarIniciar">Iniciar</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal para Confirmar Limpar Histórico -->
         <!-- Movido para historico.html -->
 
@@ -898,9 +992,12 @@
         let atividadesFiltradas = [];
 
         // Elementos do DOM
-        const inputNome = document.getElementById('nome');
-        const inputTicket = document.getElementById('ticket');
-        const btnIniciar = document.getElementById('btnIniciar');
+        const inputNome = document.getElementById('nomeModal');
+        const inputTicket = document.getElementById('ticketModal');
+        const btnIniciar = document.getElementById('btnConfirmarIniciar');
+        const btnIniciarFlutante = document.getElementById('btnIniciarFlutante');
+        const modalIniciarAtividade = document.getElementById('modalIniciarAtividade');
+        const btnCancelarIniciar = document.getElementById('btnCancelarIniciar');
         const modalJustificativa = document.getElementById('modalJustificativa');
         const txtJustificativa = document.getElementById('txtJustificativa');
         const btnConfirmarJustificativa = document.getElementById('btnConfirmarJustificativa');
@@ -1035,7 +1132,7 @@
         function iniciarAtividade() {
             const nome = inputNome.value.trim();
             const ticket = inputTicket.value.trim();
-            const descricao = document.getElementById('descricaoAtividade').value.trim();
+            const descricao = document.getElementById('descricaoModal').value.trim();
 
             if (!nome || nome === '') {
                 mostrarAlerta('erro', 'Por favor, selecione um colaborador');
@@ -1071,8 +1168,11 @@
 
             mostrarAlerta('sucesso', `Atividade iniciada para o ticket ${ticket}`);
             
-            // Limpar campos após iniciar
-            limparCamposAtividade();
+            // Fechar modal e limpar campos após iniciar
+            modalIniciarAtividade.style.display = 'none';
+            inputNome.value = '';
+            inputTicket.value = '';
+            document.getElementById('descricaoModal').value = '';
         }
 
         // Finalizar atividade
@@ -1176,7 +1276,12 @@
             alertDiv.textContent = mensagem;
 
             const card = document.querySelector('.card');
-            card.insertBefore(alertDiv, card.firstChild);
+            if (card) {
+                card.insertBefore(alertDiv, card.firstChild);
+            } else {
+                // Se não houver .card, inserir no início do body
+                document.body.insertBefore(alertDiv, document.body.firstChild);
+            }
 
             setTimeout(() => alertDiv.remove(), 4000);
         }
@@ -1422,14 +1527,17 @@
                 atividadeEmFinalizacao = null;
                 txtJustificativa.value = '';
             }
-            if (event.target === modalLimparHistorico) {
-                fecharModalLimparHistorico();
-            }
             if (event.target === modalPausarAtividade) {
                 fecharModalPausarAtividade();
             }
             if (event.target === modalObservacaoConcluir) {
                 fecharModalObservacao();
+            }
+            if (event.target === modalIniciarAtividade) {
+                modalIniciarAtividade.style.display = 'none';
+                inputNome.value = '';
+                inputTicket.value = '';
+                document.getElementById('descricaoModal').value = '';
             }
         });
 
@@ -1592,6 +1700,18 @@
         }
 
         // Event Listeners
+        btnIniciarFlutante.addEventListener('click', function() {
+            modalIniciarAtividade.style.display = 'block';
+            inputNome.focus();
+        });
+
+        btnCancelarIniciar.addEventListener('click', function() {
+            modalIniciarAtividade.style.display = 'none';
+            inputNome.value = '';
+            inputTicket.value = '';
+            document.getElementById('descricaoModal').value = '';
+        });
+
         btnIniciar.addEventListener('click', iniciarAtividade);
         btnConfirmarJustificativa.addEventListener('click', confirmarJustificativa);
         btnCancelarPausa.addEventListener('click', fecharModalPausarAtividade);
