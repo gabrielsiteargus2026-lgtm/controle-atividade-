@@ -955,6 +955,15 @@
                 <div class="modal-body">
                     <p>Por favor, justifique o motivo da pausa:</p>
                     <textarea id="txtMotivoPausa" placeholder="Digite o motivo da pausa..." style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 1em; min-height: 100px; resize: vertical;"></textarea>
+                    
+                    <p style="margin-top: 20px; margin-bottom: 8px;"><strong>Grupo:</strong></p>
+                    <select id="selectGrupoPausa" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 1em;">
+                        <option value="">-- Selecione o grupo --</option>
+                        <option value="Engenharia">Engenharia</option>
+                        <option value="Customer">Customer</option>
+                        <option value="Inteligência">Inteligência</option>
+                        <option value="Pós-vendas">Pós-vendas</option>
+                    </select>
                 </div>
                 <div class="modal-footer">
                     <button class="btn-danger" id="btnCancelarPausa" style="background: #999;">Cancelar</button>
@@ -1370,6 +1379,7 @@
         function abrirModalPausarAtividade(atividadeId) {
             atividadePausando = atividadeId;
             txtMotivoPausa.value = '';
+            document.getElementById('selectGrupoPausa').value = '';
             modalPausarAtividade.style.display = 'block';
             txtMotivoPausa.focus();
         }
@@ -1386,6 +1396,8 @@
             if (!atividadePausando) return;
 
             const motivo = txtMotivoPausa.value.trim();
+            const grupo = document.getElementById('selectGrupoPausa').value.trim();
+            
             if (!motivo) {
                 mostrarAlerta('erro', 'Por favor, forneça um motivo para a pausa');
                 return;
@@ -1396,6 +1408,7 @@
             // Atualizar estado do kanban
             kanbanState[atividadePausando].status = 'pausado';
             kanbanState[atividadePausando].motivoPausa = motivo;
+            kanbanState[atividadePausando].grupoPausa = grupo || 'Não definido';
             kanbanState[atividadePausando].tempoInicioPausa = agora.getTime();
 
             salvarDados();
@@ -1421,6 +1434,7 @@
                         ticket: atividade.ticket,
                         colaborador: atividade.nome,
                         motivo: estadoPausa.motivoPausa,
+                        grupo: estadoPausa.grupoPausa || 'Não definido',
                         dataInicio: atividade.dataInicio,
                         horaPausa: new Date(estadoPausa.tempoInicioPausa).toLocaleTimeString('pt-BR'),
                         horaRetomada: agora.toLocaleTimeString('pt-BR'),
@@ -1432,6 +1446,7 @@
             
             kanbanState[atividadeId].status = 'em_andamento';
             kanbanState[atividadeId].motivoPausa = '';
+            kanbanState[atividadeId].grupoPausa = '';
             kanbanState[atividadeId].tempoInicioPausa = null;
             
             salvarDados();

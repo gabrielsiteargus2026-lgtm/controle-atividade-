@@ -70,7 +70,7 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: calc(100% - 300px);
             margin: 0 auto;
             margin-left: 280px;
         }
@@ -481,7 +481,7 @@
 
     <div class="container">
         <div class="header">
-            <h1>📊 Dashboard de Performance</h1>
+            <h1>Controle de Performance</h1>
         </div>
 
         <!-- Filtros -->
@@ -539,7 +539,7 @@
 
         <!-- Estatísticas Detalhadas -->
         <div class="card">
-            <h2>📈 Estatísticas Gerais</h2>
+            <h2>Estatísticas Gerais</h2>
             <div class="stats-grid">
                 <div class="stat-item">
                     <div class="stat-label">Total de Atividades</div>
@@ -562,7 +562,7 @@
 
         <!-- Análise de Pausas -->
         <div class="card">
-            <h2>⏸️ Análise de Pausas e Bloqueios</h2>
+            <h2>Análise de Pausas</h2>
             
             <!-- KPIs de Pausas -->
             <div class="stats-grid" style="margin-bottom: 30px;">
@@ -584,17 +584,12 @@
                 </div>
             </div>
 
-            <!-- Motivos de Pausa -->
-            <div style="margin-bottom: 30px;">
-                <h3 style="margin-bottom: 15px;">Motivos de Pausa</h3>
-                <div id="motivosPausas" class="table-container">
-                    <div class="empty-state">Nenhuma pausa registrada</div>
-                </div>
-            </div>
-
             <!-- Tabela de Pausas Detalhada -->
             <div>
-                <h3 style="margin-bottom: 15px;">Histórico de Pausas</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0;">Histórico de Pausas</h3>
+                    <button onclick="exportarPausasCSV()" style="background: #51cf66; color: white; border: none; padding: 10px 16px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.95em;">📥 Exportar CSV</button>
+                </div>
                 <div class="table-container">
                     <table id="tabelaPausas">
                         <thead>
@@ -605,8 +600,8 @@
                                 <th>Hora da Pausa</th>
                                 <th>Hora da Retomada</th>
                                 <th>Duração da Pausa</th>
-                                <th>Motivo</th>
-                                <th>Setor Identificado</th>
+                                <th>Status</th>
+                                <th>Grupo</th>
                             </tr>
                         </thead>
                         <tbody id="tabelaPausasBody">
@@ -853,6 +848,7 @@
                         ticket: atividade.ticket,
                         colaborador: atividade.nome,
                         motivo: estadoPausa.motivoPausa,
+                        grupo: estadoPausa.grupoPausa || 'Não definido',
                         dataInicio: atividade.dataInicio,
                         horaPausa: new Date(estadoPausa.tempoInicioPausa).toLocaleTimeString('pt-BR'),
                         horaRetomada: '(ativa)',
@@ -873,7 +869,6 @@
                 document.getElementById('statTempoTotalPausado').textContent = '0h';
                 document.getElementById('statMaiorPausa').textContent = '0h';
                 document.getElementById('statMediaPausas').textContent = '0h';
-                document.getElementById('motivosPausas').innerHTML = '<div class="empty-state">Nenhuma pausa registrada</div>';
                 document.getElementById('tabelaPausasBody').innerHTML = '<tr><td colspan="8" class="empty-state">Nenhuma pausa registrada</td></tr>';
                 return;
             }
@@ -898,47 +893,24 @@
             todasAsPausas.forEach(pausa => {
                 const motivo = pausa.motivo || 'Sem motivo especificado';
                 if (!motivosStats[motivo]) {
-                    motivosStats[motivo] = { count: 0, tempoMs: 0, setores: new Set(), ativas: 0 };
+                    motivosStats[motivo] = { count: 0, tempoMs: 0, grupos: new Set(), ativas: 0 };
                 }
                 motivosStats[motivo].count++;
                 motivosStats[motivo].tempoMs += pausa.tempoPausaMs || 0;
                 if (pausa.ativa) motivosStats[motivo].ativas++;
                 
-                // Tentar identificar setor a partir do motivo
-                const setor = identificarSetor(motivo);
-                if (setor) motivosStats[motivo].setores.add(setor);
+                // Usar grupo capturado ou tentar identificar setor a partir do motivo
+                const grupo = pausa.grupo && pausa.grupo !== 'Não definido' ? pausa.grupo : identificarSetor(motivo);
+                if (grupo) motivosStats[motivo].grupos.add(grupo);
             });
-
-            // Renderizar motivos
-            let motivosHtml = '';
-            Object.entries(motivosStats)
-                .sort((a, b) => b[1].tempoMs - a[1].tempoMs)
-                .forEach(([motivo, stats]) => {
-                    const percentual = Math.round((stats.tempoMs / tempoTotalMs) * 100);
-                    const tempoMotivo = stats.tempoMs / (1000 * 60 * 60);
-                    const indicadorAtivo = stats.ativas > 0 ? ` <span style="background: #ff6b6b; color: white; padding: 2px 8px; border-radius: 3px; font-size: 0.8em; margin-left: 8px;">🔴 ${stats.ativas} ativa(s)</span>` : '';
-                    motivosHtml += `
-                        <div style="margin-bottom: 15px; padding: 12px; background: #f5f5f5; border-radius: 5px; border-left: 4px solid #667eea;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                <strong style="color: #2c3e50;">${motivo}${indicadorAtivo}</strong>
-                                <span style="background: #667eea; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9em;">${percentual}%</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; color: #666; font-size: 0.9em;">
-                                <span>${stats.count} pausa${stats.count !== 1 ? 's' : ''}</span>
-                                <span>Total: ${formatarHoras(tempoMotivo)}</span>
-                            </div>
-                        </div>
-                    `;
-                });
-            document.getElementById('motivosPausas').innerHTML = motivosHtml || '<div class="empty-state">Nenhuma pausa registrada</div>';
 
             // Renderizar tabela de pausas
             let tabelaHtml = '';
             todasAsPausas.forEach(pausa => {
-                const setor = identificarSetor(pausa.motivo);
-                const indicadorAtivo = pausa.ativa ? '<span style="background: #ff6b6b; color: white; padding: 3px 8px; border-radius: 3px; font-size: 0.85em; font-weight: bold;">ATIVA</span>' : '';
+                // Usar grupo capturado ou tentar identificar a partir do motivo
+                const grupo = pausa.grupo && pausa.grupo !== 'Não definido' ? pausa.grupo : identificarSetor(pausa.motivo);
                 tabelaHtml += `
-                    <tr ${pausa.ativa ? 'style="background: #fff3cd;"' : ''}>
+                    <tr>
                         <td><strong>#${pausa.ticket}</strong></td>
                         <td>${pausa.colaborador}</td>
                         <td>${pausa.dataInicio}</td>
@@ -946,7 +918,7 @@
                         <td>${pausa.horaRetomada}</td>
                         <td><strong>${pausa.tempoPausaFormatado || 'N/A'}</strong></td>
                         <td>${pausa.motivo}</td>
-                        <td>${indicadorAtivo} ${setor ? `<span style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 3px; font-size: 0.9em;">${setor}</span>` : '-'}</td>
+                        <td>${grupo ? `<span style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 3px; font-size: 0.9em;">${grupo}</span>` : '-'}</td>
                     </tr>
                 `;
             });
@@ -973,6 +945,66 @@
                 }
             }
             return null;
+        }
+
+        // ✅ Exportar Pausas em CSV
+        function exportarPausasCSV() {
+            // Coletar pausas: histórico retomado + pausas ativas
+            let todasAsPausas = [...historicoPausas];
+            
+            // Adicionar pausas ATIVAS
+            atividadesEmAndamento.forEach(atividade => {
+                const estadoPausa = kanbanState[atividade.id];
+                if (estadoPausa && estadoPausa.status === 'pausado' && estadoPausa.tempoInicioPausa) {
+                    const agora = new Date();
+                    const tempoPausaMs = agora.getTime() - estadoPausa.tempoInicioPausa;
+                    todasAsPausas.push({
+                        id: atividade.id,
+                        ticket: atividade.ticket,
+                        colaborador: atividade.nome,
+                        motivo: estadoPausa.motivoPausa,
+                        grupo: estadoPausa.grupoPausa || 'Não definido',
+                        dataInicio: atividade.dataInicio,
+                        horaPausa: new Date(estadoPausa.tempoInicioPausa).toLocaleTimeString('pt-BR'),
+                        horaRetomada: '(ativa)',
+                        tempoPausaMs: tempoPausaMs,
+                        tempoPausaFormatado: formatarTempo(tempoPausaMs)
+                    });
+                }
+            });
+
+            if (todasAsPausas.length === 0) {
+                alert('Nenhuma pausa registrada para exportar!');
+                return;
+            }
+
+            // Montar CSV
+            const headers = ['Ticket', 'Colaborador', 'Data de Pausa', 'Hora da Pausa', 'Hora da Retomada', 'Duração', 'Status', 'Grupo'];
+            const csvContent = [
+                headers.join(','),
+                ...todasAsPausas.map(pausa => [
+                    `#${pausa.ticket}`,
+                    pausa.colaborador,
+                    pausa.dataInicio || '-',
+                    pausa.horaPausa,
+                    pausa.horaRetomada,
+                    pausa.tempoPausaFormatado || '-',
+                    pausa.motivo,
+                    pausa.grupo
+                ].map(v => `"${v}"`).join(','))
+            ].join('\n');
+
+            // Criar download
+            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            const dataAtual = new Date().toISOString().split('T')[0];
+            link.setAttribute('href', url);
+            link.setAttribute('download', `historico_pausas_${dataAtual}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         // ✅ Filtros
