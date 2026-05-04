@@ -389,7 +389,6 @@
             padding: 10px;
             border-radius: 5px;
             margin-bottom: 20px;
-            border-left: 4px solid #51cf66;
         }
 
         .status-active p {
@@ -429,13 +428,11 @@
         .alert-success {
             background: #d3f9d8;
             color: #2f9e44;
-            border-left: 4px solid #51cf66;
         }
 
         .alert-error {
             background: #ffe0e0;
             color: #c92a2a;
-            border-left: 4px solid #ff6b6b;
         }
 
         .ranking-container {
@@ -454,7 +451,6 @@
             border-radius: 10px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             padding: 15px;
-            border-left: 5px solid #5b8ec6;
             max-width: 300px;
             height: fit-content;
         }
@@ -727,7 +723,6 @@
 
         .kanban-pause-reason {
             background: #fff3cd;
-            border-left: 3px solid #ffc107;
             padding: 8px;
             margin-top: 8px;
             border-radius: 4px;
@@ -1043,6 +1038,45 @@
         let filtroAtivo = false;
         let atividadesFiltradas = [];
         let historicoPausas = []; // Rastreamento de todas as pausas
+
+        // ===== GERENCIAR CONTADORES ACUMULADOS DE PAUSAS =====
+        function obterContadores() {
+            const contadores = localStorage.getItem('contadoresPausas');
+            if (!contadores) {
+                return {
+                    'Engenharia': 0,
+                    'Customer': 0,
+                    'Inteligência': 0,
+                    'Pós-Vendas': 0,
+                    'total_atividades': 0
+                };
+            }
+            return JSON.parse(contadores);
+        }
+
+        function salvarContadores(contadores) {
+            localStorage.setItem('contadoresPausas', JSON.stringify(contadores));
+        }
+
+        function incrementarContadorPausa(grupo) {
+            const contadores = obterContadores();
+            if (contadores.hasOwnProperty(grupo)) {
+                contadores[grupo]++;
+            }
+            contadores['total_atividades']++;
+            salvarContadores(contadores);
+        }
+
+        function resetarContadores() {
+            const contadores = {
+                'Engenharia': 0,
+                'Customer': 0,
+                'Inteligência': 0,
+                'Pós-Vendas': 0,
+                'total_atividades': 0
+            };
+            salvarContadores(contadores);
+        }
 
         // Elementos do DOM
         const inputNome = document.getElementById('nomeModal');
@@ -1411,6 +1445,12 @@
             kanbanState[atividadePausando].motivoPausa = motivo;
             kanbanState[atividadePausando].grupoPausa = grupo || 'Não definido';
             kanbanState[atividadePausando].tempoInicioPausa = agora.getTime();
+
+            // Incrementar contador acumulado de pausas
+            const grupoNormalizado = grupo || 'Não definido';
+            if (['Engenharia', 'Customer', 'Inteligência', 'Pós-Vendas'].includes(grupoNormalizado)) {
+                incrementarContadorPausa(grupoNormalizado);
+            }
 
             salvarDados();
             atualizarKanban();

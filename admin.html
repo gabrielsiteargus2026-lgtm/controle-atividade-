@@ -120,7 +120,6 @@
             border-radius: 10px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             padding: 25px;
-            border-left: 5px solid #5b8ec6;
             transition: transform 0.3s, box-shadow 0.3s;
         }
 
@@ -140,18 +139,6 @@
             margin-bottom: 20px;
             font-size: 0.95em;
             line-height: 1.5;
-        }
-
-        .admin-card.history {
-            border-left-color: #51cf66;
-        }
-
-        .admin-card.pause {
-            border-left-color: #ffd43b;
-        }
-
-        .admin-card.export {
-            border-left-color: #4dabf7;
         }
 
         button {
@@ -280,7 +267,6 @@
 
         .info-box {
             background: #d0ebff;
-            border-left: 4px solid #4dabf7;
             padding: 15px;
             border-radius: 5px;
             margin-bottom: 15px;
@@ -289,7 +275,6 @@
 
         .warning-box {
             background: #fff3bf;
-            border-left: 4px solid #ffd43b;
             padding: 15px;
             border-radius: 5px;
             margin-bottom: 15px;
@@ -409,6 +394,18 @@
                 </div>
                 <button class="btn-export" id="btnExportarTudo" style="padding: 10px;">Exportar Tudo</button>
             </div>
+
+            <!-- Card: Limpar Contadores de Pausas -->
+            <div class="admin-card history">
+                <h3>Contadores de Pausas</h3>
+                <p>Resete os contadores acumulados de pausas por departamento. Esta ação é irreversível.</p>
+                <div class="warning-box">
+                    <strong>Aviso:</strong> Esta ação resetará todos os contadores acumulados de pausas para zero.
+                </div>
+                <div style="display: flex; gap: 10px; flex-direction: column;">
+                    <button class="btn-danger" id="btnLimparContadores" style="flex: 1; padding: 10px;">Limpar Contadores</button>
+                </div>
+            </div>
         </div>
 
 
@@ -461,6 +458,23 @@
         </div>
     </div>
 
+    <!-- Modal para Confirmar Limpar Contadores -->
+    <div id="modalLimparContadores" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Limpar Contadores de Pausas</div>
+            <div class="modal-body">
+                <p><strong>Tem certeza que deseja limpar todos os contadores de pausas?</strong></p>
+                <p>Esta ação resetará todos os contadores acumulados de pausas para zero.</p>
+                <p>Digite a senha do administrador para confirmar:</p>
+                <input type="password" id="inputSenhaContadores" placeholder="Digite a senha">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="btnCancelarContadores">Cancelar</button>
+                <button class="btn-danger" id="btnConfirmarContadores">Limpar Permanentemente</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Verificação de acesso
         const SENHA_ADMIN = 'Argus2026@';
@@ -504,6 +518,36 @@
 
         // ===== INICIALIZAR ADMIN =====
         function inicializarAdmin() {
+            // ===== GERENCIAR CONTADORES ACUMULADOS =====
+            function obterContadores() {
+                const contadores = localStorage.getItem('contadoresPausas');
+                if (!contadores) {
+                    return {
+                        'Engenharia': 0,
+                        'Customer': 0,
+                        'Inteligência': 0,
+                        'Pós-Vendas': 0,
+                        'total_atividades': 0
+                    };
+                }
+                return JSON.parse(contadores);
+            }
+
+            function salvarContadores(contadores) {
+                localStorage.setItem('contadoresPausas', JSON.stringify(contadores));
+            }
+
+            function resetarContadores() {
+                const contadores = {
+                    'Engenharia': 0,
+                    'Customer': 0,
+                    'Inteligência': 0,
+                    'Pós-Vendas': 0,
+                    'total_atividades': 0
+                };
+                salvarContadores(contadores);
+            }
+
             // Elementos do DOM
             const btnLimparHistorico = document.getElementById('btnLimparHistorico');
             const btnLimparPausas = document.getElementById('btnLimparPausas');
@@ -513,12 +557,17 @@
 
             const modalLimparHistorico = document.getElementById('modalLimparHistorico');
             const modalLimparPausas = document.getElementById('modalLimparPausas');
+            const modalLimparContadores = document.getElementById('modalLimparContadores');
             const inputSenhaHistorico = document.getElementById('inputSenhaHistorico');
             const inputSenhaPausas = document.getElementById('inputSenhaPausas');
+            const inputSenhaContadores = document.getElementById('inputSenhaContadores');
             const btnCancelarHistorico = document.getElementById('btnCancelarHistorico');
             const btnCancelarPausas = document.getElementById('btnCancelarPausas');
+            const btnCancelarContadores = document.getElementById('btnCancelarContadores');
             const btnConfirmarHistorico = document.getElementById('btnConfirmarHistorico');
             const btnConfirmarPausas = document.getElementById('btnConfirmarPausas');
+            const btnConfirmarContadores = document.getElementById('btnConfirmarContadores');
+            const btnLimparContadores = document.getElementById('btnLimparContadores');
 
             let atividades = [];
             let historicoPausas = [];
@@ -558,9 +607,10 @@
                         localStorage.removeItem('atividades');
                     }
                     atividades = [];
+                    resetarContadores();
                     modalLimparHistorico.style.display = 'none';
                     inputSenhaHistorico.value = '';
-                    alert('Histórico de atividades limpo com sucesso!');
+                    alert('Histórico de atividades limpo com sucesso! Contadores resetados.');
                 } else {
                     alert('Senha incorreta!');
                     inputSenhaHistorico.value = '';
@@ -585,12 +635,35 @@
                         localStorage.removeItem('historicoPausas');
                     }
                     historicoPausas = [];
+                    resetarContadores();
                     modalLimparPausas.style.display = 'none';
                     inputSenhaPausas.value = '';
-                    alert('Histórico de pausas limpo com sucesso!');
+                    alert('Histórico de pausas limpo com sucesso! Contadores resetados.');
                 } else {
                     alert('Senha incorreta!');
                     inputSenhaPausas.value = '';
+                }
+            });
+
+            // ===== LIMPAR CONTADORES DE PAUSAS =====
+            btnLimparContadores.addEventListener('click', () => {
+                modalLimparContadores.style.display = 'flex';
+            });
+
+            btnCancelarContadores.addEventListener('click', () => {
+                modalLimparContadores.style.display = 'none';
+                inputSenhaContadores.value = '';
+            });
+
+            btnConfirmarContadores.addEventListener('click', () => {
+                if (inputSenhaContadores.value === SENHA_ADMIN) {
+                    resetarContadores();
+                    modalLimparContadores.style.display = 'none';
+                    inputSenhaContadores.value = '';
+                    alert('Contadores de pausas limpos com sucesso! Todos os valores foram resetados para zero.');
+                } else {
+                    alert('Senha incorreta!');
+                    inputSenhaContadores.value = '';
                 }
             });
 
@@ -654,7 +727,71 @@
 
             // ===== EXPORTAR TUDO =====
             btnExportarTudo.addEventListener('click', () => {
-                alert('Esta funcionalidade será implementada em breve.');
+                if ((!atividades || Object.keys(atividades).length === 0) && 
+                    (!historicoPausas || Object.keys(historicoPausas).length === 0)) {
+                    alert('Não há dados para exportar!');
+                    return;
+                }
+
+                // Preparar dados de atividades
+                const atividadesList = Array.isArray(atividades) ? atividades : Object.values(atividades);
+                let csvContent = 'RELATÓRIO COMPLETO DO SISTEMA\n';
+                csvContent += `Gerado em: ${new Date().toLocaleString('pt-BR')}\n\n`;
+
+                // Seção: Atividades
+                csvContent += '=== HISTÓRICO DE ATIVIDADES ===\n';
+                const headersAtiv = ['Colaborador', 'Ticket', 'Data de Início', 'Hora de Início', 'Data de Fim', 'Hora de Fim', 'Duração', 'Descrição', 'Observação', 'Justificativa'];
+                csvContent += headersAtiv.join(',') + '\n';
+                
+                atividadesList.forEach(a => {
+                    csvContent += [
+                        a.colaborador || '-',
+                        a.ticket || '-',
+                        a.dataInicio || '-',
+                        a.horaInicio || '-',
+                        a.dataFim || '-',
+                        a.horaFim || '-',
+                        a.duracao || '-',
+                        `"${(a.descricao || '-').replace(/"/g, '""')}"`,
+                        `"${(a.observacao || '-').replace(/"/g, '""')}"`,
+                        `"${(a.justificativa || '-').replace(/"/g, '""')}"`
+                    ].join(',') + '\n';
+                });
+
+                csvContent += '\n\n';
+
+                // Seção: Pausas
+                csvContent += '=== HISTÓRICO DE PAUSAS ===\n';
+                const pausasList = Array.isArray(historicoPausas) ? historicoPausas : Object.values(historicoPausas);
+                const headersPausas = ['Ticket', 'Colaborador', 'Data de Pausa', 'Hora da Pausa', 'Hora da Retomada', 'Duração', 'Motivo', 'Grupo'];
+                csvContent += headersPausas.join(',') + '\n';
+                
+                pausasList.forEach(pausa => {
+                    csvContent += [
+                        `#${pausa.ticket || '-'}`,
+                        pausa.colaborador || '-',
+                        pausa.dataInicio || '-',
+                        pausa.horaPausa || '-',
+                        pausa.horaRetomada || '-',
+                        pausa.tempoPausaFormatado || '-',
+                        `"${(pausa.motivo || '-').replace(/"/g, '""')}"`,
+                        pausa.grupo || '-'
+                    ].join(',') + '\n';
+                });
+
+                // Criar download
+                const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                const dataAtual = new Date().toISOString().split('T')[0];
+                link.setAttribute('href', url);
+                link.setAttribute('download', `relatorio_completo_${dataAtual}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                alert('Relatório completo exportado com sucesso!');
             });
 
             // Fechar modais ao clicar fora

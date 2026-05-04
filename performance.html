@@ -123,29 +123,12 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             padding: 25px;
             text-align: center;
-            border-left: 5px solid #5b8ec6;
             transition: transform 0.3s, box-shadow 0.3s;
         }
 
         .kpi-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
-        }
-
-        .kpi-card.success {
-            border-left-color: #51cf66;
-        }
-
-        .kpi-card.warning {
-            border-left-color: #ffd43b;
-        }
-
-        .kpi-card.danger {
-            border-left-color: #ff6b6b;
-        }
-
-        .kpi-card.info {
-            border-left-color: #4dabf7;
         }
 
         .kpi-icon {
@@ -501,11 +484,11 @@
 
         <!-- KPI Cards -->
         <div class="kpi-container">
-            <div class="kpi-card success">
-                <div class="kpi-icon">✅</div>
-                <div class="kpi-label">Tickets Finalizados</div>
-                <div class="kpi-value" id="kpiFinalizados">0</div>
-                <div class="kpi-subtitle" id="kpiFinalizadosHoje">Hoje</div>
+            <div class="kpi-card danger">
+                <div class="kpi-icon">⏳</div>
+                <div class="kpi-label">Tickets em Andamento</div>
+                <div class="kpi-value" id="kpiEmAndamento">0</div>
+                <div class="kpi-subtitle">Atividades ativas</div>
             </div>
 
             <div class="kpi-card warning">
@@ -515,11 +498,11 @@
                 <div class="kpi-subtitle" id="kpiPausadosHoje">Pendentes de retomada</div>
             </div>
 
-            <div class="kpi-card danger">
-                <div class="kpi-icon">⏳</div>
-                <div class="kpi-label">Tickets em Andamento</div>
-                <div class="kpi-value" id="kpiEmAndamento">0</div>
-                <div class="kpi-subtitle">Atividades ativas</div>
+            <div class="kpi-card success">
+                <div class="kpi-icon">✅</div>
+                <div class="kpi-label">Tickets Finalizados</div>
+                <div class="kpi-value" id="kpiFinalizados">0</div>
+                <div class="kpi-subtitle" id="kpiFinalizadosHoje">Hoje</div>
             </div>
 
             <div class="kpi-card info">
@@ -530,34 +513,49 @@
             </div>
         </div>
 
-        <!-- Top 3 Colaboradores -->
-        <div class="card">
-            <h2>🏆 Top 3 Colaboradores (Mais Atividades Finalizadas)</h2>
-            <div id="topColaboradores" class="table-container">
-                <div class="empty-state">Carregando dados...</div>
+        <!-- Cartões de Pausas por Grupo -->
+        <div class="kpi-container">
+            <div class="kpi-card info">
+                <div class="kpi-icon">📊</div>
+                <div class="kpi-label">Total de Atividades</div>
+                <div class="kpi-value" id="totalAtividadesCard">0</div>
+                <div class="kpi-subtitle">Todas as iniciadas</div>
+            </div>
+
+            <div class="kpi-card warning">
+                <div class="kpi-icon">⚙️</div>
+                <div class="kpi-label">Engenharia</div>
+                <div class="kpi-value" id="pausasEngenhariaCard">0</div>
+                <div class="kpi-subtitle">Aguardando resposta</div>
+            </div>
+
+            <div class="kpi-card warning">
+                <div class="kpi-icon">👥</div>
+                <div class="kpi-label">Customer</div>
+                <div class="kpi-value" id="pausasCustomerCard">0</div>
+                <div class="kpi-subtitle">Aguardando resposta</div>
+            </div>
+
+            <div class="kpi-card warning">
+                <div class="kpi-icon">🤖</div>
+                <div class="kpi-label">Inteligência</div>
+                <div class="kpi-value" id="pausasInteligenciaCard">0</div>
+                <div class="kpi-subtitle">Aguardando resposta</div>
+            </div>
+
+            <div class="kpi-card warning">
+                <div class="kpi-icon">📱</div>
+                <div class="kpi-label">Pós-Vendas</div>
+                <div class="kpi-value" id="pausasPosVendasCard">0</div>
+                <div class="kpi-subtitle">Aguardando resposta</div>
             </div>
         </div>
 
-        <!-- Estatísticas Detalhadas -->
+        <!-- Top Colaboradores -->
         <div class="card">
-            <h2>Estatísticas Gerais</h2>
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <div class="stat-label">Total de Atividades</div>
-                    <div class="stat-value" id="statTotalAtividades">0</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Taxa de Conclusão</div>
-                    <div class="stat-value" id="statTaxaConclusao">0%</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Atividades com Justificativa</div>
-                    <div class="stat-value" id="statJustificativas">0</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Horas Totais Trabalhadas</div>
-                    <div class="stat-value" id="statHorasTotais">0h</div>
-                </div>
+            <h2>🏆 Top  Colaboradores - Atvidades Finalizadas</h2>
+            <div id="topColaboradores" class="table-container">
+                <div class="empty-state">Carregando dados...</div>
             </div>
         </div>
 
@@ -715,6 +713,21 @@
             return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
         }
 
+        // ✅ Obter contadores acumulados de pausas
+        function obterContadores() {
+            const contadores = localStorage.getItem('contadoresPausas');
+            if (!contadores) {
+                return {
+                    'Engenharia': 0,
+                    'Customer': 0,
+                    'Inteligência': 0,
+                    'Pós-Vendas': 0,
+                    'total_atividades': 0
+                };
+            }
+            return JSON.parse(contadores);
+        }
+
         // ✅ Atualizar Dashboard
         function atualizarDashboard() {
             const atividadesFiltradas = filtrarAtividadesPorData(atividades);
@@ -743,11 +756,18 @@
                 document.getElementById('kpiTempoMedio').textContent = '0h';
             }
 
+            // Total de Atividades (Acumulado)
+            const contadores = obterContadores();
+            document.getElementById('totalAtividadesCard').textContent = contadores['total_atividades'];
+
+            // Pausas por Grupo (Acumulados)
+            document.getElementById('pausasEngenhariaCard').textContent = contadores['Engenharia'];
+            document.getElementById('pausasCustomerCard').textContent = contadores['Customer'];
+            document.getElementById('pausasInteligenciaCard').textContent = contadores['Inteligência'];
+            document.getElementById('pausasPosVendasCard').textContent = contadores['Pós-Vendas'];
+
             // Atualizar Top 3
             atualizarTop3(atividadesFiltradas);
-
-            // Atualizar Estatísticas
-            atualizarEstatisticas(atividadesFiltradas);
 
             // Atualizar Tabela
             atualizarTabela(atividadesFiltradas);
@@ -787,20 +807,6 @@
                 });
             }
             document.getElementById('topColaboradores').innerHTML = html;
-        }
-
-        // ✅ Atualizar Estatísticas
-        function atualizarEstatisticas(ativs) {
-            const total = ativs.length;
-            const finalizadas = ativs.length;
-            const comJustificativa = ativs.filter(a => a.justificativa && a.justificativa.trim() !== '').length;
-            const tempoTotal = ativs.reduce((acc, a) => acc + converterParaHoras(a.duracao), 0);
-            const taxaConclusao = total > 0 ? Math.round((finalizadas / (finalizadas + Object.values(kanbanState).filter(k => k.status === 'pausado').length)) * 100) : 0;
-
-            document.getElementById('statTotalAtividades').textContent = total;
-            document.getElementById('statTaxaConclusao').textContent = taxaConclusao + '%';
-            document.getElementById('statJustificativas').textContent = comJustificativa;
-            document.getElementById('statHorasTotais').textContent = formatarHoras(tempoTotal);
         }
 
         // ✅ Atualizar Tabela
