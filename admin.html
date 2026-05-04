@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Área do Administrador - Controle</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Menu Lateral */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: #2c3e50;
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .sidebar-logo {
+            width: 100%;
+            height: 80px;
+            object-fit: contain;
+            margin-bottom: 30px;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 10px;
+        }
+
+        .sidebar-menu a {
+            display: block;
+            padding: 12px 15px;
+            color: #ecf0f1;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .sidebar-menu a:hover {
+            background: #5b8ec6;
+            color: white;
+            padding-left: 20px;
+        }
+
+        .sidebar-menu a.active {
+            background: #5b8ec6;
+            color: white;
+            border-left: 4px solid #fff;
+        }
+
+        .container {
+            max-width: calc(100% - 300px);
+            margin: 0 auto;
+            margin-left: 280px;
+        }
+
+        .header {
+            position: relative;
+            margin-bottom: 30px;
+            padding-top: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 5px;
+            color: #2c3e50;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.05em;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .admin-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .admin-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 25px;
+            border-left: 5px solid #5b8ec6;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .admin-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .admin-card h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .admin-card p {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+
+        .admin-card.history {
+            border-left-color: #51cf66;
+        }
+
+        .admin-card.pause {
+            border-left-color: #ffd43b;
+        }
+
+        .admin-card.export {
+            border-left-color: #4dabf7;
+        }
+
+        button {
+            padding: 12px 20px;
+            font-size: 1em;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        .btn-action {
+            background: #5b8ec6;
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .btn-action:hover {
+            background: #4a75b0;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(91, 142, 198, 0.4);
+        }
+
+        .btn-export {
+            background: #51cf66;
+            color: white;
+        }
+
+        .btn-export:hover {
+            background: #40c057;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(81, 207, 102, 0.4);
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .action-buttons button {
+            flex: 1;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-body p {
+            margin-bottom: 15px;
+            color: #666;
+        }
+
+        .modal-body input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 1em;
+            margin-top: 10px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-footer button {
+            padding: 10px 20px;
+            font-size: 1em;
+            width: auto;
+            flex: 1;
+        }
+
+        .btn-cancel {
+            background: #999;
+            color: white;
+        }
+
+        .btn-cancel:hover {
+            background: #888;
+        }
+
+        .info-box {
+            background: #d0ebff;
+            border-left: 4px solid #4dabf7;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            color: #0b5394;
+        }
+
+        .warning-box {
+            background: #fff3bf;
+            border-left: 4px solid #ffd43b;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            color: #856404;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 28px;
+            font-weight: bold;
+            color: #999;
+            cursor: pointer;
+            width: auto;
+            padding: 0;
+            transition: color 0.3s;
+        }
+
+        .close-btn:hover {
+            color: #333;
+        }
+
+        .modal-content {
+            position: relative;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin-left: 0;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+
+            .admin-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        // Inicializar Firebase
+        if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('COLE_AQUI')) {
+            firebase.initializeApp(FIREBASE_CONFIG);
+            window.db = firebase.database();
+            window.FIREBASE_OK = true;
+        } else {
+            window.FIREBASE_OK = false;
+            console.warn('⚠️ Firebase não configurado. Usando localStorage temporariamente.');
+        }
+    </script>
+</head>
+<body>
+    <!-- Menu Lateral -->
+    <aside class="sidebar">
+        <img src="argus-logo 1.png" alt="Argus" class="sidebar-logo">
+        <nav>
+            <ul class="sidebar-menu">
+                <li><a href="index.html">📊 Controle de Atividade</a></li>
+                <li><a href="historico.html">📋 Histórico</a></li>
+                <li><a href="performance.html">⚡ Performance</a></li>
+                <li><a href="admin.html" class="active">🔐 Administrador</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Conteúdo Principal -->
+    <div class="container">
+        <div class="header">
+            <h1>Área do Administrador</h1>
+            <p>Gerenciar dados e configurações do sistema</p>
+        </div>
+
+        <!-- Cartões de Administração -->
+        <div class="admin-grid">
+            <!-- Card: Limpar Histórico de Atividades -->
+            <div class="admin-card history">
+                <h3>Histórico de Atividades</h3>
+                <p>Limpe o histórico completo de atividades registradas no sistema. Esta ação é irreversível.</p>
+                <div class="warning-box">
+                    <strong>Aviso:</strong> Esta ação não pode ser desfeita. Todos os dados de atividades serão apagados permanentemente.
+                </div>
+                <div style="display: flex; gap: 10px; flex-direction: column;">
+                    <button class="btn-danger" id="btnLimparHistorico" style="flex: 1; padding: 10px;">Limpar Histórico</button>
+                    <button class="btn-export" id="btnExportarHistorico" style="flex: 1; padding: 10px;">Exportar CSV</button>
+                </div>
+            </div>
+
+            <!-- Card: Limpar Histórico de Pausas -->
+            <div class="admin-card pause">
+                <h3>Histórico de Pausas</h3>
+                <p>Limpe o histórico completo de pausas registradas no sistema. Esta ação é irreversível.</p>
+                <div class="warning-box">
+                    <strong>Aviso:</strong> Esta ação não pode ser desfeita. Todos os dados de pausas serão apagados permanentemente.
+                </div>
+                <div style="display: flex; gap: 10px; flex-direction: column;">
+                    <button class="btn-danger" id="btnLimparPausas" style="flex: 1; padding: 10px;">Limpar Pausas</button>
+                    <button class="btn-export" id="btnExportarPausas" style="flex: 1; padding: 10px;">Exportar CSV</button>
+                </div>
+            </div>
+
+            <!-- Card: Exportar Tudo -->
+            <div class="admin-card export">
+                <h3>Exportar Todos os Dados</h3>
+                <p>Exporte um backup completo de todas as atividades e pausas em um arquivo CSV compactado.</p>
+                <div class="info-box">
+                    <strong>Nota:</strong> Esta operação cria um backup de segurança de todos os dados do sistema.
+                </div>
+                <button class="btn-export" id="btnExportarTudo" style="padding: 10px;">Exportar Tudo</button>
+            </div>
+        </div>
+
+
+    </div>
+
+    <!-- Modal de Autenticação -->
+    <div id="modalAutenticacao" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" id="btnFecharAuth">&times;</button>
+            <div class="modal-header">Acesso Restrito</div>
+            <div class="modal-body">
+                <p>Digite a senha do administrador para acessar esta página:</p>
+                <input type="password" id="inputSenhaAcesso" placeholder="Digite a senha" autofocus>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-danger" id="btnAcesso" style="flex: 1;">Acessar</button>
+            </div>
+        </div>
+    </div>
+    <div id="modalLimparHistorico" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Limpar Histórico de Atividades</div>
+            <div class="modal-body">
+                <p><strong>Tem certeza que deseja limpar o histórico de atividades?</strong></p>
+                <p>Esta ação é irreversível e todos os dados de atividades serão deletados permanentemente.</p>
+                <p>Digite a senha do administrador para confirmar:</p>
+                <input type="password" id="inputSenhaHistorico" placeholder="Digite a senha">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="btnCancelarHistorico">Cancelar</button>
+                <button class="btn-danger" id="btnConfirmarHistorico">Limpar Permanentemente</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Confirmar Limpar Pausas -->
+    <div id="modalLimparPausas" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Limpar Histórico de Pausas</div>
+            <div class="modal-body">
+                <p><strong>Tem certeza que deseja limpar o histórico de pausas?</strong></p>
+                <p>Esta ação é irreversível e todos os dados de pausas serão deletados permanentemente.</p>
+                <p>Digite a senha do administrador para confirmar:</p>
+                <input type="password" id="inputSenhaPausas" placeholder="Digite a senha">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="btnCancelarPausas">Cancelar</button>
+                <button class="btn-danger" id="btnConfirmarPausas">Limpar Permanentemente</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Verificação de acesso
+        const SENHA_ADMIN = 'Argus2026@';
+        const modalAutenticacao = document.getElementById('modalAutenticacao');
+        const inputSenhaAcesso = document.getElementById('inputSenhaAcesso');
+        const btnAcesso = document.getElementById('btnAcesso');
+        const btnFecharAuth = document.getElementById('btnFecharAuth');
+        const container = document.querySelector('.container');
+
+        // Sempre mostrar o modal de autenticação
+        modalAutenticacao.style.display = 'flex';
+        container.style.display = 'none';
+
+        // Botão fechar (X)
+        btnFecharAuth.addEventListener('click', function() {
+            modalAutenticacao.style.display = 'none';
+            inputSenhaAcesso.value = '';
+        });
+
+        // Verificar senha ao digitar
+        inputSenhaAcesso.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                btnAcesso.click();
+            }
+        });
+
+        // Botão de acesso
+        btnAcesso.addEventListener('click', function() {
+            if (inputSenhaAcesso.value === SENHA_ADMIN) {
+                sessionStorage.setItem('autenticadoAdmin', 'true');
+                modalAutenticacao.style.display = 'none';
+                container.style.display = 'block';
+                inputSenhaAcesso.value = '';
+                inicializarAdmin();
+            } else {
+                alert('Senha incorreta!');
+                inputSenhaAcesso.value = '';
+                inputSenhaAcesso.focus();
+            }
+        });
+
+        // ===== INICIALIZAR ADMIN =====
+        function inicializarAdmin() {
+            // Elementos do DOM
+            const btnLimparHistorico = document.getElementById('btnLimparHistorico');
+            const btnLimparPausas = document.getElementById('btnLimparPausas');
+            const btnExportarHistorico = document.getElementById('btnExportarHistorico');
+            const btnExportarPausas = document.getElementById('btnExportarPausas');
+            const btnExportarTudo = document.getElementById('btnExportarTudo');
+
+            const modalLimparHistorico = document.getElementById('modalLimparHistorico');
+            const modalLimparPausas = document.getElementById('modalLimparPausas');
+            const inputSenhaHistorico = document.getElementById('inputSenhaHistorico');
+            const inputSenhaPausas = document.getElementById('inputSenhaPausas');
+            const btnCancelarHistorico = document.getElementById('btnCancelarHistorico');
+            const btnCancelarPausas = document.getElementById('btnCancelarPausas');
+            const btnConfirmarHistorico = document.getElementById('btnConfirmarHistorico');
+            const btnConfirmarPausas = document.getElementById('btnConfirmarPausas');
+
+            let atividades = [];
+            let historicoPausas = [];
+
+            // ===== Carregar Dados =====
+            function carregarDados() {
+                if (window.FIREBASE_OK) {
+                    window.db.ref('atividades').on('value', (snapshot) => {
+                        atividades = snapshot.val() || [];
+                    });
+                    window.db.ref('historicoPausas').on('value', (snapshot) => {
+                        historicoPausas = snapshot.val() || [];
+                    });
+                } else {
+                    const dadosAtiv = localStorage.getItem('atividades');
+                    atividades = dadosAtiv ? JSON.parse(dadosAtiv) : [];
+                    const dadosPausas = localStorage.getItem('historicoPausas');
+                    historicoPausas = dadosPausas ? JSON.parse(dadosPausas) : [];
+                }
+            }
+
+            // ===== LIMPAR HISTÓRICO DE ATIVIDADES =====
+            btnLimparHistorico.addEventListener('click', () => {
+                modalLimparHistorico.style.display = 'flex';
+            });
+
+            btnCancelarHistorico.addEventListener('click', () => {
+                modalLimparHistorico.style.display = 'none';
+                inputSenhaHistorico.value = '';
+            });
+
+            btnConfirmarHistorico.addEventListener('click', () => {
+                if (inputSenhaHistorico.value === SENHA_ADMIN) {
+                    if (window.FIREBASE_OK) {
+                        window.db.ref('atividades').remove();
+                    } else {
+                        localStorage.removeItem('atividades');
+                    }
+                    atividades = [];
+                    modalLimparHistorico.style.display = 'none';
+                    inputSenhaHistorico.value = '';
+                    alert('Histórico de atividades limpo com sucesso!');
+                } else {
+                    alert('Senha incorreta!');
+                    inputSenhaHistorico.value = '';
+                }
+            });
+
+            // ===== LIMPAR HISTÓRICO DE PAUSAS =====
+            btnLimparPausas.addEventListener('click', () => {
+                modalLimparPausas.style.display = 'flex';
+            });
+
+            btnCancelarPausas.addEventListener('click', () => {
+                modalLimparPausas.style.display = 'none';
+                inputSenhaPausas.value = '';
+            });
+
+            btnConfirmarPausas.addEventListener('click', () => {
+                if (inputSenhaPausas.value === SENHA_ADMIN) {
+                    if (window.FIREBASE_OK) {
+                        window.db.ref('historicoPausas').remove();
+                    } else {
+                        localStorage.removeItem('historicoPausas');
+                    }
+                    historicoPausas = [];
+                    modalLimparPausas.style.display = 'none';
+                    inputSenhaPausas.value = '';
+                    alert('Histórico de pausas limpo com sucesso!');
+                } else {
+                    alert('Senha incorreta!');
+                    inputSenhaPausas.value = '';
+                }
+            });
+
+            // ===== EXPORTAR ATIVIDADES =====
+            btnExportarHistorico.addEventListener('click', () => {
+                if (!atividades || Object.keys(atividades).length === 0) {
+                    alert('Não há atividades para exportar!');
+                    return;
+                }
+
+                const atividadesList = Array.isArray(atividades) ? atividades : Object.values(atividades);
+                const headers = ['Colaborador', 'Ticket', 'Data de Início', 'Hora de Início', 'Data de Fim', 'Hora de Fim', 'Duração', 'Descrição', 'Observação', 'Justificativa'];
+                const csv = [
+                    headers.join(','),
+                    ...atividadesList.map(a => [a.colaborador, a.ticket, a.dataInicio, a.horaInicio, a.dataFim || '', a.horaFim, a.duracao, a.descricao || '', a.observacao || '', a.justificativa || ''].join(','))
+                ].join('\n');
+
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `historico_atividades_${new Date().toISOString().slice(0, 10)}.csv`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            });
+
+            // ===== EXPORTAR PAUSAS =====
+            btnExportarPausas.addEventListener('click', () => {
+                if (!historicoPausas || Object.keys(historicoPausas).length === 0) {
+                    alert('Não há pausas para exportar!');
+                    return;
+                }
+
+                const pausasList = Array.isArray(historicoPausas) ? historicoPausas : Object.values(historicoPausas);
+                const headers = ['Ticket', 'Colaborador', 'Data de Pausa', 'Hora da Pausa', 'Hora da Retomada', 'Duração', 'Status', 'Grupo'];
+                const csv = [
+                    headers.join(','),
+                    ...pausasList.map(pausa => [
+                        `#${pausa.ticket}`,
+                        pausa.colaborador,
+                        pausa.dataInicio || '-',
+                        pausa.horaPausa,
+                        pausa.horaRetomada,
+                        pausa.tempoPausaFormatado || '-',
+                        pausa.motivo || '-',
+                        pausa.grupo || '-'
+                    ].map(v => `"${v}"`).join(','))
+                ].join('\n');
+
+                const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                const dataAtual = new Date().toISOString().split('T')[0];
+                link.setAttribute('href', url);
+                link.setAttribute('download', `historico_pausas_${dataAtual}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+
+            // ===== EXPORTAR TUDO =====
+            btnExportarTudo.addEventListener('click', () => {
+                alert('Esta funcionalidade será implementada em breve.');
+            });
+
+            // Fechar modais ao clicar fora
+            window.addEventListener('click', (e) => {
+                if (e.target === modalLimparHistorico) {
+                    modalLimparHistorico.style.display = 'none';
+                    inputSenhaHistorico.value = '';
+                }
+                if (e.target === modalLimparPausas) {
+                    modalLimparPausas.style.display = 'none';
+                    inputSenhaPausas.value = '';
+                }
+            });
+
+            // Carregar dados
+            carregarDados();
+        }
+    </script>
+</body>
+</html>

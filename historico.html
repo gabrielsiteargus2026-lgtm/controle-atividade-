@@ -163,18 +163,6 @@
             box-shadow: 0 5px 15px rgba(77, 171, 247, 0.4);
         }
 
-        .btn-limpar-historico {
-            background: #ff8c00;
-            color: white;
-            flex: 1;
-        }
-
-        .btn-limpar-historico:hover {
-            background: #e67e00;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 140, 0, 0.4);
-        }
-
         .modal {
             display: none;
             position: fixed;
@@ -294,6 +282,7 @@
                 <li><a href="index.html">📊 Controle de Atividade</a></li>
                 <li><a href="historico.html" class="active">📋 Histórico</a></li>
                 <li><a href="performance.html">⚡ Performance</a></li>
+                <li><a href="admin.html">🔐 Administrador</a></li>
             </ul>
         </nav>
     </aside>
@@ -308,7 +297,6 @@
             <h2>Relatório de Atividades</h2>
             <div class="action-buttons">
                 <button class="btn-export" id="btnExportar">📥 Exportar para CSV</button>
-                <button class="btn-limpar-historico" id="btnLimparHistorico">🗑️ Limpar Histórico</button>
             </div>
             <div class="table-container">
                 <table id="tabelaAtividades">
@@ -336,30 +324,12 @@
         </div>
     </div>
 
-    <!-- Modal para Confirmar Limpar Histórico -->
-    <div id="modalLimparHistorico" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">⚠️ Limpar Histórico</div>
-            <div class="modal-body">
-                <p>Para limpar o histórico de atividades, digite a senha:</p>
-                <input type="password" id="inputSenhaLimpar" placeholder="Digite a senha">
-            </div>
-            <div class="modal-footer">
-                <button class="btn-danger" id="btnCancelarLimpar" style="background: #999;">Cancelar</button>
-                <button class="btn-danger" id="btnConfirmarLimpar">Limpar</button>
-            </div>
-        </div>
-    </div>
+
 
     <script>
         // Elementos do DOM
         const bodyTabela = document.getElementById('bodyTabela');
         const btnExportar = document.getElementById('btnExportar');
-        const btnLimparHistorico = document.getElementById('btnLimparHistorico');
-        const modalLimparHistorico = document.getElementById('modalLimparHistorico');
-        const inputSenhaLimpar = document.getElementById('inputSenhaLimpar');
-        const btnCancelarLimpar = document.getElementById('btnCancelarLimpar');
-        const btnConfirmarLimpar = document.getElementById('btnConfirmarLimpar');
 
         let atividades = [];
 
@@ -423,43 +393,7 @@
             window.URL.revokeObjectURL(url);
         });
 
-        // Abrir modal de limpar histórico
-        btnLimparHistorico.addEventListener('click', () => {
-            modalLimparHistorico.style.display = 'block';
-        });
 
-        // Cancelar limpar histórico
-        btnCancelarLimpar.addEventListener('click', () => {
-            modalLimparHistorico.style.display = 'none';
-            inputSenhaLimpar.value = '';
-        });
-
-        // Confirmar limpar histórico
-        btnConfirmarLimpar.addEventListener('click', () => {
-            if (inputSenhaLimpar.value === 'Argus2026@') {
-                if (window.FIREBASE_OK) {
-                    window.db.ref('atividades').remove();
-                } else {
-                    localStorage.removeItem('atividades');
-                }
-                atividades = [];
-                renderizarTabela();
-                modalLimparHistorico.style.display = 'none';
-                inputSenhaLimpar.value = '';
-                alert('✅ Histórico limpo com sucesso!');
-            } else {
-                alert('❌ Senha incorreta!');
-                inputSenhaLimpar.value = '';
-            }
-        });
-
-        // Fechar modal ao clicar fora
-        window.addEventListener('click', (e) => {
-            if (e.target === modalLimparHistorico) {
-                modalLimparHistorico.style.display = 'none';
-                inputSenhaLimpar.value = '';
-            }
-        });
 
         // Carregar atividades ao abrir a página
         carregarAtividades();
