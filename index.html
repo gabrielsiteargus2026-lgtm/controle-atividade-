@@ -864,6 +864,7 @@
             <ul class="sidebar-menu">
                 <li><a href="index.html" class="active">📊 Controle de Atividade</a></li>
                 <li><a href="historico.html">📋 Histórico</a></li>
+                <li><a href="performance.html">⚡ Performance</a></li>
             </ul>
         </nav>
     </aside>
@@ -965,15 +966,14 @@
         <!-- Modal para Observação ao Concluir -->
         <div id="modalObservacaoConcluir" class="modal">
             <div class="modal-content">
-                <div class="modal-header">Inserir Observação</div>
+                <div class="modal-header">Insira uma Observação</div>
                 <div class="modal-body">
-                    <p>Deseja inserir uma observação antes de concluir?</p>
-                    <textarea id="txtObservacaoConcluir" placeholder="Digite a observação (opcional)..." style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 1em; min-height: 100px; resize: vertical;"></textarea>
+                    <p style="margin-bottom: 15px; color: #333;"><strong>⚠️ A observação é obrigatória para concluir a atividade.</strong></p>
+                    <textarea id="txtObservacaoConcluir" placeholder="Digite a observação aqui..." style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 1em; min-height: 100px; resize: vertical;" required></textarea>
                 </div>
                 <div class="modal-footer">
                     <button class="btn-danger" id="btnCancelarObsConcluir" style="background: #999;">Cancelar</button>
-                    <button class="btn-success" id="btnConfirmarObsConcluir">Concluir Sem Observação</button>
-                    <button class="btn-success" id="btnConfirmarComObs" style="background: #51cf66;">Concluir com Observação</button>
+                    <button class="btn-success" id="btnConfirmarComObs" style="background: #51cf66;">Concluir</button>
                 </div>
             </div>
         </div>
@@ -1027,11 +1027,12 @@
         let atividadesEmAndamento = [];
         let atividades = [];
         let atividadeEmFinalizacao = null;
-        let kanbanState = {}; // { id: { status: 'em_andamento'|'pausado'|'concluido', motivoPausa: '' } }
+        let kanbanState = {}; // { id: { status: 'em_andamento'|'pausado'|'concluido', motivoPausa: '', tempoInicioPausa: null } }
         let atividadePausando = null;
         let atividadeConcluindo = null;
         let filtroAtivo = false;
         let atividadesFiltradas = [];
+        let historicoPausas = []; // Rastreamento de todas as pausas
 
         // Elementos do DOM
         const inputNome = document.getElementById('nomeModal');
@@ -1053,7 +1054,6 @@
         const modalObservacaoConcluir = document.getElementById('modalObservacaoConcluir');
         const txtObservacaoConcluir = document.getElementById('txtObservacaoConcluir');
         const btnCancelarObsConcluir = document.getElementById('btnCancelarObsConcluir');
-        const btnConfirmarObsConcluir = document.getElementById('btnConfirmarObsConcluir');
         const btnConfirmarComObs = document.getElementById('btnConfirmarComObs');
         const filtroColaborador = document.getElementById('filtroColaborador');
         const filtroData = document.getElementById('filtroData');
@@ -1062,14 +1062,21 @@
         const btnLimparFiltros = document.getElementById('btnLimparFiltros');
 
         // ✅ Carregar dados do Firebase (com fallback para localStorage)
+        let firebaseTimeout = null;
         function carregarDados() {
             if (window.FIREBASE_OK) {
+                // Timeout para fallback ao localStorage se Firebase não responder
+                firebaseTimeout = setTimeout(() => {
+                    console.warn('⚠️ Firebase não respondeu. Carregando do localStorage...');
+                    carregarDoLocalStorage();
+                }, 2000); // 2 segundos
+
                 // Listener em tempo real — sincroniza automaticamente entre computadores
                 db.ref('/').on('value', (snapshot) => {
+                    if (firebaseTimeout) clearTimeout(firebaseTimeout);
                     const dados = snapshot.val() || {};
 
                     atividades = dados.atividades || [];
-                    atualizarTabela();
 
                     const emAndamentoSalvas = dados.atividadesEmAndamento || [];
                     const novosIds = emAndamentoSalvas.map(a => a.id);
@@ -1094,33 +1101,40 @@
                     });
 
                     kanbanState = dados.kanbanState || {};
+                historicoPausas = dados.historicoPausas || [];
                     atualizarKanban();
                     
                     // Limpar campos de input após sincronização
                     limparCamposAtividade();
                 });
             } else {
-                // Fallback: localStorage
-                const dadosSalvos = localStorage.getItem('atividades');
-                if (dadosSalvos) { atividades = JSON.parse(dadosSalvos); atualizarTabela(); }
-                const emAndamentoSalvas = localStorage.getItem('atividadesEmAndamento');
-                if (emAndamentoSalvas) {
-                    atividadesEmAndamento = JSON.parse(emAndamentoSalvas).map(a => ({ ...a, tempoInicio: a.tempoInicio }));
-                    atividadesEmAndamento.forEach(a => iniciarCronometro(a.id));
-                }
-                const kanbanSalvo = localStorage.getItem('kanbanState');
-                if (kanbanSalvo) { kanbanState = JSON.parse(kanbanSalvo); }
-                
-                // Limpar campos após carregar do localStorage
-                limparCamposAtividade();
+                carregarDoLocalStorage();
             }
+        }
+
+        // ✅ Carregar do localStorage
+        function carregarDoLocalStorage() {
+            const dadosSalvos = localStorage.getItem('atividades');
+            if (dadosSalvos) { atividades = JSON.parse(dadosSalvos); }
+            const emAndamentoSalvas = localStorage.getItem('atividadesEmAndamento');
+            if (emAndamentoSalvas) {
+                atividadesEmAndamento = JSON.parse(emAndamentoSalvas).map(a => ({ ...a, tempoInicio: a.tempoInicio }));
+                atividadesEmAndamento.forEach(a => iniciarCronometro(a.id));
+            }
+            const kanbanSalvo = localStorage.getItem('kanbanState');
+            if (kanbanSalvo) { kanbanState = JSON.parse(kanbanSalvo); }
+            const pausasSalvas = localStorage.getItem('historicoPausas');
+            if (pausasSalvas) { historicoPausas = JSON.parse(pausasSalvas); }
+            
+            atualizarKanban();
+            limparCamposAtividade();
         }
         
         // Função para limpar campos de atividade
         function limparCamposAtividade() {
-            const nomeSelect = document.getElementById('nome');
-            const ticketInput = document.getElementById('ticket');
-            const descricaoInput = document.getElementById('descricaoAtividade');
+            const nomeSelect = document.getElementById('nomeModal');
+            const ticketInput = document.getElementById('ticketModal');
+            const descricaoInput = document.getElementById('descricaoModal');
             
             if (nomeSelect) {
                 nomeSelect.value = '';
@@ -1140,9 +1154,10 @@
                 id: a.id,
                 nome: a.nome,
                 ticket: a.ticket,
+                descricao: a.descricao || '',
                 dataInicio: a.dataInicio,
                 horaInicio: a.horaInicio,
-                observacao: a.observacao,
+                observacao: a.observacao || '',
                 tempoInicio: a.tempoInicio
             }));
 
@@ -1150,12 +1165,14 @@
                 db.ref('/').set({
                     atividades: atividades,
                     atividadesEmAndamento: emAndamentoParaSalvar,
-                    kanbanState: kanbanState
+                    kanbanState: kanbanState,
+                    historicoPausas: historicoPausas
                 }).catch(err => console.error('Erro ao salvar no Firebase:', err));
             } else {
                 localStorage.setItem('atividades', JSON.stringify(atividades));
                 localStorage.setItem('atividadesEmAndamento', JSON.stringify(emAndamentoParaSalvar));
                 localStorage.setItem('kanbanState', JSON.stringify(kanbanState));
+                localStorage.setItem('historicoPausas', JSON.stringify(historicoPausas));
             }
         }
 
@@ -1255,7 +1272,8 @@
                 dataFim: dataFim,
                 horaFim: horaFim,
                 duracao: formatarTempo(duracao),
-                observacao: atividade.descricao || atividade.observacao,
+                descricao: atividade.descricao || '',
+                observacao: atividade.observacao || '',
                 justificativa: justificativa
             });
 
@@ -1373,9 +1391,12 @@
                 return;
             }
 
+            const agora = new Date();
+            
             // Atualizar estado do kanban
             kanbanState[atividadePausando].status = 'pausado';
             kanbanState[atividadePausando].motivoPausa = motivo;
+            kanbanState[atividadePausando].tempoInicioPausa = agora.getTime();
 
             salvarDados();
             atualizarKanban();
@@ -1385,8 +1406,34 @@
 
         // Retomar atividade
         function retomarAtividade(atividadeId) {
+            const agora = new Date();
+            const estadoPausa = kanbanState[atividadeId];
+            
+            // Calcular tempo de pausa
+            if (estadoPausa && estadoPausa.tempoInicioPausa) {
+                const tempoPausaMs = agora.getTime() - estadoPausa.tempoInicioPausa;
+                const atividade = atividadesEmAndamento.find(a => a.id === atividadeId);
+                
+                if (atividade) {
+                    // Registrar no histórico de pausas
+                    historicoPausas.push({
+                        id: atividadeId,
+                        ticket: atividade.ticket,
+                        colaborador: atividade.nome,
+                        motivo: estadoPausa.motivoPausa,
+                        dataInicio: atividade.dataInicio,
+                        horaPausa: new Date(estadoPausa.tempoInicioPausa).toLocaleTimeString('pt-BR'),
+                        horaRetomada: agora.toLocaleTimeString('pt-BR'),
+                        tempoPausaMs: tempoPausaMs,
+                        tempoPausaFormatado: formatarTempo(tempoPausaMs)
+                    });
+                }
+            }
+            
             kanbanState[atividadeId].status = 'em_andamento';
             kanbanState[atividadeId].motivoPausa = '';
+            kanbanState[atividadeId].tempoInicioPausa = null;
+            
             salvarDados();
             atualizarKanban();
             mostrarAlerta('sucesso', 'Atividade retomada!');
@@ -1407,14 +1454,21 @@
             txtObservacaoConcluir.value = '';
         }
 
-        // Concluir com observação
+        // Concluir com observação (OBRIGATÓRIA)
         function confirmarConcluirComObs() {
             if (!atividadeConcluindo) return;
 
             const observacao = txtObservacaoConcluir.value.trim();
+            
+            // Validar se a observação foi preenchida
+            if (!observacao) {
+                mostrarAlerta('erro', 'A observação é obrigatória para concluir a atividade!');
+                return;
+            }
+            
             const atividade = atividadesEmAndamento.find(a => a.id === atividadeConcluindo);
             
-            if (atividade && observacao) {
+            if (atividade) {
                 atividade.observacao = observacao;
             }
             
@@ -1430,24 +1484,6 @@
             
             // Finalizar normalmente sem passar por finalizarAtividade
             finalizarComDados(index, ativ, duracao, agora.toLocaleDateString('pt-BR'), agora.toLocaleTimeString('pt-BR'), '');
-        }
-
-        // Concluir sem observação
-        function confirmarConcluirSemObs() {
-            if (!atividadeConcluindo) return;
-            
-            const atividadeId = atividadeConcluindo;
-            fecharModalObservacao();
-            
-            const index = atividadesEmAndamento.findIndex(a => a.id === atividadeId);
-            if (index === -1) return;
-
-            const atividade = atividadesEmAndamento[index];
-            const agora = new Date();
-            const duracao = agora.getTime() - atividade.tempoInicio;
-            
-            // Finalizar normalmente sem passar por finalizarAtividade que verifica 12h
-            finalizarComDados(index, atividade, duracao, agora.toLocaleDateString('pt-BR'), agora.toLocaleTimeString('pt-BR'), '');
         }
 
         // Marcar como concluído no kanban (agora abre modal de observação)
@@ -1486,6 +1522,7 @@
                             <div class="kanban-card-header">
                                 <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
                             </div>
+                            <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 8px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
                             <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.nome}</div>
                             <div class="kanban-card-subtitle"><strong>Data:</strong> ${atividade.dataInicio}</div>
                             <div class="kanban-card-subtitle"><strong>Início:</strong> ${atividade.horaInicio}</div>
@@ -1508,8 +1545,9 @@
                     return `
                         <div class="kanban-card">
                             <div class="kanban-card-header">
-                                <span class="kanban-card-title">${atividade.ticket}</span>
+                                <span class="kanban-card-title">🎟️ ${atividade.ticket}</span>
                             </div>
+                            <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 8px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
                             <div class="kanban-card-subtitle">${atividade.nome}</div>
                             <div class="kanban-pause-reason">💬 ${kanbanState[atividade.id]?.motivoPausa || ''}</div>
                             <div class="kanban-card-actions">
@@ -1534,6 +1572,7 @@
                         id: atividadeHoje.id || Math.random(),
                         ticket: atividadeHoje.ticket,
                         nome: atividadeHoje.colaborador,
+                        descricao: atividadeHoje.descricao,
                         horaFim: atividadeHoje.horaFim,
                         duracao: atividadeHoje.duracao
                     });
@@ -1550,8 +1589,9 @@
                     return `
                         <div class="kanban-card" style="opacity: 0.7;">
                             <div class="kanban-card-header">
-                                <span class="kanban-card-title">${atividade.ticket}</span>
+                                <span class="kanban-card-title">🎟️ ${atividade.ticket}</span>
                             </div>
+                            <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 8px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
                             <div class="kanban-card-subtitle"><strong>Por:</strong> ${atividade.nome}</div>
                             <div class="kanban-card-subtitle" style="font-size: 0.85em; color: #888;\">Duração: ${atividade.duracao || 'N/A'}</div>
                             <div style="text-align: center; color: #51cf66; font-weight: bold; margin-top: 8px;">✓ Concluído</div>
@@ -1688,6 +1728,7 @@
                             <div class="kanban-card-header">
                                 <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
                             </div>
+                            <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 8px;">📝 ${atividade.observacao || 'Sem descrição'}</div>
                             <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.colaborador}</div>
                             <div class="kanban-card-subtitle"><strong>Data:</strong> ${atividade.data}</div>
                             <div class="kanban-card-subtitle"><strong>Início:</strong> ${atividade.hora}</div>
@@ -1709,6 +1750,7 @@
                             <div class="kanban-card-header">
                                 <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
                             </div>
+                            <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 8px;">📝 ${atividade.observacao || 'Sem descrição'}</div>
                             <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.colaborador}</div>
                             <div class="kanban-pause-reason">💬 ${atividade.motivoPausa || ''}</div>
                         </div>
@@ -1726,6 +1768,7 @@
                             <div class="kanban-card-header">
                                 <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
                             </div>
+                            <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 8px;">📝 ${atividade.observacao || 'Sem descrição'}</div>
                             <div class="kanban-card-subtitle"><strong>Por:</strong> ${atividade.colaborador}</div>
                             <div style="text-align: center; color: #51cf66; font-weight: bold; margin-top: 8px;">✓ Concluído</div>
                         </div>
@@ -1752,7 +1795,6 @@
         btnCancelarPausa.addEventListener('click', fecharModalPausarAtividade);
         btnConfirmarPausa.addEventListener('click', confirmarPausarAtividade);
         btnCancelarObsConcluir.addEventListener('click', fecharModalObservacao);
-        btnConfirmarObsConcluir.addEventListener('click', confirmarConcluirSemObs);
         btnConfirmarComObs.addEventListener('click', confirmarConcluirComObs);
         txtMotivoPausa.addEventListener('keypress', function(e) {
             if (e.key === 'Enter' && e.ctrlKey) {
@@ -1771,9 +1813,6 @@
 
         // Carregar dados ao iniciar
         carregarDados();
-
-        // Atualizar kanban inicial
-        atualizarKanban();
     </script>
 </body>
 </html>
