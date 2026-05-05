@@ -756,9 +756,10 @@
                 document.getElementById('kpiTempoMedio').textContent = '0h';
             }
 
-            // Total de Atividades (Acumulado)
+            // Total de Atividades (Total de atividades finalizadas)
             const contadores = obterContadores();
-            document.getElementById('totalAtividadesCard').textContent = contadores['total_atividades'];
+            const totalAtividadesFinalizadas = atividades.length;
+            document.getElementById('totalAtividadesCard').textContent = totalAtividadesFinalizadas;
 
             // Pausas por Grupo (Acumulados)
             document.getElementById('pausasEngenhariaCard').textContent = contadores['Engenharia'];
