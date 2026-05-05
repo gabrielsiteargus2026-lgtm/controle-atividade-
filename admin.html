@@ -402,19 +402,17 @@
                 <p>Exporte um backup completo de todas as atividades e pausas em um arquivo CSV compactado.</p>
                 <button class="btn-export" id="btnExportarTudo" style="padding: 10px;">Exportar Tudo</button>
             </div>
-        </div>
 
-        <!-- Card: Excluir Atividade Específica (Fora do Grid) -->
-        <div class="card" style="margin-top: 30px;">
-            <div class="admin-card" style="margin: 0; box-shadow: none;">
+            <!-- Card: Excluir Atividade Específica -->
+            <div class="admin-card">
                 <h3>Excluir Atividade Específica</h3>
                 <p>Busque uma atividade pelo número do ticket para excluir. Esta ação é irreversível.</p>
-                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                    <input type="number" id="inputTicketBusca" placeholder="Digite o número do ticket" style="flex: 1; padding: 10px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 1em;">
-                    <button class="btn-action" id="btnBuscarAtividade" style="flex: 0.5;">Buscar</button>
+                <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+                    <input type="number" id="inputTicketBusca" placeholder="Nº do ticket" style="flex: 1; padding: 8px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 0.9em;">
+                    <button class="btn-action" id="btnBuscarAtividade" style="flex: 0.4; padding: 8px;">Buscar</button>
                 </div>
-                <div id="resultadoBusca" style="display: none; background: #f0f0f0; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
-                    <div id="infoAtividadeEncontrada"></div>
+                <div id="resultadoBusca" style="display: none; background: #f0f0f0; padding: 12px; border-radius: 5px; margin-bottom: 10px;">
+                    <div id="infoAtividadeEncontrada" style="font-size: 0.9em;"></div>
                 </div>
             </div>
         </div>
