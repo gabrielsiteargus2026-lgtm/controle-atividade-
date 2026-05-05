@@ -402,6 +402,19 @@
                 <p>Exporte um backup completo de todas as atividades e pausas em um arquivo CSV compactado.</p>
                 <button class="btn-export" id="btnExportarTudo" style="padding: 10px;">Exportar Tudo</button>
             </div>
+
+            <!-- Card: Excluir Atividade Específica -->
+            <div class="admin-card">
+                <h3>Excluir Atividade Específica</h3>
+                <p>Busque uma atividade pelo número do ticket para excluir. Esta ação é irreversível.</p>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="number" id="inputTicketBusca" placeholder="Digite o número do ticket" style="flex: 1; padding: 10px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 1em;">
+                    <button class="btn-action" id="btnBuscarAtividade" style="flex: 0.5;">Buscar</button>
+                </div>
+                <div id="resultadoBusca" style="display: none; background: #f0f0f0; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                    <div id="infoAtividadeEncontrada"></div>
+                </div>
+            </div>
         </div>
 
 
@@ -461,6 +474,24 @@
             <div class="modal-footer">
                 <button class="btn-cancel" id="btnCancelarContadores">Cancelar</button>
                 <button class="btn-danger" id="btnConfirmarContadores">Limpar Permanentemente</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Excluir Atividade Específica -->
+    <div id="modalExcluirAtividade" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Excluir Atividade</div>
+            <div class="modal-body">
+                <p><strong>Atividade encontrada:</strong></p>
+                <div id="detalhesAtividadeExcluir" style="background: #f9f9f9; padding: 12px; border-radius: 5px; margin-bottom: 15px; border-left: 4px solid #ff6b6b;">
+                </div>
+                <p><strong>Justificativa para exclusão (obrigatória):</strong></p>
+                <textarea id="txtJustificativaExclusao" placeholder="Digite o motivo da exclusão..." style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 1em; min-height: 100px; resize: vertical; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="btnCancelarExcluir">Cancelar</button>
+                <button class="btn-danger" id="btnConfirmarExcluir">Excluir Permanentemente</button>
             </div>
         </div>
     </div>
@@ -767,6 +798,168 @@
                 }
                 if (e.target === modalLimparPausas) {
                     modalLimparPausas.style.display = 'none';
+                }
+            });
+
+            // ===== EXCLUIR ATIVIDADE ESPECÍFICA =====
+            const inputTicketBusca = document.getElementById('inputTicketBusca');
+            const btnBuscarAtividade = document.getElementById('btnBuscarAtividade');
+            const resultadoBusca = document.getElementById('resultadoBusca');
+            const infoAtividadeEncontrada = document.getElementById('infoAtividadeEncontrada');
+            const modalExcluirAtividade = document.getElementById('modalExcluirAtividade');
+            const detalhesAtividadeExcluir = document.getElementById('detalhesAtividadeExcluir');
+            const txtJustificativaExclusao = document.getElementById('txtJustificativaExclusao');
+            const btnCancelarExcluir = document.getElementById('btnCancelarExcluir');
+            const btnConfirmarExcluir = document.getElementById('btnConfirmarExcluir');
+
+            let atividadeSelecionadaParaExcluir = null;
+
+            // Buscar ao pressionar Enter
+            inputTicketBusca.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    btnBuscarAtividade.click();
+                }
+            });
+
+            // Buscar atividade
+            btnBuscarAtividade.addEventListener('click', () => {
+                const ticket = inputTicketBusca.value.trim();
+                if (!ticket) {
+                    alert('Por favor, digite o número do ticket');
+                    return;
+                }
+
+                const atividadeEncontrada = atividades.find(a => a.ticket === parseInt(ticket) || a.ticket === ticket);
+
+                if (!atividadeEncontrada) {
+                    alert('Nenhuma atividade encontrada com este ticket!');
+                    resultadoBusca.style.display = 'none';
+                    return;
+                }
+
+                atividadeSelecionadaParaExcluir = atividadeEncontrada;
+
+                // Mostrar resultado
+                infoAtividadeEncontrada.innerHTML = `
+                    <p><strong>Ticket:</strong> #${atividadeEncontrada.ticket}</p>
+                    <p><strong>Colaborador:</strong> ${atividadeEncontrada.colaborador}</p>
+                    <p><strong>Data de Início:</strong> ${atividadeEncontrada.dataInicio}</p>
+                    <p><strong>Data de Fim:</strong> ${atividadeEncontrada.dataFim || 'Não finalizada'}</p>
+                    <p><strong>Duração:</strong> ${atividadeEncontrada.duracao || 'N/A'}</p>
+                    <p><strong>Descrição:</strong> ${atividadeEncontrada.descricao || 'Sem descrição'}</p>
+                `;
+                resultadoBusca.style.display = 'block';
+
+                // Mostrar detalhes no modal também
+                detalhesAtividadeExcluir.innerHTML = `
+                    <p><strong>Ticket:</strong> #${atividadeEncontrada.ticket}</p>
+                    <p><strong>Colaborador:</strong> ${atividadeEncontrada.colaborador}</p>
+                    <p><strong>Data de Início:</strong> ${atividadeEncontrada.dataInicio}</p>
+                    <p><strong>Data de Fim:</strong> ${atividadeEncontrada.dataFim || 'Não finalizada'}</p>
+                    <p><strong>Duração:</strong> ${atividadeEncontrada.duracao || 'N/A'}</p>
+                `;
+
+                // Abrir modal
+                modalExcluirAtividade.style.display = 'flex';
+                txtJustificativaExclusao.focus();
+            });
+
+            // Cancelar exclusão
+            btnCancelarExcluir.addEventListener('click', () => {
+                modalExcluirAtividade.style.display = 'none';
+                resultadoBusca.style.display = 'none';
+                inputTicketBusca.value = '';
+                txtJustificativaExclusao.value = '';
+                atividadeSelecionadaParaExcluir = null;
+            });
+
+            // Confirmar exclusão
+            btnConfirmarExcluir.addEventListener('click', () => {
+                if (!atividadeSelecionadaParaExcluir) return;
+
+                const justificativa = txtJustificativaExclusao.value.trim();
+                if (!justificativa) {
+                    alert('Por favor, forneça uma justificativa para a exclusão');
+                    return;
+                }
+
+                // Preparar dados para CSV
+                const registroExclusao = {
+                    dataExclusao: new Date().toLocaleDateString('pt-BR'),
+                    horaExclusao: new Date().toLocaleTimeString('pt-BR'),
+                    ticket: atividadeSelecionadaParaExcluir.ticket,
+                    colaborador: atividadeSelecionadaParaExcluir.colaborador,
+                    dataInicio: atividadeSelecionadaParaExcluir.dataInicio,
+                    dataFim: atividadeSelecionadaParaExcluir.dataFim || '-',
+                    duracao: atividadeSelecionadaParaExcluir.duracao || '-',
+                    descricao: atividadeSelecionadaParaExcluir.descricao || '-',
+                    observacao: atividadeSelecionadaParaExcluir.observacao || '-',
+                    justificativa: justificativa
+                };
+
+                // Excluir atividade
+                const indexAtividade = atividades.indexOf(atividadeSelecionadaParaExcluir);
+                if (indexAtividade > -1) {
+                    atividades.splice(indexAtividade, 1);
+                }
+
+                // Salvar
+                if (window.FIREBASE_OK) {
+                    window.db.ref('atividades').set(atividades).catch(err => console.error('Erro ao atualizar Firebase:', err));
+                } else {
+                    localStorage.setItem('atividades', JSON.stringify(atividades));
+                }
+
+                // Gerar CSV
+                gerarCSVExclusao(registroExclusao);
+
+                // Fechar modal e limpar
+                modalExcluirAtividade.style.display = 'none';
+                resultadoBusca.style.display = 'none';
+                inputTicketBusca.value = '';
+                txtJustificativaExclusao.value = '';
+                atividadeSelecionadaParaExcluir = null;
+
+                alert('Atividade excluída com sucesso! Um registro de exclusão foi gerado em CSV.');
+            });
+
+            // Gerar CSV de exclusão
+            function gerarCSVExclusao(registroExclusao) {
+                const headers = ['Data de Exclusão', 'Hora de Exclusão', 'Ticket', 'Colaborador', 'Data de Início', 'Data de Fim', 'Duração', 'Descrição', 'Observação', 'Justificativa da Exclusão'];
+                const csvContent = [
+                    headers.join(','),
+                    [
+                        registroExclusao.dataExclusao,
+                        registroExclusao.horaExclusao,
+                        `#${registroExclusao.ticket}`,
+                        registroExclusao.colaborador,
+                        registroExclusao.dataInicio,
+                        registroExclusao.dataFim,
+                        registroExclusao.duracao,
+                        `"${registroExclusao.descricao.replace(/"/g, '""')}"`,
+                        `"${registroExclusao.observacao.replace(/"/g, '""')}"`,
+                        `"${registroExclusao.justificativa.replace(/"/g, '""')}"`
+                    ].join(',')
+                ].join('\n');
+
+                const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                const dataAtual = new Date().toISOString().split('T')[0];
+                link.setAttribute('href', url);
+                link.setAttribute('download', `exclusao_atividade_ticket_${atividadeSelecionadaParaExcluir.ticket}_${dataAtual}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            // Fechar modal ao clicar fora
+            modalExcluirAtividade.addEventListener('click', (e) => {
+                if (e.target === modalExcluirAtividade) {
+                    modalExcluirAtividade.style.display = 'none';
+                    txtJustificativaExclusao.value = '';
+                    atividadeSelecionadaParaExcluir = null;
                 }
             });
 
