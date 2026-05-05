@@ -354,7 +354,6 @@
     <div class="container">
         <div class="header">
             <h1>Área do Administrador</h1>
-            <p>Gerenciar dados e configurações do sistema</p>
         </div>
 
         <!-- Cartões de Administração -->
@@ -385,16 +384,6 @@
                 </div>
             </div>
 
-            <!-- Card: Exportar Tudo -->
-            <div class="admin-card export">
-                <h3>Exportar Todos os Dados</h3>
-                <p>Exporte um backup completo de todas as atividades e pausas em um arquivo CSV compactado.</p>
-                <div class="info-box">
-                    <strong>Nota:</strong> Esta operação cria um backup de segurança de todos os dados do sistema.
-                </div>
-                <button class="btn-export" id="btnExportarTudo" style="padding: 10px;">Exportar Tudo</button>
-            </div>
-
             <!-- Card: Limpar Contadores de Pausas -->
             <div class="admin-card history">
                 <h3>Contadores de Pausas</h3>
@@ -405,6 +394,13 @@
                 <div style="display: flex; gap: 10px; flex-direction: column;">
                     <button class="btn-danger" id="btnLimparContadores" style="flex: 1; padding: 10px;">Limpar Contadores</button>
                 </div>
+            </div>
+
+            <!-- Card: Exportar Tudo -->
+            <div class="admin-card export">
+                <h3>Exportar Todos os Dados com Contadores de Pausas</h3>
+                <p>Exporte um backup completo de todas as atividades e pausas em um arquivo CSV compactado.</p>
+                <button class="btn-export" id="btnExportarTudo" style="padding: 10px;">Exportar Tudo</button>
             </div>
         </div>
 
@@ -431,8 +427,6 @@
             <div class="modal-body">
                 <p><strong>Tem certeza que deseja limpar o histórico de atividades?</strong></p>
                 <p>Esta ação é irreversível e todos os dados de atividades serão deletados permanentemente.</p>
-                <p>Digite a senha do administrador para confirmar:</p>
-                <input type="password" id="inputSenhaHistorico" placeholder="Digite a senha">
             </div>
             <div class="modal-footer">
                 <button class="btn-cancel" id="btnCancelarHistorico">Cancelar</button>
@@ -448,8 +442,6 @@
             <div class="modal-body">
                 <p><strong>Tem certeza que deseja limpar o histórico de pausas?</strong></p>
                 <p>Esta ação é irreversível e todos os dados de pausas serão deletados permanentemente.</p>
-                <p>Digite a senha do administrador para confirmar:</p>
-                <input type="password" id="inputSenhaPausas" placeholder="Digite a senha">
             </div>
             <div class="modal-footer">
                 <button class="btn-cancel" id="btnCancelarPausas">Cancelar</button>
@@ -465,8 +457,6 @@
             <div class="modal-body">
                 <p><strong>Tem certeza que deseja limpar todos os contadores de pausas?</strong></p>
                 <p>Esta ação resetará todos os contadores acumulados de pausas para zero.</p>
-                <p>Digite a senha do administrador para confirmar:</p>
-                <input type="password" id="inputSenhaContadores" placeholder="Digite a senha">
             </div>
             <div class="modal-footer">
                 <button class="btn-cancel" id="btnCancelarContadores">Cancelar</button>
@@ -558,9 +548,6 @@
             const modalLimparHistorico = document.getElementById('modalLimparHistorico');
             const modalLimparPausas = document.getElementById('modalLimparPausas');
             const modalLimparContadores = document.getElementById('modalLimparContadores');
-            const inputSenhaHistorico = document.getElementById('inputSenhaHistorico');
-            const inputSenhaPausas = document.getElementById('inputSenhaPausas');
-            const inputSenhaContadores = document.getElementById('inputSenhaContadores');
             const btnCancelarHistorico = document.getElementById('btnCancelarHistorico');
             const btnCancelarPausas = document.getElementById('btnCancelarPausas');
             const btnCancelarContadores = document.getElementById('btnCancelarContadores');
@@ -596,25 +583,18 @@
 
             btnCancelarHistorico.addEventListener('click', () => {
                 modalLimparHistorico.style.display = 'none';
-                inputSenhaHistorico.value = '';
             });
 
             btnConfirmarHistorico.addEventListener('click', () => {
-                if (inputSenhaHistorico.value === SENHA_ADMIN) {
-                    if (window.FIREBASE_OK) {
-                        window.db.ref('atividades').remove();
-                    } else {
-                        localStorage.removeItem('atividades');
-                    }
-                    atividades = [];
-                    resetarContadores();
-                    modalLimparHistorico.style.display = 'none';
-                    inputSenhaHistorico.value = '';
-                    alert('Histórico de atividades limpo com sucesso! Contadores resetados.');
+                if (window.FIREBASE_OK) {
+                    window.db.ref('atividades').remove();
                 } else {
-                    alert('Senha incorreta!');
-                    inputSenhaHistorico.value = '';
+                    localStorage.removeItem('atividades');
                 }
+                atividades = [];
+                resetarContadores();
+                modalLimparHistorico.style.display = 'none';
+                alert('Histórico de atividades limpo com sucesso! Contadores resetados.');
             });
 
             // ===== LIMPAR HISTÓRICO DE PAUSAS =====
@@ -624,25 +604,18 @@
 
             btnCancelarPausas.addEventListener('click', () => {
                 modalLimparPausas.style.display = 'none';
-                inputSenhaPausas.value = '';
             });
 
             btnConfirmarPausas.addEventListener('click', () => {
-                if (inputSenhaPausas.value === SENHA_ADMIN) {
-                    if (window.FIREBASE_OK) {
-                        window.db.ref('historicoPausas').remove();
-                    } else {
-                        localStorage.removeItem('historicoPausas');
-                    }
-                    historicoPausas = [];
-                    resetarContadores();
-                    modalLimparPausas.style.display = 'none';
-                    inputSenhaPausas.value = '';
-                    alert('Histórico de pausas limpo com sucesso! Contadores resetados.');
+                if (window.FIREBASE_OK) {
+                    window.db.ref('historicoPausas').remove();
                 } else {
-                    alert('Senha incorreta!');
-                    inputSenhaPausas.value = '';
+                    localStorage.removeItem('historicoPausas');
                 }
+                historicoPausas = [];
+                resetarContadores();
+                modalLimparPausas.style.display = 'none';
+                alert('Histórico de pausas limpo com sucesso! Contadores resetados.');
             });
 
             // ===== LIMPAR CONTADORES DE PAUSAS =====
@@ -652,19 +625,12 @@
 
             btnCancelarContadores.addEventListener('click', () => {
                 modalLimparContadores.style.display = 'none';
-                inputSenhaContadores.value = '';
             });
 
             btnConfirmarContadores.addEventListener('click', () => {
-                if (inputSenhaContadores.value === SENHA_ADMIN) {
-                    resetarContadores();
-                    modalLimparContadores.style.display = 'none';
-                    inputSenhaContadores.value = '';
-                    alert('Contadores de pausas limpos com sucesso! Todos os valores foram resetados para zero.');
-                } else {
-                    alert('Senha incorreta!');
-                    inputSenhaContadores.value = '';
-                }
+                resetarContadores();
+                modalLimparContadores.style.display = 'none';
+                alert('Contadores de pausas limpos com sucesso! Todos os valores foram resetados para zero.');
             });
 
             // ===== EXPORTAR ATIVIDADES =====
@@ -798,11 +764,9 @@
             window.addEventListener('click', (e) => {
                 if (e.target === modalLimparHistorico) {
                     modalLimparHistorico.style.display = 'none';
-                    inputSenhaHistorico.value = '';
                 }
                 if (e.target === modalLimparPausas) {
                     modalLimparPausas.style.display = 'none';
-                    inputSenhaPausas.value = '';
                 }
             });
 
