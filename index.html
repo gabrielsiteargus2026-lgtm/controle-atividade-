@@ -870,6 +870,10 @@
     <script src="firebase-config.js"></script>
     <script src="firebase-auth.js"></script>
     <script>
+        // ⭐ Variáveis globais para evitar múltiplas verificações
+        let authCheckInProgress = false;
+        let authCheckCompleted = false;
+        
         // Inicializar Firebase
         if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('COLE_AQUI')) {
             firebase.initializeApp(FIREBASE_CONFIG);
@@ -893,7 +897,19 @@
                 return;
             }
 
+            // Evitar múltiplas verificações simultâneas
+            if (authCheckInProgress || authCheckCompleted) {
+                console.log('Auth check já em progresso ou completo');
+                return;
+            }
+
+            authCheckInProgress = true;
+            console.log('Iniciando verificação de autenticação...');
+
             window.auth.onAuthStateChanged(user => {
+                authCheckInProgress = false;
+                authCheckCompleted = true;
+
                 if (user) {
                     usuarioAtual = {
                         uid: user.uid,
@@ -902,15 +918,21 @@
                         emailVerificado: user.emailVerified
                     };
                     
-                    console.log('Usuário autenticado:', usuarioAtual.email);
+                    console.log('✅ Usuário autenticado:', usuarioAtual.email);
+                    
+                    // Mostrar conteúdo da página após autenticação
+                    document.body.style.display = 'block';
                     
                     // Chamar callback se existir
                     if (typeof onUsuarioAutenticado === 'function') {
                         onUsuarioAutenticado(usuarioAtual);
                     }
                 } else {
-                    console.warn('Usuário não autenticado. Redirecionando para login...');
-                    window.location.href = 'login.html';
+                    console.warn('❌ Usuário não autenticado. Redirecionando para login...');
+                    // Aguardar um pouco antes de redirecionar para evitar race conditions
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 500);
                 }
             });
         }
@@ -926,6 +948,7 @@
                 <li><a href="historico.html">Histórico</a></li>
                 <li><a href="performance.html">Performance</a></li>
                 <li><a href="admin.html">Administrador</a></li>
+                <li><a href="atividades-usuarios.html">👥 Atividades dos Usuários</a></li>
             </ul>
         </nav>
     </aside>
@@ -1365,7 +1388,12 @@
                 horaInicio: agora.toLocaleTimeString('pt-BR'),
                 tempoInicio: agora.getTime(),
                 observacao: '',
-                intervaloTimer: null
+                intervaloTimer: null,
+                // ✅ Adicionar rastreamento de usuário no início
+                usuario_id: usuarioAtual?.uid || 'anonimo',
+                email_usuario: usuarioAtual?.email || 'desconhecido',
+                nome_usuario: usuarioAtual?.nome || 'Usuário',
+                data_criacao: agora.toISOString()
             };
 
             atividadesEmAndamento.push(novaAtividade);
@@ -1376,6 +1404,13 @@
             salvarDados();
             atualizarKanban();
             iniciarCronometro(novaAtividade.id);
+
+            // Registrar atividade do usuário
+            registrarAtividadeUsuario('INICIOU', ticket, descricao, {
+                usuario_id: usuarioAtual?.uid || 'anonimo',
+                email_usuario: usuarioAtual?.email || 'desconhecido',
+                nome_usuario: usuarioAtual?.nome || 'Usuário'
+            });
 
             mostrarAlerta('sucesso', `Atividade iniciada para o ticket ${ticket}`);
             
@@ -1419,6 +1454,7 @@
 
             // Criar registro para o colaborador principal
             atividades.unshift({
+                id: atividade.id,
                 colaborador: atividade.nome,
                 ticket: atividade.ticket,
                 dataInicio: atividade.dataInicio,
@@ -1429,13 +1465,20 @@
                 descricao: atividade.descricao || '',
                 observacao: atividade.observacao || '',
                 justificativa: justificativa,
-                colaboradoresAuxiliares: colaboradoresAuxiliares || []
+                colaboradoresAuxiliares: colaboradoresAuxiliares || [],
+                // ✅ Rastreamento de usuário (preservar do início)
+                usuario_id: atividade.usuario_id || usuarioAtual?.uid || 'anonimo',
+                email_usuario: atividade.email_usuario || usuarioAtual?.email || 'desconhecido',
+                nome_usuario: atividade.nome_usuario || usuarioAtual?.nome || 'Usuário',
+                data_criacao: atividade.data_criacao || new Date().toISOString(),
+                data_atualizacao: new Date().toISOString()
             });
 
             // Criar registros para colaboradores auxiliares (com duração reduzida ou notação de ajuda)
             if (colaboradoresAuxiliares && colaboradoresAuxiliares.length > 0) {
                 colaboradoresAuxiliares.forEach(colaboradorAux => {
                     atividades.unshift({
+                        id: atividade.id,
                         colaborador: colaboradorAux,
                         ticket: atividade.ticket,
                         dataInicio: atividade.dataInicio,
@@ -1447,7 +1490,13 @@
                         observacao: `[AJUDA] ${atividade.observacao || ''}`,
                         justificativa: justificativa,
                         ehAjudante: true,
-                        colaboradorPrincipal: atividade.nome
+                        colaboradorPrincipal: atividade.nome,
+                        // ✅ Rastreamento de usuário também para colaboradores auxiliares
+                        usuario_id: atividade.usuario_id || usuarioAtual?.uid || 'anonimo',
+                        email_usuario: atividade.email_usuario || usuarioAtual?.email || 'desconhecido',
+                        nome_usuario: atividade.nome_usuario || usuarioAtual?.nome || 'Usuário',
+                        data_criacao: atividade.data_criacao || new Date().toISOString(),
+                        data_atualizacao: new Date().toISOString()
                     });
                 });
             }
@@ -1460,6 +1509,16 @@
             salvarDados();
             atualizarTabela();
             atualizarKanban();
+
+            // Registrar atividade do usuário
+            registrarAtividadeUsuario('FINALIZOU', atividade.ticket, atividade.descricao, {
+                duracao: formatarTempo(duracao),
+                observacao: atividade.observacao,
+                colaboradores: colaboradoresAuxiliares || [],
+                usuario_id: atividade.usuario_id || usuarioAtual?.uid || 'anonimo',
+                email_usuario: atividade.email_usuario || usuarioAtual?.email || 'desconhecido',
+                nome_usuario: atividade.nome_usuario || usuarioAtual?.nome || 'Usuário'
+            });
 
             if (colaboradoresAuxiliares && colaboradoresAuxiliares.length > 0) {
                 mostrarAlerta('sucesso', `Atividade registrada! Atribuída também para: ${colaboradoresAuxiliares.join(', ')}`);
@@ -1522,6 +1581,41 @@
             }
 
             setTimeout(() => alertDiv.remove(), 4000);
+        }
+
+        // Registrar atividade do usuário
+        function registrarAtividadeUsuario(tipo, ticket, descricao, detalhesAdicionais = {}) {
+            if (!usuarioAtual) return;
+
+            const registro = {
+                timestamp: new Date().toISOString(),
+                usuario_id: usuarioAtual.uid,
+                email_usuario: usuarioAtual.email,
+                nome_usuario: usuarioAtual.nome,
+                tipo: tipo, // INICIOU, FINALIZOU, PAUSOU, RETOMOU
+                ticket: ticket,
+                descricao: descricao,
+                ...detalhesAdicionais
+            };
+
+            // Carregar registros existentes
+            const registrosJSON = localStorage.getItem('registrosAtividades');
+            let registros = registrosJSON ? JSON.parse(registrosJSON) : [];
+            
+            // Adicionar novo registro
+            registros.push(registro);
+            
+            // Salvar no localStorage
+            localStorage.setItem('registrosAtividades', JSON.stringify(registros));
+
+            // Tentar salvar no Firebase se disponível
+            if (window.FIREBASE_OK && db) {
+                db.ref('registrosAtividades').push(registro).catch(err => {
+                    console.warn('Erro ao salvar registro de atividade no Firebase:', err);
+                });
+            }
+
+            console.log('📊 Atividade registrada:', tipo, ticket);
         }
 
         // Exportar para CSV - Movido para historico.html
@@ -1590,6 +1684,19 @@
             salvarDados();
             atualizarKanban();
             fecharModalPausarAtividade();
+
+            // Registrar atividade do usuário
+            const atividadePausa = atividadesEmAndamento.find(a => a.id === atividadePausando);
+            if (atividadePausa) {
+                registrarAtividadeUsuario('PAUSOU', atividadePausa.ticket, atividadePausa.descricao, {
+                    motivo: motivo,
+                    grupo: grupoNormalizado,
+                    usuario_id: atividadePausa.usuario_id || usuarioAtual?.uid || 'anonimo',
+                    email_usuario: atividadePausa.email_usuario || usuarioAtual?.email || 'desconhecido',
+                    nome_usuario: atividadePausa.nome_usuario || usuarioAtual?.nome || 'Usuário'
+                });
+            }
+
             mostrarAlerta('sucesso', 'Atividade pausada com sucesso!');
         }
 
@@ -1627,6 +1734,18 @@
             
             salvarDados();
             atualizarKanban();
+
+            // Registrar atividade do usuário
+            const atividadeRetoma = atividadesEmAndamento.find(a => a.id === atividadeId);
+            if (atividadeRetoma) {
+                registrarAtividadeUsuario('RETOMOU', atividadeRetoma.ticket, atividadeRetoma.descricao, {
+                    tempoPausa: estadoPausa && estadoPausa.tempoInicioPausa ? formatarTempo(agora.getTime() - estadoPausa.tempoInicioPausa) : '-',
+                    usuario_id: atividadeRetoma.usuario_id || usuarioAtual?.uid || 'anonimo',
+                    email_usuario: atividadeRetoma.email_usuario || usuarioAtual?.email || 'desconhecido',
+                    nome_usuario: atividadeRetoma.nome_usuario || usuarioAtual?.nome || 'Usuário'
+                });
+            }
+
             mostrarAlerta('sucesso', 'Atividade retomada!');
         }
 
@@ -2081,6 +2200,10 @@
             // Carregar dados após autenticação
             carregarDados();
         }
+
+
+        
+        // Event Listeners
         
         btnIniciarFlutante.addEventListener('click', function() {
             modalIniciarAtividade.style.display = 'block';

@@ -332,16 +332,9 @@
             firebase.initializeApp(FIREBASE_CONFIG);
             window.auth = firebase.auth();
             window.db = firebase.database();
-            // Fazer logout automático ao recarregar a página
-            window.auth.signOut().then(() => {
-                console.log('✅ Logout automático ao recarregar página');
-                window.FIREBASE_OK = true;
-                inicializarAutenticacao();
-            }).catch(error => {
-                console.warn('Aviso ao fazer logout:', error);
-                window.FIREBASE_OK = true;
-                inicializarAutenticacao();
-            });
+            window.FIREBASE_OK = true;
+            // Verificar autenticação (mantém o usuário logado)
+            inicializarAutenticacao();
         } else {
             window.FIREBASE_OK = false;
             console.warn('⚠️ Firebase não configurado.');
@@ -352,17 +345,6 @@
             window.onUsuarioAutenticadoAdmin = function(usuario) {
                 criarWidgetUsuario('usuarioWidget');
             };
-        }
-            
-            // Criar widget de usuário após autenticação
-            if (typeof window.onUsuarioAutenticadoAdmin === 'undefined') {
-                window.onUsuarioAutenticadoAdmin = function(usuario) {
-                    criarWidgetUsuario('usuarioWidget');
-                };
-            }
-        } else {
-            window.FIREBASE_OK = false;
-            console.warn('⚠️ Firebase não configurado. Usando localStorage temporariamente.');
         }
     </script>
 </head>
@@ -377,6 +359,7 @@
                 <li><a href="historico.html">Histórico</a></li>
                 <li><a href="performance.html">Performance</a></li>
                 <li><a href="admin.html" class="active">Administrador</a></li>
+                <li><a href="atividades-usuarios.html">👥 Atividades dos Usuários</a></li>
             </ul>
         </nav>
     </aside>
@@ -434,37 +417,7 @@
                 <button class="btn-export" id="btnExportarTudo" style="padding: 10px;">Exportar Tudo</button>
             </div>
 
-            <!-- Card: Excluir Atividade Específica -->
-            <div class="admin-card">
-                <h3>Excluir Atividade Específica</h3>
-                <p>Busque uma atividade pelo número do ticket para excluir. Esta ação é irreversível.</p>
-                <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-                    <input type="number" id="inputTicketBusca" placeholder="Nº do ticket" style="flex: 1; padding: 8px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 0.9em;">
-                    <button class="btn-action" id="btnBuscarAtividade" style="flex: 0.4; padding: 8px;">Buscar</button>
-                </div>
-                <div id="resultadoBusca" style="display: none; background: #f0f0f0; padding: 12px; border-radius: 5px; margin-bottom: 10px;">
-                    <div id="infoAtividadeEncontrada" style="font-size: 0.9em;"></div>
-                </div>
-            </div>
-
-            <!-- Card: Log de Auditoria -->
-            <div class="admin-card" style="grid-column: 1 / -1;">
-                <h3>Log de Auditoria</h3>
-                <p>Visualize todas as ações e alterações realizadas pelos usuários no sistema com data, hora e detalhes completos.</p>
-                <div class="info-box">
-                    <strong>ℹ️ Informação:</strong> Este log mostra todas as atividades criadas/modificadas com rastreamento de quem, quando e como foi feito.
-                </div>
-                <div style="display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
-                    <select id="selectUsuarioAuditoria" style="flex: 1; min-width: 150px; padding: 8px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 0.9em;">
-                        <option value="">-- Todos os Usuários --</option>
-                    </select>
-                    <input type="date" id="inputDataInicioAuditoria" style="flex: 1; min-width: 150px; padding: 8px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 0.9em;">
-                    <input type="date" id="inputDataFimAuditoria" style="flex: 1; min-width: 150px; padding: 8px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 0.9em;">
-                    <button class="btn-action" id="btnVisualizarAuditoria" style="padding: 6px 10px; font-size: 0.85em;">Visualizar</button>
-                    <button class="btn-export" id="btnExportarAuditoria" style="padding: 6px 10px; font-size: 0.85em;">Exportar CSV</button>
-                </div>
-            </div>
-        </div>
+</div>
 
     </div>
 
@@ -522,57 +475,6 @@
             <div class="modal-footer">
                 <button class="btn-cancel" id="btnCancelarContadores">Cancelar</button>
                 <button class="btn-danger" id="btnConfirmarContadores">Limpar Permanentemente</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Log de Auditoria -->
-    <div id="modalAuditoria" class="modal">
-        <div class="modal-content" style="max-width: 90%; width: 90%; max-height: 90vh; overflow-y: auto;">
-            <button class="close-btn" id="btnFecharAuditoria">&times;</button>
-            <div class="modal-header">📋 Log de Auditoria do Sistema</div>
-            <div class="modal-body" style="margin-bottom: 20px;">
-                <div style="overflow-x: auto;">
-                    <table id="tabelaAuditoria" style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
-                        <thead>
-                            <tr style="background: #2c3e50; color: white;">
-                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Data/Hora</th>
-                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Usuário</th>
-                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Email</th>
-                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Ação</th>
-                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Ticket</th>
-                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Descrição</th>
-                            </tr>
-                        </thead>
-                        <tbody id="corpoTabelaAuditoria">
-                            <tr>
-                                <td colspan="6" style="padding: 20px; text-align: center; color: #999;">Carregando dados de auditoria...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-cancel" id="btnFecharAuditoriaRodape">Fechar</button>
-                <button class="btn-export" id="btnExportarAuditoriaModal" style="width: auto;">Exportar como CSV</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para Excluir Atividade Específica -->
-    <div id="modalExcluirAtividade" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">Excluir Atividade</div>
-            <div class="modal-body">
-                <p><strong>Atividade encontrada:</strong></p>
-                <div id="detalhesAtividadeExcluir" style="background: #f9f9f9; padding: 12px; border-radius: 5px; margin-bottom: 15px; border-left: 4px solid #ff6b6b;">
-                </div>
-                <p><strong>Justificativa para exclusão (obrigatória):</strong></p>
-                <textarea id="txtJustificativaExclusao" placeholder="Digite o motivo da exclusão..." style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 1em; min-height: 100px; resize: vertical; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;"></textarea>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-cancel" id="btnCancelarExcluir">Cancelar</button>
-                <button class="btn-danger" id="btnConfirmarExcluir">Excluir Permanentemente</button>
             </div>
         </div>
     </div>
@@ -669,23 +571,83 @@
             const btnLimparContadores = document.getElementById('btnLimparContadores');
 
             let atividades = [];
+            let atividadesEmAndamento = [];
+            let kanbanState = {};
             let historicoPausas = [];
+            let dadosCarregados = false;
 
             // ===== Carregar Dados =====
             function carregarDados() {
                 if (window.FIREBASE_OK) {
+                    console.log('⏳ Carregando dados do Firebase...');
                     window.db.ref('atividades').on('value', (snapshot) => {
                         atividades = snapshot.val() || [];
+                        dadosCarregados = true;
+                        console.log('✅ Atividades carregadas do Firebase:', atividades.length);
+                    });
+                    window.db.ref('atividadesEmAndamento').on('value', (snapshot) => {
+                        atividadesEmAndamento = snapshot.val() || [];
+                        console.log('✅ Atividades em andamento carregadas do Firebase:', atividadesEmAndamento.length);
+                    });
+                    window.db.ref('kanbanState').on('value', (snapshot) => {
+                        kanbanState = snapshot.val() || {};
+                        console.log('✅ Kanban State carregado do Firebase');
                     });
                     window.db.ref('historicoPausas').on('value', (snapshot) => {
                         historicoPausas = snapshot.val() || [];
                     });
                 } else {
+                    console.log('⏳ Carregando dados do localStorage...');
                     const dadosAtiv = localStorage.getItem('atividades');
                     atividades = dadosAtiv ? JSON.parse(dadosAtiv) : [];
+                    const dadosEmAndamento = localStorage.getItem('atividadesEmAndamento');
+                    atividadesEmAndamento = dadosEmAndamento ? JSON.parse(dadosEmAndamento) : [];
+                    const dadosKanban = localStorage.getItem('kanbanState');
+                    kanbanState = dadosKanban ? JSON.parse(dadosKanban) : {};
                     const dadosPausas = localStorage.getItem('historicoPausas');
                     historicoPausas = dadosPausas ? JSON.parse(dadosPausas) : [];
+                    dadosCarregados = true;
+                    console.log('✅ Atividades carregadas do localStorage:', atividades.length);
+                    console.log('✅ Atividades em andamento carregadas do localStorage:', atividadesEmAndamento.length);
                 }
+            }
+
+            // ===== Recarregar dados sob demanda =====
+            function recarregarDadosAoUsuario() {
+                return new Promise((resolve) => {
+                    if (window.FIREBASE_OK) {
+                        console.log('🔄 Recarregando dados do Firebase...');
+                        Promise.all([
+                            new Promise(r => window.db.ref('atividades').once('value', snap => {
+                                atividades = snap.val() || [];
+                                console.log('✅ Atividades recarregadas:', atividades.length);
+                                r();
+                            })),
+                            new Promise(r => window.db.ref('atividadesEmAndamento').once('value', snap => {
+                                atividadesEmAndamento = snap.val() || [];
+                                console.log('✅ Atividades em andamento recarregadas:', atividadesEmAndamento.length);
+                                r();
+                            })),
+                            new Promise(r => window.db.ref('kanbanState').once('value', snap => {
+                                kanbanState = snap.val() || {};
+                                r();
+                            }))
+                        ]).then(() => {
+                            console.log('✅ Dados recarregados com sucesso');
+                            resolve();
+                        });
+                    } else {
+                        console.log('🔄 Recarregando dados do localStorage...');
+                        const dadosAtiv = localStorage.getItem('atividades');
+                        atividades = dadosAtiv ? JSON.parse(dadosAtiv) : [];
+                        const dadosEmAndamento = localStorage.getItem('atividadesEmAndamento');
+                        atividadesEmAndamento = dadosEmAndamento ? JSON.parse(dadosEmAndamento) : [];
+                        const dadosKanban = localStorage.getItem('kanbanState');
+                        kanbanState = dadosKanban ? JSON.parse(dadosKanban) : {};
+                        console.log('✅ Dados recarregados do localStorage');
+                        resolve();
+                    }
+                });
             }
 
             // ===== LIMPAR HISTÓRICO DE ATIVIDADES =====
@@ -881,364 +843,6 @@
                     modalLimparPausas.style.display = 'none';
                 }
             });
-
-            // ===== EXCLUIR ATIVIDADE ESPECÍFICA =====
-            const inputTicketBusca = document.getElementById('inputTicketBusca');
-            const btnBuscarAtividade = document.getElementById('btnBuscarAtividade');
-            const resultadoBusca = document.getElementById('resultadoBusca');
-            const infoAtividadeEncontrada = document.getElementById('infoAtividadeEncontrada');
-            const modalExcluirAtividade = document.getElementById('modalExcluirAtividade');
-            const detalhesAtividadeExcluir = document.getElementById('detalhesAtividadeExcluir');
-            const txtJustificativaExclusao = document.getElementById('txtJustificativaExclusao');
-            const btnCancelarExcluir = document.getElementById('btnCancelarExcluir');
-            const btnConfirmarExcluir = document.getElementById('btnConfirmarExcluir');
-
-            let atividadeSelecionadaParaExcluir = null;
-
-            // Buscar ao pressionar Enter
-            inputTicketBusca.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    btnBuscarAtividade.click();
-                }
-            });
-
-            // Buscar atividade
-            btnBuscarAtividade.addEventListener('click', () => {
-                const ticket = inputTicketBusca.value.trim();
-                if (!ticket) {
-                    alert('Por favor, digite o número do ticket');
-                    return;
-                }
-
-                const atividadeEncontrada = atividades.find(a => a.ticket === parseInt(ticket) || a.ticket === ticket);
-
-                if (!atividadeEncontrada) {
-                    alert('Nenhuma atividade encontrada com este ticket!');
-                    resultadoBusca.style.display = 'none';
-                    return;
-                }
-
-                atividadeSelecionadaParaExcluir = atividadeEncontrada;
-
-                // Mostrar resultado
-                infoAtividadeEncontrada.innerHTML = `
-                    <p><strong>Ticket:</strong> #${atividadeEncontrada.ticket}</p>
-                    <p><strong>Colaborador:</strong> ${atividadeEncontrada.colaborador}</p>
-                    <p><strong>Data de Início:</strong> ${atividadeEncontrada.dataInicio}</p>
-                    <p><strong>Data de Fim:</strong> ${atividadeEncontrada.dataFim || 'Não finalizada'}</p>
-                    <p><strong>Duração:</strong> ${atividadeEncontrada.duracao || 'N/A'}</p>
-                    <p><strong>Descrição:</strong> ${atividadeEncontrada.descricao || 'Sem descrição'}</p>
-                `;
-                resultadoBusca.style.display = 'block';
-
-                // Mostrar detalhes no modal também
-                detalhesAtividadeExcluir.innerHTML = `
-                    <p><strong>Ticket:</strong> #${atividadeEncontrada.ticket}</p>
-                    <p><strong>Colaborador:</strong> ${atividadeEncontrada.colaborador}</p>
-                    <p><strong>Data de Início:</strong> ${atividadeEncontrada.dataInicio}</p>
-                    <p><strong>Data de Fim:</strong> ${atividadeEncontrada.dataFim || 'Não finalizada'}</p>
-                    <p><strong>Duração:</strong> ${atividadeEncontrada.duracao || 'N/A'}</p>
-                `;
-
-                // Abrir modal
-                modalExcluirAtividade.style.display = 'flex';
-                txtJustificativaExclusao.focus();
-            });
-
-            // Cancelar exclusão
-            btnCancelarExcluir.addEventListener('click', () => {
-                modalExcluirAtividade.style.display = 'none';
-                resultadoBusca.style.display = 'none';
-                inputTicketBusca.value = '';
-                txtJustificativaExclusao.value = '';
-                atividadeSelecionadaParaExcluir = null;
-            });
-
-            // Confirmar exclusão
-            btnConfirmarExcluir.addEventListener('click', () => {
-                if (!atividadeSelecionadaParaExcluir) return;
-
-                const justificativa = txtJustificativaExclusao.value.trim();
-                if (!justificativa) {
-                    alert('Por favor, forneça uma justificativa para a exclusão');
-                    return;
-                }
-
-                // Preparar dados para CSV
-                const registroExclusao = {
-                    dataExclusao: new Date().toLocaleDateString('pt-BR'),
-                    horaExclusao: new Date().toLocaleTimeString('pt-BR'),
-                    ticket: atividadeSelecionadaParaExcluir.ticket,
-                    colaborador: atividadeSelecionadaParaExcluir.colaborador,
-                    dataInicio: atividadeSelecionadaParaExcluir.dataInicio,
-                    dataFim: atividadeSelecionadaParaExcluir.dataFim || '-',
-                    duracao: atividadeSelecionadaParaExcluir.duracao || '-',
-                    descricao: atividadeSelecionadaParaExcluir.descricao || '-',
-                    observacao: atividadeSelecionadaParaExcluir.observacao || '-',
-                    justificativa: justificativa
-                };
-
-                // Excluir atividade
-                const indexAtividade = atividades.indexOf(atividadeSelecionadaParaExcluir);
-                if (indexAtividade > -1) {
-                    atividades.splice(indexAtividade, 1);
-                }
-
-                // Salvar
-                if (window.FIREBASE_OK) {
-                    window.db.ref('atividades').set(atividades).catch(err => console.error('Erro ao atualizar Firebase:', err));
-                } else {
-                    localStorage.setItem('atividades', JSON.stringify(atividades));
-                }
-
-                // Gerar CSV
-                gerarCSVExclusao(registroExclusao);
-
-                // Fechar modal e limpar
-                modalExcluirAtividade.style.display = 'none';
-                resultadoBusca.style.display = 'none';
-                inputTicketBusca.value = '';
-                txtJustificativaExclusao.value = '';
-                atividadeSelecionadaParaExcluir = null;
-
-                alert('Atividade excluída com sucesso! Um registro de exclusão foi gerado em CSV.');
-            });
-
-            // Gerar CSV de exclusão
-            function gerarCSVExclusao(registroExclusao) {
-                const headers = ['Data de Exclusão', 'Hora de Exclusão', 'Ticket', 'Colaborador', 'Data de Início', 'Data de Fim', 'Duração', 'Descrição', 'Observação', 'Justificativa da Exclusão'];
-                const csvContent = [
-                    headers.join(','),
-                    [
-                        registroExclusao.dataExclusao,
-                        registroExclusao.horaExclusao,
-                        `#${registroExclusao.ticket}`,
-                        registroExclusao.colaborador,
-                        registroExclusao.dataInicio,
-                        registroExclusao.dataFim,
-                        registroExclusao.duracao,
-                        `"${registroExclusao.descricao.replace(/"/g, '""')}"`,
-                        `"${registroExclusao.observacao.replace(/"/g, '""')}"`,
-                        `"${registroExclusao.justificativa.replace(/"/g, '""')}"`
-                    ].join(',')
-                ].join('\n');
-
-                const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                const url = URL.createObjectURL(blob);
-                const dataAtual = new Date().toISOString().split('T')[0];
-                link.setAttribute('href', url);
-                link.setAttribute('download', `exclusao_atividade_ticket_${atividadeSelecionadaParaExcluir.ticket}_${dataAtual}.csv`);
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-
-            // Fechar modal ao clicar fora
-            modalExcluirAtividade.addEventListener('click', (e) => {
-                if (e.target === modalExcluirAtividade) {
-                    modalExcluirAtividade.style.display = 'none';
-                    txtJustificativaExclusao.value = '';
-                    atividadeSelecionadaParaExcluir = null;
-                }
-            });
-
-            // ===== LOG DE AUDITORIA =====
-            const selectUsuarioAuditoria = document.getElementById('selectUsuarioAuditoria');
-            const inputDataInicioAuditoria = document.getElementById('inputDataInicioAuditoria');
-            const inputDataFimAuditoria = document.getElementById('inputDataFimAuditoria');
-            const btnVisualizarAuditoria = document.getElementById('btnVisualizarAuditoria');
-            const btnExportarAuditoria = document.getElementById('btnExportarAuditoria');
-            const modalAuditoria = document.getElementById('modalAuditoria');
-            const btnFecharAuditoria = document.getElementById('btnFecharAuditoria');
-            const btnFecharAuditoriaRodape = document.getElementById('btnFecharAuditoriaRodape');
-            const tabelaAuditoria = document.getElementById('tabelaAuditoria');
-            const corpoTabelaAuditoria = document.getElementById('corpoTabelaAuditoria');
-            const btnExportarAuditoriaModal = document.getElementById('btnExportarAuditoriaModal');
-
-            let dadosAuditoriaFiltrados = [];
-
-            // Carregar lista de usuários
-            function carregarUsuariosAuditoria() {
-                if (!window.FIREBASE_OK) return;
-
-                selectUsuarioAuditoria.innerHTML = '<option value="">-- Carregando usuários... --</option>';
-
-                window.db.ref('usuarios').on('value', (snapshot) => {
-                    const usuarios = snapshot.val() || {};
-                    selectUsuarioAuditoria.innerHTML = '<option value="">-- Todos os Usuários --</option>';
-
-                    const usuariosArray = Object.keys(usuarios).map(uid => ({
-                        uid,
-                        nome: usuarios[uid].nome || 'Sem nome',
-                        email: usuarios[uid].email || 'sem-email'
-                    }));
-
-                    if (usuariosArray.length === 0) {
-                        const option = document.createElement('option');
-                        option.value = '';
-                        option.text = '-- Nenhum usuário encontrado --';
-                        selectUsuarioAuditoria.appendChild(option);
-                    } else {
-                        usuariosArray.forEach(user => {
-                            const option = document.createElement('option');
-                            option.value = user.uid;
-                            option.text = `${user.nome} (${user.email})`;
-                            selectUsuarioAuditoria.appendChild(option);
-                        });
-                    }
-
-                    console.log('✅ Lista de usuários carregada:', usuariosArray.length, 'usuários');
-                }, (error) => {
-                    console.error('❌ Erro ao carregar usuários:', error);
-                    selectUsuarioAuditoria.innerHTML = '<option value="">-- Erro ao carregar --</option>';
-                });
-            }
-
-            // Visualizar log de auditoria
-            btnVisualizarAuditoria.addEventListener('click', () => {
-                const usuarioSelecionado = selectUsuarioAuditoria.value;
-                const dataInicio = inputDataInicioAuditoria.value;
-                const dataFim = inputDataFimAuditoria.value;
-
-                // Buscar e filtrar dados
-                let dadosParaExibir = Array.isArray(atividades) ? atividades : Object.values(atividades || {});
-
-                // Filtrar por usuário
-                if (usuarioSelecionado) {
-                    dadosParaExibir = dadosParaExibir.filter(a => a.usuario_id === usuarioSelecionado);
-                }
-
-                // Filtrar por data (se informada)
-                if (dataInicio) {
-                    dadosParaExibir = dadosParaExibir.filter(a => {
-                        const dataAtiv = a.data_criacao ? new Date(a.data_criacao).toISOString().split('T')[0] : a.dataInicio;
-                        return dataAtiv >= dataInicio;
-                    });
-                }
-
-                if (dataFim) {
-                    dadosParaExibir = dadosParaExibir.filter(a => {
-                        const dataAtiv = a.data_criacao ? new Date(a.data_criacao).toISOString().split('T')[0] : a.dataInicio;
-                        return dataAtiv <= dataFim;
-                    });
-                }
-
-                // Ordenar por data (mais recente primeiro)
-                dadosParaExibir.sort((a, b) => {
-                    const dataA = new Date(a.data_criacao || a.dataInicio);
-                    const dataB = new Date(b.data_criacao || b.dataInicio);
-                    return dataB - dataA;
-                });
-
-                dadosAuditoriaFiltrados = dadosParaExibir;
-
-                // Preencher tabela
-                corpoTabelaAuditoria.innerHTML = '';
-
-                if (dadosParaExibir.length === 0) {
-                    corpoTabelaAuditoria.innerHTML = `
-                        <tr>
-                            <td colspan="6" style="padding: 20px; text-align: center; color: #999;">
-                                Nenhuma atividade encontrada com os filtros aplicados.
-                            </td>
-                        </tr>
-                    `;
-                } else {
-                    dadosParaExibir.forEach((atividade, index) => {
-                        const dataCriacao = atividade.data_criacao ? new Date(atividade.data_criacao).toLocaleString('pt-BR') : `${atividade.dataInicio} ${atividade.horaInicio || ''}`;
-                        const emailUsuario = atividade.email_usuario || 'N/A';
-                        const nomeUsuario = atividade.nome_usuario || atividade.colaborador || 'N/A';
-                        const acao = atividade.data_atualizacao ? '📝 Modificada' : '✅ Criada';
-                        const ticket = atividade.ticket || 'N/A';
-                        const descricao = (atividade.descricao || '').substring(0, 50) + (atividade.descricao && atividade.descricao.length > 50 ? '...' : '');
-
-                        const tr = document.createElement('tr');
-                        tr.style.borderBottom = '1px solid #ddd';
-                        tr.innerHTML = `
-                            <td style="padding: 10px; border: 1px solid #ddd;">${dataCriacao}</td>
-                            <td style="padding: 10px; border: 1px solid #ddd;">${nomeUsuario}</td>
-                            <td style="padding: 10px; border: 1px solid #ddd;">${emailUsuario}</td>
-                            <td style="padding: 10px; border: 1px solid #ddd;">${acao}</td>
-                            <td style="padding: 10px; border: 1px solid #ddd;">#${ticket}</td>
-                            <td style="padding: 10px; border: 1px solid #ddd;" title="${atividade.descricao || ''}">${descricao}</td>
-                        `;
-                        corpoTabelaAuditoria.appendChild(tr);
-                    });
-                }
-
-                modalAuditoria.style.display = 'flex';
-            });
-
-            // Fechar modal de auditoria
-            btnFecharAuditoria.addEventListener('click', () => {
-                modalAuditoria.style.display = 'none';
-            });
-
-            btnFecharAuditoriaRodape.addEventListener('click', () => {
-                modalAuditoria.style.display = 'none';
-            });
-
-            // Exportar auditoria como CSV
-            function exportarAuditoriaCSV() {
-                if (dadosAuditoriaFiltrados.length === 0) {
-                    alert('Nenhum dado para exportar! Visualize o log primeiro.');
-                    return;
-                }
-
-                const headers = ['Data/Hora', 'Usuário', 'Email', 'Ação', 'Ticket', 'Descrição', 'Duração'];
-                let csvContent = 'LOG DE AUDITORIA DO SISTEMA\n';
-                csvContent += `Gerado em: ${new Date().toLocaleString('pt-BR')}\n\n`;
-                csvContent += headers.join(',') + '\n';
-
-                dadosAuditoriaFiltrados.forEach(atividade => {
-                    const dataCriacao = atividade.data_criacao ? new Date(atividade.data_criacao).toLocaleString('pt-BR') : `${atividade.dataInicio} ${atividade.horaInicio || ''}`;
-                    const emailUsuario = atividade.email_usuario || 'N/A';
-                    const nomeUsuario = atividade.nome_usuario || atividade.colaborador || 'N/A';
-                    const acao = atividade.data_atualizacao ? 'Modificada' : 'Criada';
-                    const ticket = atividade.ticket || 'N/A';
-                    const descricao = atividade.descricao || 'Sem descrição';
-                    const duracao = atividade.duracao || 'N/A';
-
-                    csvContent += [
-                        dataCriacao,
-                        nomeUsuario,
-                        emailUsuario,
-                        acao,
-                        `#${ticket}`,
-                        `"${descricao.replace(/"/g, '""')}"`,
-                        duracao
-                    ].join(',') + '\n';
-                });
-
-                const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                const url = URL.createObjectURL(blob);
-                const dataAtual = new Date().toISOString().split('T')[0];
-                link.setAttribute('href', url);
-                link.setAttribute('download', `auditoria_${dataAtual}.csv`);
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-
-            btnExportarAuditoria.addEventListener('click', exportarAuditoriaCSV);
-            btnExportarAuditoriaModal.addEventListener('click', exportarAuditoriaCSV);
-
-            // Fechar modais ao clicar fora
-            modalAuditoria.addEventListener('click', (e) => {
-                if (e.target === modalAuditoria) {
-                    modalAuditoria.style.display = 'none';
-                }
-            });
-
-            // Carregar usuários ao iniciar
-            setTimeout(() => {
-                carregarUsuariosAuditoria();
-                
-            }, 1000);
 
             // Carregar dados
             carregarDados();

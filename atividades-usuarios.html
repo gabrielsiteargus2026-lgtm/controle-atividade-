@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atividades dos Usuários - Controle de Atividade</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .navbar {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 15px 20px;
+            margin-bottom: 30px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar-brand {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-email {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .logout-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .logout-btn:hover {
+            background: #c0392b;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .page-header h1 {
+            color: #333;
+            font-size: 2em;
+        }
+
+        .page-header p {
+            color: #666;
+            font-size: 0.95em;
+            margin-top: 5px;
+        }
+
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9em;
+        }
+
+        .filter-group input,
+        .filter-group select {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 0.9em;
+            min-width: 200px;
+        }
+
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .activities-list {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .activity-item {
+            padding: 20px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+            transition: background 0.2s ease;
+        }
+
+        .activity-item:hover {
+            background: #f9f9f9;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            font-size: 2em;
+            flex-shrink: 0;
+            width: 50px;
+            text-align: center;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-user {
+            font-weight: 700;
+            color: #333;
+            font-size: 1.05em;
+        }
+
+        .activity-user span {
+            color: #667eea;
+        }
+
+        .activity-action {
+            color: #555;
+            margin: 5px 0;
+            line-height: 1.5;
+        }
+
+        .activity-ticket {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .activity-time {
+            color: #999;
+            font-size: 0.85em;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .activity-details {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .empty-state h2 {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #999;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            height: 100vh;
+            background: #2c3e50;
+            padding: 20px;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .sidebar-logo {
+            color: white;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 10px;
+        }
+
+        .sidebar-menu a {
+            color: #bdc3c7;
+            text-decoration: none;
+            padding: 10px 15px;
+            display: block;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-menu a:hover,
+        .sidebar-menu a.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .main-content {
+            margin-left: 250px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .filters {
+                flex-direction: column;
+            }
+
+            .filter-group input,
+            .filter-group select {
+                width: 100%;
+            }
+
+            .page-header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .spinner {
+            border: 4px solid #f0f0f0;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .export-btn {
+            background: #27ae60;
+            color: white;
+        }
+
+        .export-btn:hover {
+            background: #229954;
+        }
+    </style>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <!-- Firebase Config & Auth -->
+    <script src="firebase-config.js"></script>
+    
+    <!-- Definir callback ANTES de carregar firebase-auth.js -->
+    <script>
+        // Estado global - usuarioAtual é declarado em firebase-auth.js
+        let registrosAtividades = [];
+        let registrosFiltrados = [];
+        let intervaloCarregamento = null;
+
+        // Callback chamado automaticamente quando usuário se autentica
+        function onUsuarioAutenticado(usuario) {
+            console.log('✅ Usuário autenticado:', usuario.email);
+            document.getElementById('userEmail').textContent = usuario.email;
+            carregarAtividades();
+        }
+        
+        // Carregar atividades dos usuários
+        function carregarAtividades() {
+            console.log('Carregando atividades dos usuários...');
+            const loadingElement = document.getElementById('loading');
+            if (loadingElement) loadingElement.style.display = 'block';
+
+            setTimeout(() => {
+                const atividadesLocal = localStorage.getItem('registrosAtividades');
+                if (atividadesLocal) {
+                    try {
+                        registrosAtividades = JSON.parse(atividadesLocal);
+                        console.log('✅ Carregadas', registrosAtividades.length, 'atividades do localStorage');
+                    } catch (e) {
+                        console.error('Erro ao parsear atividades:', e);
+                        registrosAtividades = [];
+                    }
+                } else {
+                    console.warn('⚠️ Nenhuma atividade encontrada no localStorage');
+                    registrosAtividades = [];
+                }
+
+                // Ordenar por data (mais recente primeiro)
+                registrosAtividades.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                registrosFiltrados = [...registrosAtividades];
+                atualizarEstatisticas();
+                exibirAtividades();
+                if (loadingElement) loadingElement.style.display = 'none';
+
+                // Iniciar intervalo de recarregamento apenas na primeira vez
+                if (!intervaloCarregamento) {
+                    intervaloCarregamento = setInterval(carregarAtividades, 5000);
+                }
+            }, 500);
+        }
+    </script>
+    
+    <script src="firebase-auth.js"></script>
+    <script>
+        console.log('🔍 Debug: Verificando estado após carregar firebase-auth.js');
+        console.log('   - typeof inicializarAutenticacao:', typeof inicializarAutenticacao);
+        console.log('   - typeof onUsuarioAutenticado:', typeof onUsuarioAutenticado);
+        console.log('   - typeof FIREBASE_CONFIG:', typeof FIREBASE_CONFIG);
+        
+        // Pequeno delay para garantir que firebase-auth.js foi totalmente processado
+        setTimeout(() => {
+            // Inicializar Firebase
+            if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('COLE_AQUI')) {
+                console.log('✅ FIREBASE_CONFIG encontrado');
+                if (!firebase.apps || firebase.apps.length === 0) {
+                    firebase.initializeApp(FIREBASE_CONFIG);
+                    console.log('✅ Firebase inicializado');
+                } else {
+                    console.log('ℹ️  Firebase já estava inicializado');
+                }
+                window.auth = firebase.auth();
+                window.db = firebase.database();
+                window.FIREBASE_OK = true;
+                console.log('✅ window.auth e window.db atribuídos');
+                
+                // Verificar autenticação (mantém o usuário logado)
+                console.log('Chamando inicializarAutenticacao()...');
+                if (typeof inicializarAutenticacao === 'function') {
+                    inicializarAutenticacao();
+                } else {
+                    console.error('❌ inicializarAutenticacao não é uma função!');
+                }
+            } else {
+                window.FIREBASE_OK = false;
+                console.warn('⚠️ Firebase não configurado.');
+            }
+        }, 100);
+    </script>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-logo">📊 Menu</div>
+        <nav>
+            <ul class="sidebar-menu">
+                <li><a href="index.html">Controle de Atividade</a></li>
+                <li><a href="historico.html">Histórico</a></li>
+                <li><a href="performance.html">Performance</a></li>
+                <li><a href="admin.html">Administrador</a></li>
+                <li><a href="atividades-usuarios.html" class="active">👥 Atividades dos Usuários</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <div class="main-content">
+        <div class="navbar">
+            <div class="navbar-brand">📊 Atividades dos Usuários</div>
+            <div class="user-info">
+                <div class="user-email" id="userEmail">Usuário não autenticado</div>
+                <button class="logout-btn" id="logoutBtn">Sair</button>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="page-header">
+                <div>
+                    <h1>👥 Atividades dos Usuários</h1>
+                    <p>Visualize todas as ações realizadas pelos usuários no sistema</p>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalAtividades">0</div>
+                    <div class="stat-label">Total de Ações</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalUsuarios">0</div>
+                    <div class="stat-label">Usuários Ativos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="atividadesHoje">0</div>
+                    <div class="stat-label">Ações Hoje</div>
+                </div>
+            </div>
+
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Email do Usuário:</label>
+                    <input type="text" id="filterEmail" placeholder="Digite email para filtrar...">
+                </div>
+                <div class="filter-group">
+                    <label>Tipo de Ação:</label>
+                    <select id="filterAcao">
+                        <option value="">-- Todas as ações --</option>
+                        <option value="INICIOU">Iniciou Atividade</option>
+                        <option value="FINALIZOU">Finalizou Atividade</option>
+                        <option value="PAUSOU">Pausou Atividade</option>
+                        <option value="RETOMOU">Retomou Atividade</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Data:</label>
+                    <input type="date" id="filterData">
+                </div>
+                <div class="filter-buttons">
+                    <button class="btn btn-primary" id="btnAplicarFiltros">🔍 Aplicar</button>
+                    <button class="btn btn-secondary" id="btnLimparFiltros">🔄 Limpar</button>
+                    <button class="btn export-btn" id="btnExportarCSV">💾 Exportar CSV</button>
+                </div>
+            </div>
+
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                Carregando atividades...
+            </div>
+
+            <div id="activitiesList" class="activities-list">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <h2>Nenhuma atividade registrada</h2>
+                    <p>As atividades dos usuários aparecerão aqui</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Atualizar estatísticas
+        function atualizarEstatisticas() {
+            // Total de atividades
+            document.getElementById('totalAtividades').textContent = registrosAtividades.length;
+
+            // Total de usuários únicos
+            const usuariosUnicos = new Set(registrosAtividades.map(r => r.email_usuario));
+            document.getElementById('totalUsuarios').textContent = usuariosUnicos.size;
+
+            // Atividades de hoje
+            const hoje = new Date().toISOString().split('T')[0];
+            const atividadesHoje = registrosAtividades.filter(r => {
+                const data = new Date(r.timestamp).toISOString().split('T')[0];
+                return data === hoje;
+            });
+            document.getElementById('atividadesHoje').textContent = atividadesHoje.length;
+        }
+
+        // Exibir atividades
+        function exibirAtividades() {
+            const container = document.getElementById('activitiesList');
+
+            if (registrosFiltrados.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <h2>Nenhuma atividade encontrada</h2>
+                        <p>Tente ajustar os filtros</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            registrosFiltrados.forEach(registro => {
+                const data = new Date(registro.timestamp);
+                const dataFormatada = data.toLocaleDateString('pt-BR');
+                const horaFormatada = data.toLocaleTimeString('pt-BR');
+
+                let icon = '📝';
+                let acao = '';
+                let detalhes = '';
+
+                switch (registro.tipo) {
+                    case 'INICIOU':
+                        icon = '▶️';
+                        acao = `iniciou a atividade <span class="activity-ticket">#${registro.ticket}</span>`;
+                        detalhes = `Descrição: ${registro.descricao}`;
+                        break;
+                    case 'FINALIZOU':
+                        icon = '✅';
+                        acao = `finalizou a atividade <span class="activity-ticket">#${registro.ticket}</span>`;
+                        detalhes = `Duração: ${registro.duracao} | Observação: ${registro.observacao || '-'}`;
+                        break;
+                    case 'PAUSOU':
+                        icon = '⏸️';
+                        acao = `pausou a atividade <span class="activity-ticket">#${registro.ticket}</span>`;
+                        detalhes = `Motivo: ${registro.motivo} | Grupo: ${registro.grupo}`;
+                        break;
+                    case 'RETOMOU':
+                        icon = '▶️';
+                        acao = `retomou a atividade <span class="activity-ticket">#${registro.ticket}</span>`;
+                        detalhes = `Tempo de pausa: ${registro.tempoPausa}`;
+                        break;
+                }
+
+                html += `
+                    <div class="activity-item">
+                        <div class="activity-icon">${icon}</div>
+                        <div class="activity-content">
+                            <div class="activity-user">
+                                <span>${registro.email_usuario}</span> ${acao}
+                            </div>
+                            <div class="activity-action">
+                                ${registro.nome_usuario} (${registro.usuario_id.substring(0, 8)}...)
+                            </div>
+                            <div class="activity-details">
+                                ${detalhes}
+                            </div>
+                            <div class="activity-time">
+                                📅 ${dataFormatada} às ${horaFormatada}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Aplicar filtros
+        function aplicarFiltros() {
+            const email = document.getElementById('filterEmail').value.toLowerCase();
+            const acao = document.getElementById('filterAcao').value;
+            const data = document.getElementById('filterData').value;
+
+            registrosFiltrados = registrosAtividades.filter(registro => {
+                let passa = true;
+
+                if (email && !registro.email_usuario.toLowerCase().includes(email)) {
+                    passa = false;
+                }
+
+                if (acao && registro.tipo !== acao) {
+                    passa = false;
+                }
+
+                if (data) {
+                    const dataRegistro = new Date(registro.timestamp).toISOString().split('T')[0];
+                    if (dataRegistro !== data) {
+                        passa = false;
+                    }
+                }
+
+                return passa;
+            });
+
+            exibirAtividades();
+        }
+
+        // Limpar filtros
+        function limparFiltros() {
+            document.getElementById('filterEmail').value = '';
+            document.getElementById('filterAcao').value = '';
+            document.getElementById('filterData').value = '';
+            registrosFiltrados = [...registrosAtividades];
+            exibirAtividades();
+        }
+
+        // Exportar para CSV
+        function exportarCSV() {
+            if (registrosFiltrados.length === 0) {
+                alert('Nenhum dado para exportar! Aplique filtros primeiro.');
+                return;
+            }
+
+            let csvContent = 'ATIVIDADES DOS USUÁRIOS\n';
+            csvContent += `Exportado em: ${new Date().toLocaleString('pt-BR')}\n\n`;
+            csvContent += 'Data/Hora,Usuário,Email,Ação,Ticket,Detalhes\n';
+
+            registrosFiltrados.forEach(registro => {
+                const data = new Date(registro.timestamp).toLocaleString('pt-BR');
+                let acao = '';
+                let detalhes = '';
+
+                switch (registro.tipo) {
+                    case 'INICIOU':
+                        acao = 'Iniciou';
+                        detalhes = registro.descricao;
+                        break;
+                    case 'FINALIZOU':
+                        acao = 'Finalizou';
+                        detalhes = `Duração: ${registro.duracao}`;
+                        break;
+                    case 'PAUSOU':
+                        acao = 'Pausou';
+                        detalhes = `Motivo: ${registro.motivo}`;
+                        break;
+                    case 'RETOMOU':
+                        acao = 'Retomou';
+                        detalhes = `Pausa: ${registro.tempoPausa}`;
+                        break;
+                }
+
+                csvContent += `"${data}","${registro.nome_usuario}","${registro.email_usuario}","${acao}","#${registro.ticket}","${detalhes}"\n`;
+            });
+
+            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            const dataAtual = new Date().toISOString().split('T')[0];
+            link.setAttribute('href', url);
+            link.setAttribute('download', `atividades-usuarios_${dataAtual}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Inicializar Firebase
+        if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('COLE_AQUI')) {
+            if (!firebase.apps || firebase.apps.length === 0) {
+                firebase.initializeApp(FIREBASE_CONFIG);
+            }
+            window.auth = firebase.auth();
+            window.db = firebase.database();
+            window.FIREBASE_OK = true;
+            console.log('✅ Firebase inicializado em atividades-usuarios.html');
+        } else {
+            window.FIREBASE_OK = false;
+            console.warn('⚠️ Firebase não configurado.');
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM carregado, adicionando event listeners...');
+            
+            document.getElementById('btnAplicarFiltros').addEventListener('click', aplicarFiltros);
+            document.getElementById('btnLimparFiltros').addEventListener('click', limparFiltros);
+            document.getElementById('btnExportarCSV').addEventListener('click', exportarCSV);
+
+            document.getElementById('logoutBtn').addEventListener('click', () => {
+                if (intervaloCarregamento) clearInterval(intervaloCarregamento);
+                if (window.FIREBASE_OK && window.auth) {
+                    window.auth.signOut().then(() => {
+                        window.location.href = 'login.html';
+                    });
+                } else {
+                    window.location.href = 'login.html';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

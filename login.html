@@ -677,12 +677,22 @@
                 window.auth = firebase.auth();
                 window.db = firebase.database();
                 
+                // ⭐ ATIVAR PERSISTÊNCIA LOCAL - mantém usuário logado
+                window.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+                    .then(() => {
+                        console.log('✅ Persistência LOCAL ativada - usuário permanecerá logado');
+                        
+                        // Verificar se já tem sessão ativa
+                        checkAuthState();
+                    })
+                    .catch(error => {
+                        console.warn('⚠️ Não conseguiu ativar persistência:', error);
+                        // Continuar mesmo sem persistência
+                        checkAuthState();
+                    });
+                
                 console.log('Firebase Auth inicializado:', !!window.auth);
                 console.log('Firebase DB inicializado:', !!window.db);
-                
-                // Verificar autenticação (sem persistência por enquanto)
-                checkAuthState();
-                
                 console.log('Firebase inicializado com sucesso!');
                 
             } catch (error) {
@@ -693,9 +703,25 @@
         
         // Função para verificar estado de autenticação
         function checkAuthState() {
-            // NÃO redireciona mais automaticamente
-            // Usuário SEMPRE precisa fazer login, mesmo se estiver autenticado
-            console.log('Aguardando entrada do usuário...');
+            console.log('Verificando se há sessão ativa...');
+            
+            if (!window.auth) {
+                console.warn('⚠️ Firebase Auth ainda não inicializado');
+                return;
+            }
+            
+            // ⭐ Se usuário já está logado → redirecionar para index.html
+            window.auth.onAuthStateChanged(user => {
+                if (user) {
+                    console.log('✅ Sessão encontrada para:', user.email);
+                    // Redirecionar para index.html com delay para completar inicialização
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 300);
+                } else {
+                    console.log('❌ Nenhuma sessão ativa. Aguardando login do usuário...');
+                }
+            });
         }
     </script>
 </body>
