@@ -576,8 +576,11 @@
             background: #f9f9f9;
             border-radius: 8px;
             padding: 12px;
-            min-height: 300px;
+            height: 600px;
             border: 2px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         .kanban-column h4 {
@@ -587,12 +590,33 @@
             font-size: 0.95em;
             padding-bottom: 8px;
             border-bottom: 2px solid #5b8ec6;
+            flex-shrink: 0;
         }
 
         .kanban-tasks {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 10px;
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+        
+        .kanban-tasks::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .kanban-tasks::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .kanban-tasks::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+        
+        .kanban-tasks::-webkit-scrollbar-thumb:hover {
+            background: #999;
         }
 
         .kanban-card {
@@ -735,6 +759,10 @@
             color: #999;
             padding: 30px 10px;
             font-style: italic;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .btn-iniciar-flutuante {
@@ -978,7 +1006,27 @@
                 </div>
                 <div class="modal-footer">
                     <button class="btn-danger" id="btnCancelarObsConcluir" style="background: #999;">Cancelar</button>
-                    <button class="btn-success" id="btnConfirmarComObs" style="background: #51cf66;">Concluir</button>
+                    <button class="btn-success" id="btnConfirmarComObs" style="background: #51cf66;">Próximo</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para Atribuir Colaboradores Auxiliares -->
+        <div id="modalAtribuirColaboradores" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">👥 Atribuir Colaboradores Auxiliares</div>
+                <div class="modal-body">
+                    <p style="margin-bottom: 15px; color: #333;"><strong>Deseja atribuir essa atividade a outros colegas de equipe?</strong></p>
+                    <p style="margin-bottom: 15px; color: #666; font-size: 0.9em;">Selecione os colaboradores que ajudaram nesta atividade para que eles também recebam crédito:</p>
+                    
+                    <div id="checkboxColaboradores" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-height: 250px; overflow-y: auto; border: 1px solid #e0e0e0; padding: 12px; border-radius: 5px; margin-bottom: 15px;">
+                        <!-- Checkboxes serão gerados dinamicamente -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-danger" id="btnCancelarColaboradores" style="background: #999;">Cancelar</button>
+                    <button class="btn-primary" id="btnProsseguirSemColaboradores" style="background: #5b8ec6;">Concluir Sem Atribuir</button>
+                    <button class="btn-success" id="btnConfirmarAtribuicao" style="background: #51cf66;">Concluir e Atribuir</button>
                 </div>
             </div>
         </div>
@@ -1035,9 +1083,21 @@
         let kanbanState = {}; // { id: { status: 'em_andamento'|'pausado'|'concluido', motivoPausa: '', tempoInicioPausa: null } }
         let atividadePausando = null;
         let atividadeConcluindo = null;
+        let atividadeEmObservacao = null; // Rastrear atividade em observação para depois atribuir
         let filtroAtivo = false;
         let atividadesFiltradas = [];
         let historicoPausas = []; // Rastreamento de todas as pausas
+        let colaboradoresSelecionados = []; // Armazenar colaboradores selecionados
+
+        // Lista de todos os colaboradores
+        const todosColaboradores = [
+            'Gabriel Oliveira',
+            'Francielly Cristina',
+            'Edson Michellon',
+            'Angelica Luz',
+            'Brandon Spinoza',
+            'Ellen Ferreira'
+        ];
 
         // ===== GERENCIAR CONTADORES ACUMULADOS DE PAUSAS =====
         function obterContadores() {
@@ -1104,6 +1164,11 @@
         const filtroStatus = document.getElementById('filtroStatus');
         const btnAplicarFiltros = document.getElementById('btnAplicarFiltros');
         const btnLimparFiltros = document.getElementById('btnLimparFiltros');
+        const modalAtribuirColaboradores = document.getElementById('modalAtribuirColaboradores');
+        const checkboxColaboradores = document.getElementById('checkboxColaboradores');
+        const btnCancelarColaboradores = document.getElementById('btnCancelarColaboradores');
+        const btnProsseguirSemColaboradores = document.getElementById('btnProsseguirSemColaboradores');
+        const btnConfirmarAtribuicao = document.getElementById('btnConfirmarAtribuicao');
 
         // ✅ Carregar dados do Firebase (com fallback para localStorage)
         let firebaseTimeout = null;
@@ -1305,9 +1370,10 @@
         }
 
         // Finalizar com dados completos
-        function finalizarComDados(index, atividade, duracao, dataFim, horaFim, justificativa) {
+        function finalizarComDados(index, atividade, duracao, dataFim, horaFim, justificativa, colaboradoresAuxiliares = []) {
             clearInterval(atividade.intervaloTimer);
 
+            // Criar registro para o colaborador principal
             atividades.unshift({
                 colaborador: atividade.nome,
                 ticket: atividade.ticket,
@@ -1318,8 +1384,29 @@
                 duracao: formatarTempo(duracao),
                 descricao: atividade.descricao || '',
                 observacao: atividade.observacao || '',
-                justificativa: justificativa
+                justificativa: justificativa,
+                colaboradoresAuxiliares: colaboradoresAuxiliares || []
             });
+
+            // Criar registros para colaboradores auxiliares (com duração reduzida ou notação de ajuda)
+            if (colaboradoresAuxiliares && colaboradoresAuxiliares.length > 0) {
+                colaboradoresAuxiliares.forEach(colaboradorAux => {
+                    atividades.unshift({
+                        colaborador: colaboradorAux,
+                        ticket: atividade.ticket,
+                        dataInicio: atividade.dataInicio,
+                        horaInicio: atividade.horaInicio,
+                        dataFim: dataFim,
+                        horaFim: horaFim,
+                        duracao: formatarTempo(duracao),
+                        descricao: atividade.descricao || '',
+                        observacao: `[AJUDA] ${atividade.observacao || ''}`,
+                        justificativa: justificativa,
+                        ehAjudante: true,
+                        colaboradorPrincipal: atividade.nome
+                    });
+                });
+            }
 
             atividadesEmAndamento.splice(index, 1);
             
@@ -1330,7 +1417,11 @@
             atualizarTabela();
             atualizarKanban();
 
-            mostrarAlerta('sucesso', 'Atividade registrada com sucesso!');
+            if (colaboradoresAuxiliares && colaboradoresAuxiliares.length > 0) {
+                mostrarAlerta('sucesso', `Atividade registrada! Atribuída também para: ${colaboradoresAuxiliares.join(', ')}`);
+            } else {
+                mostrarAlerta('sucesso', 'Atividade registrada com sucesso!');
+            }
             
             // Limpar campos após finalizar
             limparCamposAtividade();
@@ -1510,6 +1601,103 @@
             txtObservacaoConcluir.value = '';
         }
 
+        // Abrir modal de atribuição de colaboradores
+        function abrirModalAtribuirColaboradores() {
+            colaboradoresSelecionados = [];
+            const atividade = atividadesEmAndamento.find(a => a.id === atividadeEmObservacao.atividadeId);
+            
+            // Criar checkboxes para cada colaborador, exceto o principal
+            checkboxColaboradores.innerHTML = '';
+            todosColaboradores.forEach(colaborador => {
+                if (colaborador !== atividade.nome) {
+                    const checkbox = document.createElement('label');
+                    checkbox.style.display = 'flex';
+                    checkbox.style.alignItems = 'center';
+                    checkbox.style.padding = '8px';
+                    checkbox.style.cursor = 'pointer';
+                    checkbox.style.borderRadius = '4px';
+                    checkbox.style.transition = 'background 0.2s';
+                    
+                    checkbox.innerHTML = `
+                        <input type="checkbox" value="${colaborador}" style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
+                        <span>${colaborador}</span>
+                    `;
+                    
+                    checkbox.addEventListener('change', (e) => {
+                        if (e.target.checked) {
+                            if (!colaboradoresSelecionados.includes(colaborador)) {
+                                colaboradoresSelecionados.push(colaborador);
+                            }
+                        } else {
+                            colaboradoresSelecionados = colaboradoresSelecionados.filter(c => c !== colaborador);
+                        }
+                    });
+                    
+                    checkbox.addEventListener('mouseenter', () => {
+                        checkbox.style.backgroundColor = '#f0f0f0';
+                    });
+                    checkbox.addEventListener('mouseleave', () => {
+                        checkbox.style.backgroundColor = 'transparent';
+                    });
+                    
+                    checkboxColaboradores.appendChild(checkbox);
+                }
+            });
+            
+            modalAtribuirColaboradores.style.display = 'block';
+        }
+
+        // Fechar modal de colaboradores
+        function fecharModalAtribuirColaboradores() {
+            modalAtribuirColaboradores.style.display = 'none';
+            colaboradoresSelecionados = [];
+            atividadeEmObservacao = null;
+        }
+
+        // Prosseguir sem atribuir colaboradores
+        function prosseguirSemAtribuir() {
+            if (!atividadeEmObservacao) return;
+
+            const index = atividadesEmAndamento.findIndex(a => a.id === atividadeEmObservacao.atividadeId);
+            if (index === -1) {
+                fecharModalAtribuirColaboradores();
+                return;
+            }
+
+            const ativ = atividadesEmAndamento[index];
+            const agora = new Date();
+            const duracao = agora.getTime() - ativ.tempoInicio;
+            
+            // Finalizar sem colaboradores auxiliares
+            finalizarComDados(index, ativ, duracao, agora.toLocaleDateString('pt-BR'), agora.toLocaleTimeString('pt-BR'), '', []);
+            fecharModalAtribuirColaboradores();
+        }
+
+        // Confirmar atribuição de colaboradores
+        function confirmarAtribuicaoColaboradores() {
+            if (!atividadeEmObservacao) return;
+
+            if (colaboradoresSelecionados.length === 0) {
+                mostrarAlerta('info', 'Nenhum colaborador foi selecionado');
+                prosseguirSemAtribuir();
+                return;
+            }
+
+            const index = atividadesEmAndamento.findIndex(a => a.id === atividadeEmObservacao.atividadeId);
+            if (index === -1) {
+                fecharModalAtribuirColaboradores();
+                return;
+            }
+
+            const ativ = atividadesEmAndamento[index];
+            const agora = new Date();
+            const duracao = agora.getTime() - ativ.tempoInicio;
+            
+            // Finalizar com colaboradores auxiliares
+            finalizarComDados(index, ativ, duracao, agora.toLocaleDateString('pt-BR'), agora.toLocaleTimeString('pt-BR'), '', colaboradoresSelecionados);
+            fecharModalAtribuirColaboradores();
+        }
+
         // Concluir com observação (OBRIGATÓRIA)
         function confirmarConcluirComObs() {
             if (!atividadeConcluindo) return;
@@ -1528,18 +1716,14 @@
                 atividade.observacao = observacao;
             }
             
-            const atividadeId = atividadeConcluindo;
+            atividadeEmObservacao = {
+                atividadeId: atividadeConcluindo,
+                observacao: observacao
+            };
+            
+            // Fechar modal de observação e abrir modal de colaboradores
             fecharModalObservacao();
-            
-            const index = atividadesEmAndamento.findIndex(a => a.id === atividadeId);
-            if (index === -1) return;
-
-            const ativ = atividadesEmAndamento[index];
-            const agora = new Date();
-            const duracao = agora.getTime() - ativ.tempoInicio;
-            
-            // Finalizar normalmente sem passar por finalizarAtividade
-            finalizarComDados(index, ativ, duracao, agora.toLocaleDateString('pt-BR'), agora.toLocaleTimeString('pt-BR'), '');
+            abrirModalAtribuirColaboradores();
         }
 
         // Marcar como concluído no kanban (agora abre modal de observação)
@@ -1597,7 +1781,7 @@
             if (atividadesGrupadasPorStatus.pausado.length === 0) {
                 kanbanPausado.innerHTML = '<div class="kanban-empty">Nenhuma atividade pausada</div>';
             } else {
-                kanbanPausado.innerHTML = atividadesGrupadasPorStatus.pausado.map(atividade => {
+                const cardsPausado = atividadesGrupadasPorStatus.pausado.map(atividade => {
                     return `
                         <div class="kanban-card">
                             <div class="kanban-card-header">
@@ -1613,6 +1797,7 @@
                         </div>
                     `;
                 }).join('');
+                kanbanPausado.innerHTML = `<div class="kanban-tasks">${cardsPausado}</div>`;
             }
 
             // Renderizar Concluído (apenas 4 últimos)
@@ -1641,7 +1826,7 @@
             if (todasConcluidas.length === 0) {
                 kanbanConcluido.innerHTML = '<div class="kanban-empty">Nenhuma atividade concluída</div>';
             } else {
-                kanbanConcluido.innerHTML = todasConcluidas.map(atividade => {
+                const cardsConcluido = todasConcluidas.map(atividade => {
                     return `
                         <div class="kanban-card" style="opacity: 0.7;">
                             <div class="kanban-card-header">
@@ -1654,6 +1839,7 @@
                         </div>
                     `;
                 }).join('');
+                kanbanConcluido.innerHTML = `<div class="kanban-tasks">${cardsConcluido}</div>`;
             }
         }
 
@@ -1669,6 +1855,9 @@
             }
             if (event.target === modalObservacaoConcluir) {
                 fecharModalObservacao();
+            }
+            if (event.target === modalAtribuirColaboradores) {
+                fecharModalAtribuirColaboradores();
             }
             if (event.target === modalIniciarAtividade) {
                 modalIniciarAtividade.style.display = 'none';
@@ -1778,7 +1967,7 @@
             if (atividadesGrupadasPorStatus.em_andamento.length === 0) {
                 kanbanEmAndamento.innerHTML = '<div class="kanban-empty">Nenhuma atividade em andamento com os filtros</div>';
             } else {
-                kanbanEmAndamento.innerHTML = atividadesGrupadasPorStatus.em_andamento.map(atividade => {
+                const cardsEmAndamento = atividadesGrupadasPorStatus.em_andamento.map(atividade => {
                     return `
                         <div class="kanban-card">
                             <div class="kanban-card-header">
@@ -1794,13 +1983,14 @@
                         </div>
                     `;
                 }).join('');
+                kanbanEmAndamento.innerHTML = `<div class="kanban-tasks">${cardsEmAndamento}</div>`;
             }
 
             // Renderizar Pausado
             if (atividadesGrupadasPorStatus.pausado.length === 0) {
                 kanbanPausado.innerHTML = '<div class="kanban-empty">Nenhuma atividade pausada com os filtros</div>';
             } else {
-                kanbanPausado.innerHTML = atividadesGrupadasPorStatus.pausado.map(atividade => {
+                const cardsPausado = atividadesGrupadasPorStatus.pausado.map(atividade => {
                     return `
                         <div class="kanban-card">
                             <div class="kanban-card-header">
@@ -1812,13 +2002,14 @@
                         </div>
                     `;
                 }).join('');
+                kanbanPausado.innerHTML = `<div class="kanban-tasks">${cardsPausado}</div>`;
             }
 
             // Renderizar Concluído
             if (atividadesGrupadasPorStatus.concluido.length === 0) {
                 kanbanConcluido.innerHTML = '<div class="kanban-empty">Nenhuma atividade concluída com os filtros</div>';
             } else {
-                kanbanConcluido.innerHTML = atividadesGrupadasPorStatus.concluido.map(atividade => {
+                const cardsConcluido = atividadesGrupadasPorStatus.concluido.map(atividade => {
                     return `
                         <div class="kanban-card" style="opacity: 0.7;">
                             <div class="kanban-card-header">
@@ -1830,6 +2021,7 @@
                         </div>
                     `;
                 }).join('');
+                kanbanConcluido.innerHTML = `<div class="kanban-tasks">${cardsConcluido}</div>`;
             }
         }
 
@@ -1852,6 +2044,9 @@
         btnConfirmarPausa.addEventListener('click', confirmarPausarAtividade);
         btnCancelarObsConcluir.addEventListener('click', fecharModalObservacao);
         btnConfirmarComObs.addEventListener('click', confirmarConcluirComObs);
+        btnCancelarColaboradores.addEventListener('click', fecharModalAtribuirColaboradores);
+        btnProsseguirSemColaboradores.addEventListener('click', prosseguirSemAtribuir);
+        btnConfirmarAtribuicao.addEventListener('click', confirmarAtribuicaoColaboradores);
         txtMotivoPausa.addEventListener('keypress', function(e) {
             if (e.key === 'Enter' && e.ctrlKey) {
                 confirmarPausarAtividade();
