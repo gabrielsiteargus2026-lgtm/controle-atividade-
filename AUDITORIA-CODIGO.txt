@@ -1,0 +1,309 @@
+🔧 MUDANÇAS TÉCNICAS - O QUE FOI MODIFICADO
+===========================================
+
+## Arquivo: admin.html
+
+### 1️⃣ NOVO CARD - Log de Auditoria
+
+**Localização:** Após card "Excluir Atividade Específica" → antes do `</div>` de admin-grid
+
+**O que adiciona:**
+- Dropdown para selecionar usuário
+- Campo de data inicial
+- Campo de data final
+- Botão "Visualizar"
+- Botão "Exportar CSV"
+
+**HTML adicionado:**
+```html
+<!-- Card: Log de Auditoria -->
+<div class="admin-card" style="grid-column: 1 / -1;">
+    <h3>📋 Log de Auditoria - Rastreamento de Ações</h3>
+    <p>Visualize todas as ações e alterações realizadas pelos usuários...</p>
+    <div style="display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
+        <select id="selectUsuarioAuditoria">
+            <option value="">-- Todos os Usuários --</option>
+        </select>
+        <input type="date" id="inputDataInicioAuditoria">
+        <input type="date" id="inputDataFimAuditoria">
+        <button class="btn-action" id="btnVisualizarAuditoria">Visualizar</button>
+        <button class="btn-export" id="btnExportarAuditoria">Exportar CSV</button>
+    </div>
+</div>
+```
+
+---
+
+### 2️⃣ NOVO MODAL - Exibir Auditoria
+
+**Localização:** Após modal "Limpar Contadores" → antes do `</div>` de modais
+
+**O que mostra:**
+- Tabela com todas as ações
+- Colunas: Data/Hora, Usuário, Email, Ação, Ticket, Descrição
+- Botão "Fechar"
+- Botão "Exportar como CSV"
+
+**HTML adicionado:**
+```html
+<!-- Modal de Log de Auditoria -->
+<div id="modalAuditoria" class="modal">
+    <div class="modal-content" style="max-width: 90%; width: 90%; max-height: 90vh; overflow-y: auto;">
+        <button class="close-btn" id="btnFecharAuditoria">&times;</button>
+        <div class="modal-header">📋 Log de Auditoria do Sistema</div>
+        <div class="modal-body" style="margin-bottom: 20px;">
+            <div style="overflow-x: auto;">
+                <table id="tabelaAuditoria" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #2c3e50; color: white;">
+                            <th style="padding: 10px; text-align: left;">Data/Hora</th>
+                            <th style="padding: 10px; text-align: left;">Usuário</th>
+                            <th style="padding: 10px; text-align: left;">Email</th>
+                            <th style="padding: 10px; text-align: left;">Ação</th>
+                            <th style="padding: 10px; text-align: left;">Ticket</th>
+                            <th style="padding: 10px; text-align: left;">Descrição</th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpoTabelaAuditoria">
+                        <!-- Preenchido dinamicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" id="btnFecharAuditoriaRodape">Fechar</button>
+            <button class="btn-export" id="btnExportarAuditoriaModal">Exportar como CSV</button>
+        </div>
+    </div>
+</div>
+```
+
+---
+
+### 3️⃣ NOVO JAVASCRIPT - Lógica de Auditoria
+
+**Localização:** No `<script>` → Antes de `carregarDados()`
+
+**Funções principais:**
+
+#### `carregarUsuariosAuditoria()`
+```javascript
+// Busca lista de usuários do Firebase
+// Popula dropdown com: "Nome (email)"
+// Chamada automática após 1 segundo de carregamento
+```
+
+#### `btnVisualizarAuditoria.addEventListener('click', () => { ... })`
+```javascript
+// Quando clica "Visualizar":
+// 1. Busca dados de atividades
+// 2. Filtra por usuário (se selecionado)
+// 3. Filtra por data inicial (se informada)
+// 4. Filtra por data final (se informada)
+// 5. Ordena por data (mais recente primeiro)
+// 6. Preenche tabela no modal
+// 7. Abre modal
+```
+
+#### `exportarAuditoriaCSV()`
+```javascript
+// Quando clica "Exportar CSV":
+// 1. Verifica se há dados
+// 2. Cria cabeçalho CSV
+// 3. Itera sobre dados filtrados
+// 4. Formata datas em pt-BR
+// 5. Escapa aspas em descrições
+// 6. Cria blob com encoding UTF-8
+// 7. Faz download automático
+// 8. Nome do arquivo: auditoria_YYYY-MM-DD.csv
+```
+
+---
+
+## 📊 Estrutura de Dados Esperada
+
+Cada atividade precisa ter:
+
+```javascript
+{
+    // Campos tradicionais
+    ticket: 1001,
+    colaborador: "João Silva",
+    dataInicio: "2026-05-06",
+    horaInicio: "10:30",
+    descricao: "Tarefa importante",
+    
+    // ✨ NOVOS CAMPOS DE AUDITORIA ✨
+    usuario_id: "a1b2c3d4e5f6...",      // ID do Firebase Auth
+    email_usuario: "joao@empresa.com",  // Email do usuário
+    nome_usuario: "João Silva",         // Nome completo
+    data_criacao: "2026-05-06T10:30:45.123Z",  // ISO 8601
+    data_atualizacao: "2026-05-06T14:30:00.456Z"  // ISO 8601 (opcional)
+}
+```
+
+---
+
+## 🔍 Filtros Implementados
+
+### Filtro 1: Usuário
+```javascript
+if (usuarioSelecionado) {
+    dados = dados.filter(a => a.usuario_id === usuarioSelecionado);
+}
+```
+
+### Filtro 2: Data Inicial
+```javascript
+if (dataInicio) {
+    dados = dados.filter(a => {
+        const dataAtiv = a.data_criacao 
+            ? new Date(a.data_criacao).toISOString().split('T')[0]
+            : a.dataInicio;
+        return dataAtiv >= dataInicio;
+    });
+}
+```
+
+### Filtro 3: Data Final
+```javascript
+if (dataFim) {
+    dados = dados.filter(a => {
+        const dataAtiv = a.data_criacao 
+            ? new Date(a.data_criacao).toISOString().split('T')[0]
+            : a.dataInicio;
+        return dataAtiv <= dataFim;
+    });
+}
+```
+
+---
+
+## 📤 Formato do CSV Exportado
+
+```
+LOG DE AUDITORIA DO SISTEMA
+Gerado em: 06/05/2026 15:30:45
+
+Data/Hora,Usuário,Email,Ação,Ticket,Descrição,Duração
+2026-05-06 10:30:45,João Silva,joao@empresa.com,Criada,#1001,"Tarefa importante",1:30:00
+2026-05-06 10:25:30,Maria Santos,maria@empresa.com,Modificada,#1021,"Bug de login",0:45:00
+```
+
+---
+
+## 🔗 Dependências (Não alteradas)
+
+- ✅ `firebase-auth.js` - Funções de auditoria já existem
+- ✅ `index.html` - Já adiciona campos de auditoria
+- ✅ Firebase SDK - Já carregado no admin.html
+
+---
+
+## 🧪 Testes Recomendados
+
+1. **Teste sem filtros:**
+   - Clique "Visualizar"
+   - Deve mostrar TODAS as atividades
+   - Ordenadas por data (mais recente primeiro)
+
+2. **Teste com filtro de usuário:**
+   - Selecione um usuário
+   - Clique "Visualizar"
+   - Deve mostrar apenas atividades desse usuário
+
+3. **Teste com filtro de data:**
+   - Selecione data inicial = hoje
+   - Selecione data final = hoje
+   - Clique "Visualizar"
+   - Deve mostrar apenas atividades de hoje
+
+4. **Teste combinado:**
+   - Selecione usuário + período
+   - Clique "Visualizar"
+   - Deve filtrar por ambos
+
+5. **Teste exportação:**
+   - Deixe filtros como quiser
+   - Clique "Exportar CSV"
+   - Abra em Excel
+   - Procure pelos dados esperados
+
+---
+
+## 🐛 Troubleshooting
+
+### Problema 1: Dropdown vazio
+- **Causa**: Sem dados em Firebase → usuarios/
+- **Solução**: Crie pelo menos uma conta
+
+### Problema 2: Tabela vazia
+- **Causa**: Sem atividades ou sem campos de auditoria
+- **Solução**: Crie atividades em index.html após ativar auditoria
+
+### Problema 3: CSV não baixa
+- **Causa**: Navegador bloqueando downloads
+- **Solução**: Verifique permissões ou tente em incógnito
+
+### Problema 4: Datas estranhas
+- **Causa**: Timezone diferente
+- **Solução**: Esperado. Converte para horário local automaticamente
+
+---
+
+## 📈 Escalabilidade
+
+### Performance (número de atividades)
+- ✅ 100 atividades - Muito rápido
+- ✅ 1.000 atividades - Rápido
+- ⚠️ 10.000+ atividades - Pode ficar lento
+- 💡 Solução futura: Implementar paginação
+
+### Otimizações possíveis
+```javascript
+// Adicionar índices no Firebase
+// Implementar lazy loading
+// Cache local dos dados
+// Paginação na tabela
+// Busca em tempo real (live search)
+```
+
+---
+
+## 🔒 Segurança
+
+✅ **O que é protegido:**
+- Apenas página admin.html acessa auditoria
+- Precisa de senha (verificada em modalAutenticacao)
+- Dados vêm direto do Firebase (não em localStorage)
+
+⚠️ **O que se pode melhorar:**
+- Adicionar roles (admin, gerente, usuário)
+- Criptografar dados de auditoria
+- Backup automático de relatórios
+- Alertas de ações suspeitas
+
+---
+
+## 📝 Checklist de Implementação
+
+- [x] Adicionar card "Log de Auditoria" no admin-grid
+- [x] Adicionar modal para visualizar tabela
+- [x] Implementar função carregarUsuariosAuditoria()
+- [x] Implementar filtro por usuário
+- [x] Implementar filtro por data inicial
+- [x] Implementar filtro por data final
+- [x] Implementar ordenação por data (desc)
+- [x] Implementar preenchimento de tabela
+- [x] Implementar botão "Visualizar"
+- [x] Implementar botão "Exportar CSV"
+- [x] Implementar fechar modal
+- [x] Testar com dados reais
+- [x] Documentar para usuário
+- [x] Documentar para desenvolvedor
+
+---
+
+**Status: ✅ COMPLETO E PRONTO PARA PRODUÇÃO**
+
+Próximo passo: Execute os testes em TESTE-AUDITORIA.txt

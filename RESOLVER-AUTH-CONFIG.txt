@@ -1,0 +1,74 @@
+🔴 ERRO: auth/configuration-not-found
+======================================
+
+CAUSA:
+❌ Email/Password Sign-In NÃO está ativado no seu Firebase Console
+
+SOLUÇÃO (3 passos):
+
+---
+
+## PASSO 1: Acesse Firebase Console
+
+1. Abra: https://console.firebase.google.com
+2. Selecione seu projeto "controle-atividades-60b4e"
+
+---
+
+## PASSO 2: Vá para Autenticação
+
+1. No menu lateral, clique em "Authentication" (ou "Autenticação")
+2. Se for primeira vez, clique em "Get started" ou "Começar"
+3. Procure pela aba "Sign-in methods" (ou "Métodos de login")
+
+---
+
+## PASSO 3: Ativar Email/Password
+
+1. Procure pela opção "Email/Password" na lista
+2. Se estiver CINZENTA/DESATIVADA, clique nela
+3. Ative o toggle de "Email/Password" (ficar AZUL)
+4. Se houver opção de "Email link", deixe desativada
+5. Clique em "Save" (ou "Salvar")
+
+✅ Pronto!
+
+---
+
+## VERIFICAR SE FUNCIONOU
+
+Depois de ativar:
+
+1. Volte para login.html
+2. Pressione F5 (recarregar)
+3. Abra F12 (Console)
+4. Procure por: "✅ Firebase inicializado com sucesso!"
+5. Tente criar conta novamente
+
+---
+
+## SE AINDA DER ERRO
+
+Procure por esta mensagem no Console (F12):
+
+❌ Email/Password não está ativado no Firebase. Acesse: Firebase Console → Authentication → Sign-in methods → Ative Email/Password
+
+Isso significa que não conseguiu ativar corretamente. Repita os passos acima.
+
+---
+
+## SCREENSHOTS ESPERADOS
+
+Quando Email/Password ESTÁ ATIVADO:
+✅ "Email/Password" aparece com toggle AZUL
+✅ Mostra "Enabled" embaixo da opção
+
+Quando NÃO está ativado:
+❌ "Email/Password" aparece CINZENTO
+❌ Toggle está DESATIVADO
+
+---
+
+**Tente isso agora e me avise se funcionou!**
+
+Se precisar de mais ajuda, tire um screenshot do Firebase Console.

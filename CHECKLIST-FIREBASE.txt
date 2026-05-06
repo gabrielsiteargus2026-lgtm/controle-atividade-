@@ -1,0 +1,112 @@
+✅ CHECKLIST COMPLETO - FIREBASE SETUP
+======================================
+
+Verifique se TODOS os itens abaixo estão ✅ ATIVADOS:
+
+---
+
+## 1️⃣ PROJETO FIREBASE
+
+- [ ] Projeto foi criado em https://console.firebase.google.com
+- [ ] Nome do projeto: controle-atividades-60b4e
+- [ ] Selecionei o projeto correto
+
+---
+
+## 2️⃣ FIREBASE CONFIG
+
+Arquivo: firebase-config.js
+
+- [ ] apiKey: tem valor (NÃO tem "COLE_AQUI")
+- [ ] authDomain: tem valor (NÃO tem "COLE_AQUI")
+- [ ] databaseURL: tem valor (NÃO tem "COLE_AQUI")
+- [ ] projectId: tem valor (NÃO tem "COLE_AQUI")
+- [ ] appId: tem valor (NÃO tem "COLE_AQUI")
+
+---
+
+## 3️⃣ AUTHENTICATION
+
+Firebase Console → Authentication
+
+- [ ] Seção "Sign-in methods" existe (se não, clique "Get started")
+- [ ] Email/Password está HABILITADO (toggle AZUL)
+- [ ] Email/Password mostra "Enabled" embaixo
+
+---
+
+## 4️⃣ REALTIME DATABASE
+
+Firebase Console → Realtime Database
+
+- [ ] Banco de dados foi criado
+- [ ] Modo de teste está ativado (lê/escreve liberado)
+- [ ] URL do banco começa com: https://
+
+---
+
+## 5️⃣ REGRAS DE SEGURANÇA
+
+Firebase Console → Realtime Database → Rules
+
+- [ ] Procure por: `"read": true, "write": true`
+- [ ] Se vir `"read": false` ou `"write": false`, está muito restritivo!
+
+Se está restritivo, mude para:
+```
+{
+  "rules": {
+    ".read": true,
+    ".write": true
+  }
+}
+```
+
+Clique "Publish"
+
+---
+
+## 6️⃣ TESTAR NO CONSOLE
+
+Abra login.html → F12 (Console)
+
+Procure por:
+- [ ] "✅ Firebase inicializado com sucesso!"
+- [ ] "Auth: true"
+- [ ] "Database: true"
+
+---
+
+## ❌ SE ALGO FALHAR
+
+Se NÃO vir as mensagens acima:
+
+1. Recarregue a página (F5)
+2. Limpe cache: Ctrl+Shift+Delete
+3. Tente em outro navegador
+4. Tente incognito: Ctrl+Shift+N
+
+---
+
+## 🧪 TESTE FINAL
+
+Com TUDO acima ativado:
+
+1. Abra login.html
+2. Clique "Criar Conta"
+3. Preencha:
+   - Email: teste@empresa.com
+   - Senha: Teste123
+   - Nome: Teste User
+4. Clique "Criar Conta"
+
+✅ ESPERADO: Redirect para index.html sem erro
+
+❌ SE DER ERRO: Note a mensagem exata do Console (F12)
+
+---
+
+**Se ainda tiver dúvida, compartilhe:**
+1. Screenshot do Firebase Console (Authentication → Sign-in methods)
+2. Screenshot do Console (F12) com mensagens de erro
+3. Qual foi o último erro que recebeu

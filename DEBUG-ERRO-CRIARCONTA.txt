@@ -1,0 +1,202 @@
+🔍 DIAGNÓSTICO DE ERRO - CRIAR CONTA
+=====================================
+
+Se está recebendo erro ao criar conta, siga os passos abaixo para diagnosticar:
+
+---
+
+## PASSO 1: Verificar Console do Navegador (IMPORTANTE)
+
+1. Abra login.html
+2. Pressione F12 (abre Developer Tools)
+3. Clique na aba "Console"
+4. Tente criar conta novamente
+5. **Copie TODA a mensagem de erro que aparecer**
+
+A mensagem de erro vai ter informação importante como:
+- ❌ Erro ao criar conta: [mensagem detalhada]
+- Código do erro (ex: auth/operation-not-allowed)
+
+---
+
+## PASSO 2: Erros Comuns e Soluções
+
+### ❌ "auth/operation-not-allowed"
+**Causa:** Email/Password não está ativado no Firebase
+**Solução:**
+1. Acesse: https://console.firebase.google.com
+2. Selecione seu projeto
+3. Menu: Authentication
+4. Aba: Sign-in methods
+5. Procure "Email/Password"
+6. Se estiver desativado, clique para ativar
+7. Clique em "Enable" e depois "Save"
+
+### ❌ "Erro de rede" ou "network-request-failed"
+**Causa:** Firebase Config não está correto ou conexão com internet
+**Solução:**
+1. Verificar internet (abra Google.com para testar)
+2. Verificar firebase-config.js:
+   - Certifique-se que apiKey está preenchido
+   - Certifique-se que authDomain está correto
+   - Certifique-se que projectId está correto
+3. Se em localhost, pode ser bloqueado por firewall
+
+### ❌ "Email já está registrado"
+**Causa:** Esse email já tem conta
+**Solução:**
+- Use um email diferente
+- Ou acesse https://console.firebase.google.com → Authentication → Users
+- Procure o email e clique em Delete para remover
+
+### ❌ "Senha muito fraca"
+**Causa:** Senha tem menos de 6 caracteres
+**Solução:**
+- Use uma senha com 6+ caracteres
+- Exemplo bom: Teste123, Argus@123, MinhaSenha1
+
+### ❌ "Email inválido"
+**Causa:** Formato de email incorreto
+**Solução:**
+- Use formato válido: usuario@empresa.com
+- Não deixe espaços em branco
+
+---
+
+## PASSO 3: Verificar Firebase Config
+
+Abra: firebase-config.js
+
+Procure por:
+```javascript
+const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyBFEcYo34h_J6DovzVWUeDVRLmqSwEo8HU",
+    authDomain: "controle-atividades-60b4e.firebaseapp.com",
+    databaseURL: "https://controle-atividades-60b4e-default-rtdb.firebaseio.com",
+    projectId: "controle-atividades-60b4e",
+    storageBucket: "controle-atividades-60b4e.firebasestorage.app",
+    messagingSenderId: "197242752867",
+    appId: "1:197242752867:web:43bcbb50b621d149070d56"
+};
+```
+
+Se vir "COLE_AQUI" em qualquer campo, está vazio!
+
+Se vir campos vazios, copie valores corretos de:
+1. https://console.firebase.google.com
+2. Selecione seu projeto
+3. Configurações (⚙️) → Configurações do Projeto
+4. Aba "Geral"
+5. Procure "Sua Aplicação"
+6. Clique em </> (Web)
+7. Copie o objeto firebaseConfig
+
+---
+
+## PASSO 4: Verificar Realtime Database
+
+1. Acesse: https://console.firebase.google.com
+2. Selecione seu projeto
+3. Menu: Realtime Database
+4. Se não existir, clique em "Criar Banco de Dados"
+5. Modo: "Iniciar em modo de teste"
+6. Se já existe, procure por regras de segurança:
+   - Clique em "Regras"
+   - Procure por: `"read": true, "write": true`
+   - Se não tiver, está muito restritivo!
+
+---
+
+## PASSO 5: Teste Simples
+
+Teste este código no Console (F12 → Console):
+
+```javascript
+console.log('Firebase:', typeof firebase);
+console.log('Auth:', typeof auth);
+console.log('DB:', typeof db);
+console.log('Config:', FIREBASE_CONFIG);
+```
+
+Deve mostrar:
+```
+Firebase: object
+Auth: object
+DB: object
+Config: {apiKey: "...", authDomain: "...", ...}
+```
+
+Se algum mostrar "undefined", algo não carregou corretamente.
+
+---
+
+## PASSO 6: Testar Autenticação Manualmente
+
+No Console (F12 → Console), copie e cole:
+
+```javascript
+auth.createUserWithEmailAndPassword('teste@teste.com', 'Teste123')
+  .then(user => {
+    console.log('✅ Sucesso:', user.user.email);
+  })
+  .catch(error => {
+    console.log('❌ Erro:', error.code, error.message);
+  });
+```
+
+Isso vai te mostrar o erro exato!
+
+---
+
+## PASSO 7: Compartilhar Informações para Suporte
+
+Se o erro não foi resolvido, compartilhe:
+
+1. **Mensagem exata do erro** (do Console F12)
+2. **Código do erro** (ex: auth/operation-not-allowed)
+3. **Screenshot do Console** (F12)
+4. **Resultado do teste do PASSO 5**
+5. **firebase-config.js** (verifique se não tem valores sensíveis)
+
+---
+
+## CHECKLIST DE VERIFICAÇÃO
+
+- [ ] Abri F12 e procurei mensagem de erro no Console
+- [ ] Ativa "Email/Password" no Firebase Authentication
+- [ ] Firebase Config está preenchido corretamente
+- [ ] Realtime Database foi criado
+- [ ] Testei no Console e consegui ver o erro exato
+- [ ] Tentei um email diferente
+- [ ] Tentei uma senha com 6+ caracteres
+
+---
+
+## ✅ Se Passou em Todos os Checks
+
+Tudo deve estar funcionando! Tente criar conta novamente.
+
+---
+
+## 📞 Última Opção
+
+Se nada funcionou:
+
+1. **Recrie o projeto Firebase:**
+   - Acesse console.firebase.google.com
+   - Delete o projeto atual
+   - Crie um novo
+   - Copie as credenciais para firebase-config.js
+
+2. **Teste em outro navegador:**
+   - Chrome, Firefox, Safari
+   - Pode ser bloqueado por extensão
+
+3. **Teste localmente vs online:**
+   - Se está em file://, tente colocar online no GitHub Pages
+   - Se está online, tente em localhost
+
+---
+
+**Data:** 6 de maio de 2026  
+**Versão:** Guia de Diagnóstico v1

@@ -1,0 +1,138 @@
+🧪 GUIA RÁPIDO DE TESTE
+=======================
+
+⏱️ Tempo estimado: 5 minutos
+
+Siga os passos abaixo para verificar que tudo funciona:
+
+---
+
+## PASSO 1: Criar Conta (2 min)
+
+1. Abra: login.html
+2. Clique em "Criar Conta"
+3. Preencha:
+   - Email: teste@empresa.com
+   - Senha: Teste123
+   - Nome: Teste User
+4. Clique "Criar Conta"
+5. ✅ Espere ser redirecionado para index.html
+
+---
+
+## PASSO 2: Verificar Login (1 min)
+
+1. No topo da página, procure por:
+   - "Logado como:"
+   - Seu email (teste@empresa.com)
+   - Seu nome (Teste User)
+   - Botão "Sair"
+
+2. ✅ Se vir tudo isso, o login está funcionando!
+
+---
+
+## PASSO 3: Criar Atividade (1 min)
+
+1. Clique no botão azul "Iniciar Atividade"
+2. Preencha:
+   - Nome: Teste User (seu nome)
+   - Ticket: 12345
+   - Descrição: Teste de autenticação
+
+3. Clique "Iniciar"
+4. ✅ Veja a atividade aparecer no Kanban em "Em Andamento"
+
+---
+
+## PASSO 4: Verificar Rastreamento (1 min)
+
+1. Acesse: https://console.firebase.google.com
+2. Selecione seu projeto
+3. Menu: Realtime Database
+4. Abra: atividadesEmAndamento
+5. Procure sua atividade
+6. Procure por esses campos:
+   - usuario_id ✅
+   - email_usuario: teste@empresa.com ✅
+   - nome_usuario: Teste User ✅
+   - data_criacao ✅
+   - data_atualizacao ✅
+
+7. ✅ Se vir tudo isso, o rastreamento está funcionando!
+
+---
+
+## PASSO 5: Testar Logout (muito rápido)
+
+1. Clique no botão "Sair" no topo
+2. Confirme "Tem certeza que deseja sair?"
+3. ✅ Será redirecionado para login.html
+
+---
+
+## PASSO 6: Testar Login Novamente (30 seg)
+
+1. Agora em login.html
+2. Clique em "Fazer Login" (ou deixe no aba "Acesse sua conta")
+3. Preencha:
+   - Email: teste@empresa.com
+   - Senha: Teste123
+4. Clique "Entrar"
+5. ✅ Pronto! Estará novamente no Controle de Atividade
+
+---
+
+## CHECKLIST FINAL
+
+- [ ] Consegui criar conta
+- [ ] Consigo fazer login
+- [ ] Vi meu email e nome no topo
+- [ ] Consegui criar atividade
+- [ ] Atividade apareceu no Kanban
+- [ ] Consigo ver dados no Firebase Console
+- [ ] Consegui fazer logout
+- [ ] Consegui fazer login novamente
+
+---
+
+✅ SE TUDO PASSOU NO CHECKLIST:
+
+A autenticação está 100% funcional!
+
+Pronto para usar com sua equipe.
+
+---
+
+⚠️ SE ALGO NÃO FUNCIONOU:
+
+1. Limpe o cache do navegador (Ctrl+Shift+Delete)
+2. Recarregue a página (Ctrl+F5)
+3. Verifique o console (F12 → Console)
+4. Leia as mensagens de erro
+5. Contacte suporte
+
+---
+
+📱 TESTAR EM MÚLTIPLOS NAVEGADORES
+
+Teste também em:
+- [ ] Chrome
+- [ ] Firefox
+- [ ] Safari (se em Mac)
+- [ ] Edge
+
+---
+
+🎯 TESTAR COM EQUIPE
+
+1. Compartilhe a URL do projeto
+2. Peça que criem conta com seu email
+3. Peça que criem uma atividade
+4. Verifique no Firebase se foi rastreado
+5. Confirme que aparece com o email deles
+
+---
+
+Data: 6 de maio de 2026
+Status: Pronto para testes

@@ -1,0 +1,38 @@
+✅ CORRIGIDO: auth/configuration-not-found
+
+O PROBLEMA ERA:
+❌ Firebase estava sendo inicializado ANTES de estar totalmente carregado
+❌ firebase-auth.js estava sendo carregado antes do Firebase estar pronto
+
+A SOLUÇÃO:
+✅ Removido firebase-auth.js do header
+✅ Inicialização do Firebase movida para o FINAL do página (antes de </body>)
+✅ Aguarda 500ms para garantir que tudo carregou
+✅ Melhor tratamento de erros
+
+---
+
+🧪 TESTE AGORA:
+
+1. F5 para recarregar login.html
+2. Abra F12 (Console)
+3. Procure por:
+   ✅ "✅ Firebase inicializado com sucesso!"
+   ✅ "Auth: true"
+   ✅ "Database: true"
+
+4. Se vir isso, Firebase está pronto!
+5. Clique em "Criar Conta"
+6. Preencha e clique "Criar Conta"
+
+---
+
+ESPERADO:
+✅ Sem erro auth/configuration-not-found
+✅ Se email/senha válidos, conta é criada
+✅ Se email já existe, mostra "Email já está registrado"
+✅ Se senha < 6 char, mostra "Senha muito fraca"
+
+---
+
+Se AINDA tiver erro no Console, compartilhe a mensagem exata!

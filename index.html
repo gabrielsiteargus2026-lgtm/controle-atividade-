@@ -865,17 +865,54 @@
     </style>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="firebase-config.js"></script>
+    <script src="firebase-auth.js"></script>
     <script>
         // Inicializar Firebase
         if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('COLE_AQUI')) {
             firebase.initializeApp(FIREBASE_CONFIG);
+            window.auth = firebase.auth();
             window.db = firebase.database();
             window.FIREBASE_OK = true;
+            
+            // Verificar autenticação
+            verificarAutenticacao();
         } else {
             window.FIREBASE_OK = false;
-            console.warn('⚠️ Firebase não configurado. Usando localStorage temporariamente.');
+            console.warn('Firebase não configurado. Usando localStorage temporariamente.');
+        }
+        
+        /**
+         * Verificar estado de autenticação do usuário
+         */
+        function verificarAutenticacao() {
+            if (!window.auth) {
+                console.error('Firebase Auth não inicializado');
+                return;
+            }
+
+            window.auth.onAuthStateChanged(user => {
+                if (user) {
+                    usuarioAtual = {
+                        uid: user.uid,
+                        email: user.email,
+                        nome: user.displayName || 'Usuário',
+                        emailVerificado: user.emailVerified
+                    };
+                    
+                    console.log('Usuário autenticado:', usuarioAtual.email);
+                    
+                    // Chamar callback se existir
+                    if (typeof onUsuarioAutenticado === 'function') {
+                        onUsuarioAutenticado(usuarioAtual);
+                    }
+                } else {
+                    console.warn('Usuário não autenticado. Redirecionando para login...');
+                    window.location.href = 'login.html';
+                }
+            });
         }
     </script>
 </head>
@@ -896,6 +933,7 @@
     <div class="container">
         <div class="header">
             <h1>Controle de Atividade</h1>
+            <div id="usuarioWidget" style="margin-top: 15px;"></div>
         </div>
 
         <div class="ranking-container">
@@ -1267,7 +1305,13 @@
                 dataInicio: a.dataInicio,
                 horaInicio: a.horaInicio,
                 observacao: a.observacao || '',
-                tempoInicio: a.tempoInicio
+                tempoInicio: a.tempoInicio,
+                // ✅ Rastreamento de usuário
+                usuario_id: usuarioAtual?.uid || 'anonimo',
+                email_usuario: usuarioAtual?.email || 'desconhecido',
+                nome_usuario: usuarioAtual?.nome || 'Usuário',
+                data_criacao: a.data_criacao || new Date().toISOString(),
+                data_atualizacao: new Date().toISOString()
             }));
 
             if (window.FIREBASE_OK) {
@@ -2026,6 +2070,18 @@
         }
 
         // Event Listeners
+        
+        // ✅ Callback chamado quando usuário está autenticado
+        function onUsuarioAutenticado(usuario) {
+            console.log('✅ Usuário autenticado no index.html:', usuario.email);
+            
+            // Criar widget de usuário no header
+            criarWidgetUsuario('usuarioWidget');
+            
+            // Carregar dados após autenticação
+            carregarDados();
+        }
+        
         btnIniciarFlutante.addEventListener('click', function() {
             modalIniciarAtividade.style.display = 'block';
             inputNome.focus();
@@ -2062,8 +2118,7 @@
         btnAplicarFiltros.addEventListener('click', aplicarFiltros);
         btnLimparFiltros.addEventListener('click', limparFiltros);
 
-        // Carregar dados ao iniciar
-        carregarDados();
+        // ✅ Dados serão carregados após autenticação (veja onUsuarioAutenticado)
     </script>
 </body>
 </html>

@@ -304,6 +304,34 @@
             position: relative;
         }
 
+        /* Widget de Usuário Logado */
+        .usuario-widget {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            font-size: 0.85em;
+            color: #2c3e50;
+            z-index: 500;
+            max-width: 250px;
+            word-wrap: break-word;
+        }
+
+        .usuario-widget strong {
+            display: block;
+            color: #666;
+            font-size: 0.75em;
+            margin-bottom: 3px;
+        }
+
+        .usuario-widget .email {
+            color: #5b8ec6;
+            font-weight: 500;
+        }
+
         @media (max-width: 768px) {
             .container {
                 margin-left: 0;
@@ -322,14 +350,32 @@
     </style>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="firebase-config.js"></script>
+    <script src="firebase-auth.js"></script>
     <script>
         // Inicializar Firebase
         if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('COLE_AQUI')) {
             firebase.initializeApp(FIREBASE_CONFIG);
+            window.auth = firebase.auth();
             window.db = firebase.database();
             window.FIREBASE_OK = true;
+            
+            // Inicializar autenticação
+            inicializarAutenticacao();
+            
+            // Mostrar usuário logado no widget
+            window.auth.onAuthStateChanged(user => {
+                if (user) {
+                    const usuarioWidget = document.getElementById('usuarioWidget');
+                    const emailUsuarioWidget = document.getElementById('emailUsuarioWidget');
+                    if (usuarioWidget && emailUsuarioWidget) {
+                        emailUsuarioWidget.textContent = user.email || 'Não identificado';
+                        usuarioWidget.style.display = 'block';
+                    }
+                }
+            });
         } else {
             window.FIREBASE_OK = false;
             console.warn('⚠️ Firebase não configurado. Usando localStorage temporariamente.');
@@ -349,6 +395,12 @@
             </ul>
         </nav>
     </aside>
+
+    <!-- Widget de Usuário Logado -->
+    <div class="usuario-widget" id="usuarioWidget" style="display: none;">
+        <strong>Logado como:</strong>
+        <span class="email" id="emailUsuarioWidget">-</span>
+    </div>
 
     <!-- Conteúdo Principal -->
     <div class="container">
@@ -415,6 +467,24 @@
                     <div id="infoAtividadeEncontrada" style="font-size: 0.9em;"></div>
                 </div>
             </div>
+
+            <!-- Card: Log de Auditoria -->
+            <div class="admin-card" style="grid-column: 1 / -1;">
+                <h3>Log de Auditoria</h3>
+                <p>Visualize todas as ações e alterações realizadas pelos usuários no sistema com data, hora e detalhes completos.</p>
+                <div class="info-box">
+                    <strong>ℹ️ Informação:</strong> Este log mostra todas as atividades criadas/modificadas com rastreamento de quem, quando e como foi feito.
+                </div>
+                <div style="display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
+                    <select id="selectUsuarioAuditoria" style="flex: 1; min-width: 150px; padding: 8px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 0.9em;">
+                        <option value="">-- Todos os Usuários --</option>
+                    </select>
+                    <input type="date" id="inputDataInicioAuditoria" style="flex: 1; min-width: 150px; padding: 8px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 0.9em;">
+                    <input type="date" id="inputDataFimAuditoria" style="flex: 1; min-width: 150px; padding: 8px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 0.9em;">
+                    <button class="btn-action" id="btnVisualizarAuditoria" style="padding: 8px 15px;">Visualizar</button>
+                    <button class="btn-export" id="btnExportarAuditoria" style="padding: 8px 15px;">Exportar CSV</button>
+                </div>
+            </div>
         </div>
 
     </div>
@@ -473,6 +543,39 @@
             <div class="modal-footer">
                 <button class="btn-cancel" id="btnCancelarContadores">Cancelar</button>
                 <button class="btn-danger" id="btnConfirmarContadores">Limpar Permanentemente</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Log de Auditoria -->
+    <div id="modalAuditoria" class="modal">
+        <div class="modal-content" style="max-width: 90%; width: 90%; max-height: 90vh; overflow-y: auto;">
+            <button class="close-btn" id="btnFecharAuditoria">&times;</button>
+            <div class="modal-header">📋 Log de Auditoria do Sistema</div>
+            <div class="modal-body" style="margin-bottom: 20px;">
+                <div style="overflow-x: auto;">
+                    <table id="tabelaAuditoria" style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                        <thead>
+                            <tr style="background: #2c3e50; color: white;">
+                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Data/Hora</th>
+                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Usuário</th>
+                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Email</th>
+                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Ação</th>
+                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Ticket</th>
+                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Descrição</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpoTabelaAuditoria">
+                            <tr>
+                                <td colspan="6" style="padding: 20px; text-align: center; color: #999;">Carregando dados de auditoria...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="btnFecharAuditoriaRodape">Fechar</button>
+                <button class="btn-export" id="btnExportarAuditoriaModal" style="width: auto;">Exportar como CSV</button>
             </div>
         </div>
     </div>
@@ -961,6 +1064,211 @@
                     atividadeSelecionadaParaExcluir = null;
                 }
             });
+
+            // ===== LOG DE AUDITORIA =====
+            const selectUsuarioAuditoria = document.getElementById('selectUsuarioAuditoria');
+            const inputDataInicioAuditoria = document.getElementById('inputDataInicioAuditoria');
+            const inputDataFimAuditoria = document.getElementById('inputDataFimAuditoria');
+            const btnVisualizarAuditoria = document.getElementById('btnVisualizarAuditoria');
+            const btnExportarAuditoria = document.getElementById('btnExportarAuditoria');
+            const modalAuditoria = document.getElementById('modalAuditoria');
+            const btnFecharAuditoria = document.getElementById('btnFecharAuditoria');
+            const btnFecharAuditoriaRodape = document.getElementById('btnFecharAuditoriaRodape');
+            const tabelaAuditoria = document.getElementById('tabelaAuditoria');
+            const corpoTabelaAuditoria = document.getElementById('corpoTabelaAuditoria');
+            const btnExportarAuditoriaModal = document.getElementById('btnExportarAuditoriaModal');
+
+            let dadosAuditoriaFiltrados = [];
+
+            // Carregar lista de usuários
+            function carregarUsuariosAuditoria() {
+                if (!window.FIREBASE_OK) return;
+
+                selectUsuarioAuditoria.innerHTML = '<option value="">-- Carregando usuários... --</option>';
+
+                window.db.ref('usuarios').on('value', (snapshot) => {
+                    const usuarios = snapshot.val() || {};
+                    selectUsuarioAuditoria.innerHTML = '<option value="">-- Todos os Usuários --</option>';
+
+                    const usuariosArray = Object.keys(usuarios).map(uid => ({
+                        uid,
+                        nome: usuarios[uid].nome || 'Sem nome',
+                        email: usuarios[uid].email || 'sem-email'
+                    }));
+
+                    if (usuariosArray.length === 0) {
+                        const option = document.createElement('option');
+                        option.value = '';
+                        option.text = '-- Nenhum usuário encontrado --';
+                        selectUsuarioAuditoria.appendChild(option);
+                    } else {
+                        usuariosArray.forEach(user => {
+                            const option = document.createElement('option');
+                            option.value = user.uid;
+                            option.text = `${user.nome} (${user.email})`;
+                            selectUsuarioAuditoria.appendChild(option);
+                        });
+                    }
+
+                    console.log('✅ Lista de usuários carregada:', usuariosArray.length, 'usuários');
+                }, (error) => {
+                    console.error('❌ Erro ao carregar usuários:', error);
+                    selectUsuarioAuditoria.innerHTML = '<option value="">-- Erro ao carregar --</option>';
+                });
+            }
+
+            // Visualizar log de auditoria
+            btnVisualizarAuditoria.addEventListener('click', () => {
+                const usuarioSelecionado = selectUsuarioAuditoria.value;
+                const dataInicio = inputDataInicioAuditoria.value;
+                const dataFim = inputDataFimAuditoria.value;
+
+                // Buscar e filtrar dados
+                let dadosParaExibir = Array.isArray(atividades) ? atividades : Object.values(atividades || {});
+
+                // Filtrar por usuário
+                if (usuarioSelecionado) {
+                    dadosParaExibir = dadosParaExibir.filter(a => a.usuario_id === usuarioSelecionado);
+                }
+
+                // Filtrar por data (se informada)
+                if (dataInicio) {
+                    dadosParaExibir = dadosParaExibir.filter(a => {
+                        const dataAtiv = a.data_criacao ? new Date(a.data_criacao).toISOString().split('T')[0] : a.dataInicio;
+                        return dataAtiv >= dataInicio;
+                    });
+                }
+
+                if (dataFim) {
+                    dadosParaExibir = dadosParaExibir.filter(a => {
+                        const dataAtiv = a.data_criacao ? new Date(a.data_criacao).toISOString().split('T')[0] : a.dataInicio;
+                        return dataAtiv <= dataFim;
+                    });
+                }
+
+                // Ordenar por data (mais recente primeiro)
+                dadosParaExibir.sort((a, b) => {
+                    const dataA = new Date(a.data_criacao || a.dataInicio);
+                    const dataB = new Date(b.data_criacao || b.dataInicio);
+                    return dataB - dataA;
+                });
+
+                dadosAuditoriaFiltrados = dadosParaExibir;
+
+                // Preencher tabela
+                corpoTabelaAuditoria.innerHTML = '';
+
+                if (dadosParaExibir.length === 0) {
+                    corpoTabelaAuditoria.innerHTML = `
+                        <tr>
+                            <td colspan="6" style="padding: 20px; text-align: center; color: #999;">
+                                Nenhuma atividade encontrada com os filtros aplicados.
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    dadosParaExibir.forEach((atividade, index) => {
+                        const dataCriacao = atividade.data_criacao ? new Date(atividade.data_criacao).toLocaleString('pt-BR') : `${atividade.dataInicio} ${atividade.horaInicio || ''}`;
+                        const emailUsuario = atividade.email_usuario || 'N/A';
+                        const nomeUsuario = atividade.nome_usuario || atividade.colaborador || 'N/A';
+                        const acao = atividade.data_atualizacao ? '📝 Modificada' : '✅ Criada';
+                        const ticket = atividade.ticket || 'N/A';
+                        const descricao = (atividade.descricao || '').substring(0, 50) + (atividade.descricao && atividade.descricao.length > 50 ? '...' : '');
+
+                        const tr = document.createElement('tr');
+                        tr.style.borderBottom = '1px solid #ddd';
+                        tr.innerHTML = `
+                            <td style="padding: 10px; border: 1px solid #ddd;">${dataCriacao}</td>
+                            <td style="padding: 10px; border: 1px solid #ddd;">${nomeUsuario}</td>
+                            <td style="padding: 10px; border: 1px solid #ddd;">${emailUsuario}</td>
+                            <td style="padding: 10px; border: 1px solid #ddd;">${acao}</td>
+                            <td style="padding: 10px; border: 1px solid #ddd;">#${ticket}</td>
+                            <td style="padding: 10px; border: 1px solid #ddd;" title="${atividade.descricao || ''}">${descricao}</td>
+                        `;
+                        corpoTabelaAuditoria.appendChild(tr);
+                    });
+                }
+
+                modalAuditoria.style.display = 'flex';
+            });
+
+            // Fechar modal de auditoria
+            btnFecharAuditoria.addEventListener('click', () => {
+                modalAuditoria.style.display = 'none';
+            });
+
+            btnFecharAuditoriaRodape.addEventListener('click', () => {
+                modalAuditoria.style.display = 'none';
+            });
+
+            // Exportar auditoria como CSV
+            function exportarAuditoriaCSV() {
+                if (dadosAuditoriaFiltrados.length === 0) {
+                    alert('Nenhum dado para exportar! Visualize o log primeiro.');
+                    return;
+                }
+
+                const headers = ['Data/Hora', 'Usuário', 'Email', 'Ação', 'Ticket', 'Descrição', 'Duração'];
+                let csvContent = 'LOG DE AUDITORIA DO SISTEMA\n';
+                csvContent += `Gerado em: ${new Date().toLocaleString('pt-BR')}\n\n`;
+                csvContent += headers.join(',') + '\n';
+
+                dadosAuditoriaFiltrados.forEach(atividade => {
+                    const dataCriacao = atividade.data_criacao ? new Date(atividade.data_criacao).toLocaleString('pt-BR') : `${atividade.dataInicio} ${atividade.horaInicio || ''}`;
+                    const emailUsuario = atividade.email_usuario || 'N/A';
+                    const nomeUsuario = atividade.nome_usuario || atividade.colaborador || 'N/A';
+                    const acao = atividade.data_atualizacao ? 'Modificada' : 'Criada';
+                    const ticket = atividade.ticket || 'N/A';
+                    const descricao = atividade.descricao || 'Sem descrição';
+                    const duracao = atividade.duracao || 'N/A';
+
+                    csvContent += [
+                        dataCriacao,
+                        nomeUsuario,
+                        emailUsuario,
+                        acao,
+                        `#${ticket}`,
+                        `"${descricao.replace(/"/g, '""')}"`,
+                        duracao
+                    ].join(',') + '\n';
+                });
+
+                const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                const dataAtual = new Date().toISOString().split('T')[0];
+                link.setAttribute('href', url);
+                link.setAttribute('download', `auditoria_${dataAtual}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            btnExportarAuditoria.addEventListener('click', exportarAuditoriaCSV);
+            btnExportarAuditoriaModal.addEventListener('click', exportarAuditoriaCSV);
+
+            // Fechar modais ao clicar fora
+            modalAuditoria.addEventListener('click', (e) => {
+                if (e.target === modalAuditoria) {
+                    modalAuditoria.style.display = 'none';
+                }
+            });
+
+            // Carregar usuários ao iniciar
+            setTimeout(() => {
+                carregarUsuariosAuditoria();
+                
+                // Mostrar usuário logado
+                if (window.auth && window.auth.currentUser) {
+                    const usuarioWidget = document.getElementById('usuarioWidget');
+                    const emailUsuarioWidget = document.getElementById('emailUsuarioWidget');
+                    if (usuarioWidget && emailUsuarioWidget) {
+                        emailUsuarioWidget.textContent = window.auth.currentUser.email || 'Não identificado';
+                        usuarioWidget.style.display = 'block';
+                    }
+                }
+            }, 1000);
 
             // Carregar dados
             carregarDados();

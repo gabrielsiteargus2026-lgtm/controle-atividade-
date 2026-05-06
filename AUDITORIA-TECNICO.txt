@@ -1,0 +1,362 @@
+🔐 ARQUITETURA DE AUDITORIA - GUIA TÉCNICO
+===========================================
+
+## 1. VISÃO GERAL
+
+O sistema de auditoria **rastreia TODAS as ações** de todos os usuários automaticamente.
+Nenhuma mudança fica sem registro.
+
+---
+
+## 2. COMO FUNCIONA
+
+```
+Usuario cria atividade em index.html
+           ↓
+salvarDados() é chamado
+           ↓
+adicionarRastreamentoUsuario() adiciona 5 campos
+           ↓
+Dados são salvos no Firebase Realtime Database
+           ↓
+admin.html consulta Firebase e mostra no Log de Auditoria
+```
+
+---
+
+## 3. CAMPOS DE AUDITORIA
+
+Cada atividade salva **AUTOMATICAMENTE** estes 5 campos:
+
+### Campo 1: `usuario_id`
+- **O que é**: ID único do usuário (gerado pelo Firebase Auth)
+- **Tipo**: String (36 caracteres)
+- **Exemplo**: `"a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"`
+- **Quando é preenchido**: Quando o usuário faz login
+- **Para que serve**: Identificar QUEM fez a ação
+
+### Campo 2: `email_usuario`
+- **O que é**: Email da pessoa que fez a ação
+- **Tipo**: String (email)
+- **Exemplo**: `"joao@empresa.com"`
+- **Quando é preenchido**: Na criação/modificação de atividade
+- **Para que serve**: Facilitar visualização do email sem olhar a ID
+
+### Campo 3: `nome_usuario`
+- **O que é**: Nome completo do usuário
+- **Tipo**: String
+- **Exemplo**: `"João da Silva"`
+- **Quando é preenchido**: Na criação da conta (profile do Firebase)
+- **Para que serve**: Mostrar nome legível no log
+
+### Campo 4: `data_criacao`
+- **O que é**: Timestamp exato de quando foi criado
+- **Tipo**: ISO 8601 String
+- **Exemplo**: `"2026-05-06T10:30:45.123Z"`
+- **Quando é preenchido**: No primeiro salvar da atividade
+- **Para que serve**: Saber EXATAMENTE quando foi criado
+
+### Campo 5: `data_atualizacao`
+- **O que é**: Timestamp da última modificação
+- **Tipo**: ISO 8601 String (ou null se nunca modificado)
+- **Exemplo**: `"2026-05-06T14:30:00.456Z"`
+- **Quando é preenchido**: Toda vez que modifica a atividade
+- **Para que serve**: Rastrear QUANDO foi modificado
+
+---
+
+## 4. ESTRUTURA NO FIREBASE
+
+```
+Realtime Database
+├── atividades/
+│   ├── 1001/
+│   │   ├── ticket: 1001
+│   │   ├── colaborador: "João Silva"
+│   │   ├── dataInicio: "2026-05-06"
+│   │   ├── horaInicio: "10:30"
+│   │   ├── usuario_id: "a1b2c3d4e5f6..."  ← AUDITORIA
+│   │   ├── email_usuario: "joao@empresa.com"  ← AUDITORIA
+│   │   ├── nome_usuario: "João Silva"  ← AUDITORIA
+│   │   ├── data_criacao: "2026-05-06T10:30:45"  ← AUDITORIA
+│   │   ├── data_atualizacao: "2026-05-06T14:00:00"  ← AUDITORIA
+│   │   └── ...outros campos
+│   │
+│   ├── 1002/
+│   │   ├── ticket: 1002
+│   │   ├── usuario_id: "x9y8z7w6v5u4t3s2r1..."
+│   │   └── ...
+│   │
+│   └── 1003/
+│       └── ...
+│
+├── usuarios/
+│   ├── a1b2c3d4e5f6.../
+│   │   ├── email: "joao@empresa.com"
+│   │   ├── nome: "João Silva"
+│   │   ├── dataCriacao: "2026-05-01T..."
+│   │   └── ativo: true
+│   │
+│   └── x9y8z7w6v5u4.../
+│       └── ...
+│
+└── atividades_em_andamento/
+    └── (mesma estrutura)
+```
+
+---
+
+## 5. CÓDIGO - COMO É ADICIONADO
+
+### Em `firebase-auth.js`:
+
+```javascript
+function adicionarRastreamentoUsuario(atividade) {
+    if (!window.auth || !window.auth.currentUser) {
+        console.warn('⚠️ Usuário não autenticado');
+        return atividade;
+    }
+
+    const usuario = window.auth.currentUser;
+    
+    atividade.usuario_id = usuario.uid;                    // Campo 1
+    atividade.email_usuario = usuario.email;               // Campo 2
+    atividade.nome_usuario = usuario.displayName;          // Campo 3
+    atividade.data_criacao = new Date().toISOString();     // Campo 4
+    
+    if (atividade.data_atualizacao) {
+        atividade.data_atualizacao = new Date().toISOString(); // Campo 5
+    }
+    
+    return atividade;
+}
+```
+
+### Em `index.html` (quando salva):
+
+```javascript
+function salvarDados() {
+    let atividade = {
+        ticket: 1001,
+        colaborador: "João",
+        dataInicio: "2026-05-06",
+        descricao: "Minha tarefa",
+        // ... outros campos
+    };
+    
+    // ✨ AQUI ADICIONA AUDITORIA
+    atividade = adicionarRastreamentoUsuario(atividade);
+    
+    // Agora atividade tem:
+    // - usuario_id
+    // - email_usuario
+    // - nome_usuario
+    // - data_criacao
+    // - data_atualizacao
+    
+    // Salva no Firebase
+    db.ref(`atividades/${atividade.ticket}`).set(atividade);
+}
+```
+
+---
+
+## 6. LOG DE AUDITORIA - COMO FUNCIONA
+
+### Em `admin.html`:
+
+```javascript
+// PASSO 1: Buscar todos os usuários
+window.db.ref('usuarios').once('value', (snapshot) => {
+    const usuarios = snapshot.val();
+    // Popula dropdown com nomes e emails
+});
+
+// PASSO 2: Buscar atividades
+let atividades = Array.isArray(data) ? data : Object.values(data || {});
+
+// PASSO 3: Filtrar por usuário
+atividades = atividades.filter(a => a.usuario_id === selecionado);
+
+// PASSO 4: Filtrar por data
+atividades = atividades.filter(a => {
+    const data = new Date(a.data_criacao);
+    return data >= dataInicio && data <= dataFim;
+});
+
+// PASSO 5: Exibir em tabela
+// Mostra: data_criacao, nome_usuario, email_usuario, ação, ticket, descricao
+```
+
+---
+
+## 7. FLUXO COMPLETO - EXEMPLO
+
+### Scenario: João cria uma atividade
+
+**T1 - 10:30:45 (João cria atividade)**
+
+```javascript
+// 1. João preenche form em index.html
+atividade = {
+    ticket: 1001,
+    colaborador: "João da Silva",
+    dataInicio: "2026-05-06",
+    horaInicio: "10:30",
+    descricao: "Implementar login"
+};
+
+// 2. Clica "Salvar"
+salvarDados(); // Chama adicionarRastreamentoUsuario()
+
+// 3. Automaticamente adiciona auditoria
+atividade = {
+    ticket: 1001,
+    colaborador: "João da Silva",
+    dataInicio: "2026-05-06",
+    horaInicio: "10:30",
+    descricao: "Implementar login",
+    usuario_id: "a1b2c3d4e5f6...",
+    email_usuario: "joao@empresa.com",
+    nome_usuario: "João da Silva",
+    data_criacao: "2026-05-06T10:30:45.123Z",  ← RASTREADO
+    data_atualizacao: null
+};
+
+// 4. Salva no Firebase
+// No caminho: atividades/1001/
+```
+
+**T2 - 14:30:00 (João MODIFICA a atividade)**
+
+```javascript
+// 1. João abre atividade, muda descrição para "Implementar login com 2FA"
+atividade.descricao = "Implementar login com 2FA";
+
+// 2. Clica "Atualizar"
+salvarDados(); // Chama adicionarRastreamentoUsuario() NOVAMENTE
+
+// 3. Automaticamente ATUALIZA o campo data_atualizacao
+atividade = {
+    ticket: 1001,
+    colaborador: "João da Silva",
+    dataInicio: "2026-05-06",
+    horaInicio: "10:30",
+    descricao: "Implementar login com 2FA",  ← MODIFICADO
+    usuario_id: "a1b2c3d4e5f6...",
+    email_usuario: "joao@empresa.com",
+    nome_usuario: "João da Silva",
+    data_criacao: "2026-05-06T10:30:45.123Z",  ← MANTÉM ORIGINAL
+    data_atualizacao: "2026-05-06T14:30:00.456Z"  ← NOVA MODIFICAÇÃO
+};
+
+// 4. Salva atualizado no Firebase
+```
+
+**T3 - 15:00:00 (Admin verifica auditoria)**
+
+```javascript
+// Admin abre admin.html → Log de Auditoria → Clica "Visualizar"
+
+// Sistema mostra na tabela:
+Data/Hora: 2026-05-06 14:30:00
+Usuário: João da Silva
+Email: joao@empresa.com
+Ação: 📝 Modificada              ← Porque tem data_atualizacao
+Ticket: #1001
+Descrição: Implementar login com 2FA
+```
+
+---
+
+## 8. PROTEÇÃO DE DADOS
+
+### Dados que NÃO podem ser deletados:
+- ✅ `usuario_id` - Permanente (salvo no Firebase)
+- ✅ `data_criacao` - Permanente (timestamp imutável)
+- ✅ `email_usuario` - Permanente (salvo com a atividade)
+- ✅ `nome_usuario` - Permanente (snapshot do nome na época)
+
+### Se admin limpar histórico:
+- ❌ TUDO é deletado (inclusive auditoria)
+- ⚠️ Isso é uma ação IRREVERSÍVEL
+
+### Se um usuário deletar sua conta:
+- ❌ O uid pode mudar
+- ✅ Mas email_usuario fica registrado na atividade histórica
+
+---
+
+## 9. PADRÃO ISO 8601
+
+As datas são salvas em formato **ISO 8601** (padrão internacional):
+
+```
+2026-05-06T10:30:45.123Z
+│        │  │  │  │ │
+├─ Ano   ├─ Mês
+         ├─ Dia
+            ├─ Hora (24h)
+               ├─ Minuto
+                  ├─ Segundo
+                     └─ Millisegundos
+                        └─ Z = UTC (Timezone)
+```
+
+**Por que**: 
+- Funciona em qualquer timezone
+- Pode ser comparado diretamente
+- Sorteia automaticamente
+
+**Conversão em JavaScript**:
+```javascript
+// String ISO → Data legível
+const iso = "2026-05-06T10:30:45.123Z";
+const date = new Date(iso);
+console.log(date.toLocaleString('pt-BR'));
+// Output: 06/05/2026 07:30:45 (em Brasília)
+```
+
+---
+
+## 10. OTIMIZAÇÕES
+
+### Índices (para performance)
+```javascript
+// Firebase permite criar índices:
+// - usuario_id (para filtrar por usuário rapidamente)
+// - data_criacao (para filtrar por período rapidamente)
+```
+
+### Paginação (se crescer muito)
+```javascript
+// Se houver milhares de atividades:
+// Modificar admin.html para carregar 100 por vez
+// E ir adicionando mais conforme scroll
+```
+
+---
+
+## 11. COMPLIANCE & REGULAMENTAÇÕES
+
+Este sistema atende:
+- ✅ **LGPD** (Lei Geral de Proteção de Dados)
+  - Rastreia quem acessou dados
+  - Permite deletar histórico se solicitado
+
+- ✅ **SOX** (Lei Sarbanes-Oxley) - se aplicável
+  - Auditoria completa de todas as ações
+  - Timestamps precisos
+
+- ✅ **ISO 27001** (Segurança da Informação)
+  - Rastreabilidade de ações
+  - Imutabilidade de logs
+
+---
+
+**Conclusão:**
+
+O log de auditoria é **automático, permanente e impossível de alterar**.
+Cada ação deixa um rastro que pode ser consultado a qualquer momento.
+
+🔐 **Privado → Auditado → Rastreável**

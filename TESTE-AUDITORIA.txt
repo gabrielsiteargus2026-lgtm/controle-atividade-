@@ -1,0 +1,142 @@
+🎬 TESTE RÁPIDO - LOG DE AUDITORIA
+==================================
+
+Vamos validar que o log de auditoria está funcionando em 5 minutos!
+
+---
+
+## ⏱️ PASSO 1: Criar Atividades (1 min)
+
+1. Abra `index.html`
+2. Crie 2-3 atividades:
+   - Ticket: 1001, Descrição: "Tarefa de teste"
+   - Ticket: 1002, Descrição: "Outra tarefa"
+
+3. Feche sem salvar logs no console
+
+---
+
+## ⏱️ PASSO 2: Acessar Admin (1 min)
+
+1. Abra `admin.html`
+2. Digite a senha de administrador
+3. Procure a seção **"Log de Auditoria"** na ÚLTIMA seção da página
+4. Você deve ver 3 campos:
+   - ✅ Dropdown de usuários (com seu nome)
+   - ✅ Campo "Data Inicial"
+   - ✅ Campo "Data Final"
+   - ✅ Botão "Visualizar"
+   - ✅ Botão "Exportar CSV"
+
+---
+
+## ⏱️ PASSO 3: Visualizar Log Sem Filtros (1 min)
+
+1. Deixe "Usuário" em **"-- Todos os Usuários --"**
+2. Deixe "Data Inicial" e "Data Final" **vazios**
+3. Clique **"Visualizar"**
+4. Uma tabela deve aparecer com suas 2-3 atividades
+
+Procure por:
+- ✅ Data/hora exato
+- ✅ Seu nome de usuário
+- ✅ Seu email
+- ✅ "✅ Criada" ou "📝 Modificada"
+- ✅ Números dos tickets
+- ✅ Descrição das atividades
+
+---
+
+## ⏱️ PASSO 4: Testar Filtro por Usuário (1 min)
+
+1. Clique "Visualizar" novamente
+2. Desta vez, selecione **seu nome** no dropdown "Usuário"
+3. Clique "Visualizar"
+4. A tabela deve mostrar APENAS suas atividades
+5. Se havia outras pessoas, elas não aparecem mais
+
+---
+
+## ⏱️ PASSO 5: Exportar CSV (1 min)
+
+1. Com o log aberto (ou deixe os filtros e clique "Visualizar" novamente)
+2. Clique **"Exportar CSV"** (boto verde na seção de auditoria OU no modal)
+3. Um arquivo `auditoria_YYYY-MM-DD.csv` deve download automaticamente
+4. Abra em Excel ou Google Sheets
+5. Procure por:
+   - ✅ Linha de cabeçalho com: Data/Hora, Usuário, Email, Ação, Ticket, Descrição, Duração
+   - ✅ Suas 2-3 atividades nos dados
+   - ✅ Dados separados por vírgula
+
+---
+
+## ✅ CHECKLIST DE SUCESSO
+
+- [ ] Consigo abrir admin.html sem erro
+- [ ] Consigo acessar a seção "Log de Auditoria"
+- [ ] Consigo clicar "Visualizar" e ver uma tabela
+- [ ] A tabela mostra pelo menos uma atividade que criei
+- [ ] O filtro por usuário funciona (mostra/oculta atividades)
+- [ ] Consegui exportar um arquivo CSV
+- [ ] O arquivo CSV abre sem erro no Excel/Sheets
+- [ ] O CSV contém minhas atividades com dados corretos
+
+---
+
+## 🐛 SE ALGO NÃO FUNCIONAR
+
+### Erro 1: "Log de Auditoria" não aparece na página
+- Verifique se está em `admin.html` (não em outro arquivo)
+- Recarregue a página (F5)
+- Limpe cache (Ctrl+Shift+Delete)
+
+### Erro 2: Dropdown de usuários está vazio
+- Verifique se alguém criou conta no Firebase
+- Abra F12 → Console
+- Procure por erros em vermelho
+
+### Erro 3: Tabela mostra "Carregando dados..." e não muda
+- Aguarde 2-3 segundos
+- Se persistir, abra F12 → Console
+- Procure por mensagens de erro
+- Verifique se Firebase Config está correto
+
+### Erro 4: Tabela está vazia (zero registros)
+- Verifique se criou atividades em `index.html`
+- As atividades precisam ter os campos:
+  - `usuario_id` (ID do Firebase)
+  - `email_usuario`
+  - `nome_usuario`
+  - `data_criacao`
+
+### Erro 5: CSV não baixa ao clicar "Exportar"
+- Verifique se o navegador permite downloads
+- Tente em modo incógnito
+- Procure downloads na pasta Downloads
+
+---
+
+## 🎓 PRÓXIMAS FUNCIONALIDADES
+
+Depois que validar que tudo funciona:
+
+1. **Teste com múltiplos usuários**:
+   - Crie 2+ contas diferentes
+   - Crie atividades com cada uma
+   - Veja o log mostrando todas
+
+2. **Teste filtros de data**:
+   - Selecione "Data Inicial": hoje
+   - Selecione "Data Final": hoje
+   - Veja apenas atividades de hoje
+
+3. **Teste modificar atividade**:
+   - Crie uma atividade
+   - Modifique-a em `index.html`
+   - Veja aparecer "📝 Modificada" no log
+
+---
+
+**Pronto? Comece o teste!** 🚀
+
+Se tiver dúvidas, compartilhe um screenshot do que vê (ou não vê) no console (F12).

@@ -234,13 +234,19 @@
     </style>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="firebase-config.js"></script>
+    <script src="firebase-auth.js"></script>
     <script>
         if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('COLE_AQUI')) {
             firebase.initializeApp(FIREBASE_CONFIG);
+            window.auth = firebase.auth();
             window.db = firebase.database();
             window.FIREBASE_OK = true;
+            
+            // Inicializar autenticação
+            inicializarAutenticacao();
         } else {
             window.FIREBASE_OK = false;
         }

@@ -1,0 +1,158 @@
+🔍 LOG DE AUDITORIA - GUIA COMPLETO
+===================================
+
+## O que é?
+
+Um log de auditoria é um **registro detalhado de TODAS as ações** feitas no sistema:
+- Quem criou cada atividade
+- Quando foi criada (data e hora)
+- Se foi modificada depois
+- Email e nome completo de cada usuário
+- Ticket associado
+- Descrição da atividade
+
+---
+
+## 📍 Onde fica?
+
+**Página:** `admin.html` → Seção **"Log de Auditoria - Rastreamento de Ações"**
+
+⚠️ **Importante:** Apenas administradores conseguem acessar (protegido com senha)
+
+---
+
+## 🎯 Como usar
+
+### 1️⃣ Abrir o Log
+
+1. Acesse `admin.html`
+2. Digite a senha de administrador
+3. Procure a seção **"Log de Auditoria"** (última seção da página)
+
+### 2️⃣ Filtrar dados
+
+Os filtros disponíveis são:
+
+| Filtro | O que faz | Exemplo |
+|--------|----------|---------|
+| **Usuário** | Mostrar apenas atividades de 1 pessoa | Selecione "João Silva" |
+| **Data Inicial** | Atividades a partir de uma data | 01/05/2026 |
+| **Data Final** | Atividades até uma data | 31/05/2026 |
+
+### 3️⃣ Visualizar
+
+Clique em **"Visualizar"** → Abre uma tabela com todas as atividades filtradas
+
+A tabela mostra:
+- ✅ **Data/Hora** - Exato momento da ação
+- 👤 **Usuário** - Nome de quem fez
+- 📧 **Email** - Email do usuário
+- 🎯 **Ação** - "Criada" ou "Modificada"
+- 🎫 **Ticket** - Número do ticket
+- 📝 **Descrição** - Primeiras 50 caracteres
+
+### 4️⃣ Exportar
+
+Clique em **"Exportar CSV"** → Download de um arquivo Excel com todos os dados
+
+---
+
+## 📊 Exemplo de Saída
+
+Quando você visualiza o log:
+
+```
+Data/Hora                Usuário           Email              Ação      Ticket  Descrição
+2026-05-06 10:30:45    João Silva        joao@empresa.com   ✅ Criada   #1023   Implementar novo módulo...
+2026-05-06 10:25:30    Maria Santos      maria@empresa.com  📝 Modif... #1021   Corrigir bug de login...
+2026-05-06 09:15:00    João Silva        joao@empresa.com   ✅ Criada   #1022   Testes unitários...
+```
+
+---
+
+## 🔑 Campos de Auditoria (dados salvos)
+
+Cada atividade salva automaticamente:
+
+```javascript
+{
+  usuario_id: "UUID-do-Firebase",      // ID único do usuário
+  email_usuario: "joao@empresa.com",   // Email de quem criou
+  nome_usuario: "João Silva",          // Nome completo
+  data_criacao: "2026-05-06T10:30:45", // Quando foi criada
+  data_atualizacao: "2026-05-06T14:00" // Última modificação (opcional)
+}
+```
+
+---
+
+## 📋 Casos de Uso
+
+### Caso 1: Auditar um colaborador específico
+1. Abra admin.html
+2. Selecione o nome do colaborador em "Usuário"
+3. Clique "Visualizar"
+4. Você vê TUDO que essa pessoa fez no sistema
+
+### Caso 2: Relatório de um período
+1. Selecione "Data Inicial": 01/05/2026
+2. Selecione "Data Final": 31/05/2026
+3. Clique "Visualizar"
+4. Clique "Exportar CSV" para compartilhar
+
+### Caso 3: Rastrear alterações em um dia específico
+1. Selecione "Data Inicial": 06/05/2026
+2. Selecione "Data Final": 06/05/2026
+3. Clique "Visualizar"
+4. Vê todas as ações de hoje com horários precisos
+
+---
+
+## 🛡️ Segurança
+
+✅ **O que é protegido:**
+- Apenas admin pode ver o log de auditoria
+- Dados salvos são read-only (não podem ser alterados)
+- Cada ação deixa registro permanente
+
+❌ **O que NÃO é alterável:**
+- Não dá para editar histórico
+- Não dá para deletar registros de auditoria
+- Não dá para ocultar quem fez o quê
+
+---
+
+## 💡 Dicas
+
+1. **Exportar regularmente**: Faça backup dos CSVs periodicamente
+2. **Revisar mudanças**: Procure por "Modificada" para ver edições
+3. **Rastrear por pessoa**: Use filtro de usuário para verificar produtividade
+4. **Auditoria completa**: Deixe os filtros vazios para ver TUDO
+
+---
+
+## ❓ FAQ
+
+**P: Quanto tempo de dados fica disponível?**
+R: Enquanto estiver no Firebase. O sistema não apaga automaticamente.
+
+**P: Posso deletar registros de auditoria?**
+R: Não. O log é imutável. Se precisar, use admin.html → "Limpar Histórico" para TUDO.
+
+**P: O log rastreia deletar atividades?**
+R: Sim! Quando você deleta, pede "Justificativa da exclusão" e gera um CSV de auditoria de exclusão.
+
+**P: Os dados são em tempo real?**
+R: Sim. Assim que alguém cria uma atividade, já fica no log.
+
+**P: Posso exportar em outro formato?**
+R: Atualmente é CSV. Abra em Excel, Google Sheets ou qualquer ferramenta que leia CSV.
+
+---
+
+**Próximos passos:**
+1. Abra admin.html
+2. Teste visualizando o log de auditoria
+3. Teste os filtros
+4. Teste exportar em CSV
+5. Compartilhe o relatório com o time
