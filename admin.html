@@ -304,34 +304,6 @@
             position: relative;
         }
 
-        /* Widget de Usuário Logado */
-        .usuario-widget {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: white;
-            padding: 10px 15px;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            font-size: 0.85em;
-            color: #2c3e50;
-            z-index: 500;
-            max-width: 250px;
-            word-wrap: break-word;
-        }
-
-        .usuario-widget strong {
-            display: block;
-            color: #666;
-            font-size: 0.75em;
-            margin-bottom: 3px;
-        }
-
-        .usuario-widget .email {
-            color: #5b8ec6;
-            font-weight: 500;
-        }
-
         @media (max-width: 768px) {
             .container {
                 margin-left: 0;
@@ -370,18 +342,24 @@
                 window.FIREBASE_OK = true;
                 inicializarAutenticacao();
             });
+        } else {
+            window.FIREBASE_OK = false;
+            console.warn('⚠️ Firebase não configurado.');
+        }
+        
+        // Criar widget de usuário após autenticação
+        if (typeof window.onUsuarioAutenticadoAdmin === 'undefined') {
+            window.onUsuarioAutenticadoAdmin = function(usuario) {
+                criarWidgetUsuario('usuarioWidget');
+            };
+        }
             
-            // Mostrar usuário logado no widget
-            window.auth.onAuthStateChanged(user => {
-                if (user) {
-                    const usuarioWidget = document.getElementById('usuarioWidget');
-                    const emailUsuarioWidget = document.getElementById('emailUsuarioWidget');
-                    if (usuarioWidget && emailUsuarioWidget) {
-                        emailUsuarioWidget.textContent = user.email || 'Não identificado';
-                        usuarioWidget.style.display = 'block';
-                    }
-                }
-            });
+            // Criar widget de usuário após autenticação
+            if (typeof window.onUsuarioAutenticadoAdmin === 'undefined') {
+                window.onUsuarioAutenticadoAdmin = function(usuario) {
+                    criarWidgetUsuario('usuarioWidget');
+                };
+            }
         } else {
             window.FIREBASE_OK = false;
             console.warn('⚠️ Firebase não configurado. Usando localStorage temporariamente.');
@@ -389,6 +367,7 @@
     </script>
 </head>
 <body>
+    <div id="usuarioWidget"></div>
     <!-- Menu Lateral -->
     <aside class="sidebar">
         <img src="argus-logo 1.png" alt="Argus" class="sidebar-logo">
@@ -401,12 +380,6 @@
             </ul>
         </nav>
     </aside>
-
-    <!-- Widget de Usuário Logado -->
-    <div class="usuario-widget" id="usuarioWidget" style="display: none;">
-        <strong>Logado como:</strong>
-        <span class="email" id="emailUsuarioWidget">-</span>
-    </div>
 
     <!-- Conteúdo Principal -->
     <div class="container">
@@ -1265,15 +1238,6 @@
             setTimeout(() => {
                 carregarUsuariosAuditoria();
                 
-                // Mostrar usuário logado
-                if (window.auth && window.auth.currentUser) {
-                    const usuarioWidget = document.getElementById('usuarioWidget');
-                    const emailUsuarioWidget = document.getElementById('emailUsuarioWidget');
-                    if (usuarioWidget && emailUsuarioWidget) {
-                        emailUsuarioWidget.textContent = window.auth.currentUser.email || 'Não identificado';
-                        usuarioWidget.style.display = 'block';
-                    }
-                }
             }, 1000);
 
             // Carregar dados

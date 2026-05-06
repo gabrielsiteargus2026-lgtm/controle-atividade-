@@ -203,13 +203,126 @@ function criarWidgetUsuario(containerId = 'usuarioWidget') {
 
     const widget = document.createElement('div');
     widget.innerHTML = `
-        <div style="position: fixed; top: 10px; right: 10px; display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: white; border-radius: 6px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15); z-index: 9999;">
-            <div style="text-align: right;">
-                <p style="margin: 0; font-size: 0.85em; color: #999;">Logado como</p>
-                <p style="margin: 0; font-weight: 600; font-size: 0.95em; color: #333;">${usuarioAtual.nome}</p>
-                <p style="margin: 0; font-size: 0.8em; color: #666;">${usuarioAtual.email}</p>
-            </div>
-            <button onclick="fazerLogout()" style="padding: 8px 14px; font-size: 0.85em; background: #ff6b6b; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;">Sair</button>
+        <style>
+            .usuario-widget {
+                position: fixed;
+                top: 10px;
+                right: 20px;
+                background: white;
+                border-radius: 8px;
+                padding: 8px 12px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                z-index: 999;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                min-width: 180px;
+            }
+
+            .usuario-widget-nome {
+                font-weight: 600;
+                font-size: 0.9em;
+                color: #2c3e50;
+                margin: 0 0 1px 0;
+                padding: 0;
+                line-height: 1.1;
+            }
+
+            .usuario-widget-email {
+                font-size: 0.75em;
+                color: #5b8ec6;
+                margin: 0 0 6px 0;
+                padding: 0;
+                line-height: 1.1;
+                word-break: break-word;
+            }
+
+            .usuario-widget-divider {
+                height: 1px;
+                background: #e0e0e0;
+                margin: 6px 0;
+            }
+
+            .usuario-widget-btn {
+                padding: 6px 10px;
+                font-size: 0.75em;
+                background: #ff6b6b;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-weight: 600;
+                width: 100%;
+                transition: all 0.2s ease;
+            }
+
+            .usuario-widget-btn:hover {
+                background: #ff5252;
+                box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+                transform: translateY(-1px);
+            }
+
+            .usuario-widget-btn:active {
+                transform: translateY(0);
+            }
+
+            @media (max-width: 768px) {
+                .usuario-widget {
+                    top: 8px;
+                    right: 15px;
+                    min-width: 160px;
+                    padding: 7px 10px;
+                }
+
+                .usuario-widget-nome {
+                    font-size: 0.85em;
+                }
+
+                .usuario-widget-email {
+                    font-size: 0.7em;
+                    margin: 0 0 5px 0;
+                }
+
+                .usuario-widget-btn {
+                    padding: 5px 8px;
+                    font-size: 0.7em;
+                }
+
+                .usuario-widget-divider {
+                    margin: 5px 0;
+                }
+            }
+
+            @media (max-width: 480px) {
+                .usuario-widget {
+                    top: 5px;
+                    right: 10px;
+                    min-width: 150px;
+                    padding: 6px 9px;
+                }
+
+                .usuario-widget-nome {
+                    font-size: 0.8em;
+                }
+
+                .usuario-widget-email {
+                    font-size: 0.65em;
+                    margin: 0 0 4px 0;
+                }
+
+                .usuario-widget-btn {
+                    padding: 4px 7px;
+                    font-size: 0.65em;
+                }
+
+                .usuario-widget-divider {
+                    margin: 4px 0;
+                }
+            }
+        </style>
+        <div class="usuario-widget">
+            <p class="usuario-widget-nome">${usuarioAtual.nome}</p>
+            <p class="usuario-widget-email">${usuarioAtual.email}</p>
+            <div class="usuario-widget-divider"></div>
+            <button onclick="fazerLogout()" class="usuario-widget-btn">Sair</button>
         </div>
     `;
     container.appendChild(widget);

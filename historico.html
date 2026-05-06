@@ -283,9 +283,18 @@
             window.FIREBASE_OK = false;
             console.warn('⚠️ Firebase não configurado. Usando localStorage temporariamente.');
         }
+        
+        // Criar widget de usuário após autenticação
+        if (typeof window.onUsuarioAutenticadoHistorico === 'undefined') {
+            window.onUsuarioAutenticadoHistorico = function(usuario) {
+                criarWidgetUsuario('usuarioWidget');
+                carregarDados();
+            };
+        }
     </script>
 </head>
 <body>
+    <div id="usuarioWidget"></div>
     <!-- Menu Lateral -->
     <aside class="sidebar">
         <img src="argus-logo 1.png" alt="Argus" class="sidebar-logo">

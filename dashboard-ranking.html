@@ -255,6 +255,17 @@
             });
         } else {
             window.FIREBASE_OK = false;
+            console.warn('⚠️ Firebase não configurado.');
+        }
+        
+        // Criar widget de usuário após autenticação
+        if (typeof window.onUsuarioAutenticadoDashboard === 'undefined') {
+            window.onUsuarioAutenticadoDashboard = function(usuario) {
+                criarWidgetUsuario('usuarioWidget');
+            };
+        }
+        } else {
+            window.FIREBASE_OK = false;
         }
     </script>
 </head>

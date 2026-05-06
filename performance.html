@@ -450,6 +450,7 @@
     </style>
 </head>
 <body>
+    <div id="usuarioWidget"></div>
     <!-- Menu Lateral -->
     <aside class="sidebar">
         <img src="argus-logo 1.png" alt="Argus" class="sidebar-logo">
@@ -639,6 +640,14 @@
         } else {
             window.FIREBASE_OK = false;
             console.warn('⚠️ Firebase não configurado. Usando localStorage temporariamente.');
+        }
+        
+        // Criar widget de usuário após autenticação
+        if (typeof window.onUsuarioAutenticadoPerformance === 'undefined') {
+            window.onUsuarioAutenticadoPerformance = function(usuario) {
+                criarWidgetUsuario('usuarioWidget');
+                carregarGrafico();
+            };
         }
 
         // Variáveis globais

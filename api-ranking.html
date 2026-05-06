@@ -159,10 +159,19 @@
             });
         } else {
             window.FIREBASE_OK = false;
+            console.warn('⚠️ Firebase não configurado.');
+        }
+        
+        // Criar widget de usuário após autenticação
+        if (typeof window.onUsuarioAutenticadoAPI === 'undefined') {
+            window.onUsuarioAutenticadoAPI = function(usuario) {
+                criarWidgetUsuario('usuarioWidget');
+            };
         }
     </script>
 </head>
 <body>
+    <div id="usuarioWidget"></div>
     <div class="container">
         <div class="header">
             <img src="argus-logo 1.png" alt="Argus" class="header-logo">
