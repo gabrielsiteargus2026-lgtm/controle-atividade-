@@ -68,9 +68,9 @@
             background: white;
             border-radius: 10px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            padding: 30px;
+            padding: 50px;
             width: 100%;
-            max-width: 500px;
+            max-width: 900px;
             margin: 0 auto;
         }
 
@@ -87,9 +87,9 @@
         }
 
         .login-header h1 {
-            font-size: 1.8em;
+            font-size: 2em;
             color: #2c3e50;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
 
         .login-header p {
@@ -98,7 +98,7 @@
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         label {
@@ -113,10 +113,10 @@
         input[type="password"],
         input[type="text"] {
             width: 100%;
-            padding: 12px;
+            padding: 14px;
             border: 2px solid #e0e0e0;
             border-radius: 5px;
-            font-size: 1em;
+            font-size: 1.05em;
             transition: border-color 0.3s;
         }
 
@@ -693,15 +693,9 @@
         
         // Função para verificar estado de autenticação
         function checkAuthState() {
-            window.auth.onAuthStateChanged(user => {
-                if (user) {
-                    console.log('Usuário já logado:', user.email);
-                    console.log('Redirecionando para index.html...');
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 500);
-                }
-            });
+            // NÃO redireciona mais automaticamente
+            // Usuário SEMPRE precisa fazer login, mesmo se estiver autenticado
+            console.log('Aguardando entrada do usuário...');
         }
     </script>
 </body>

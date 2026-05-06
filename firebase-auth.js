@@ -203,13 +203,13 @@ function criarWidgetUsuario(containerId = 'usuarioWidget') {
 
     const widget = document.createElement('div');
     widget.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
-            <div style="flex: 1;">
-                <p style="margin: 0; font-size: 0.9em; color: #666;">Logado como:</p>
-                <p style="margin: 0; font-weight: 600; color: #333;">${usuarioAtual.nome}</p>
-                <p style="margin: 0; font-size: 0.85em; color: #999;">${usuarioAtual.email}</p>
+        <div style="position: fixed; top: 10px; right: 10px; display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: white; border-radius: 6px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15); z-index: 9999;">
+            <div style="text-align: right;">
+                <p style="margin: 0; font-size: 0.85em; color: #999;">Logado como</p>
+                <p style="margin: 0; font-weight: 600; font-size: 0.95em; color: #333;">${usuarioAtual.nome}</p>
+                <p style="margin: 0; font-size: 0.8em; color: #666;">${usuarioAtual.email}</p>
             </div>
-            <button onclick="fazerLogout()" style="padding: 8px 15px; background: #ff6b6b; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">Sair</button>
+            <button onclick="fazerLogout()" style="padding: 8px 14px; font-size: 0.85em; background: #ff6b6b; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;">Sair</button>
         </div>
     `;
     container.appendChild(widget);

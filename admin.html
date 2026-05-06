@@ -360,10 +360,16 @@
             firebase.initializeApp(FIREBASE_CONFIG);
             window.auth = firebase.auth();
             window.db = firebase.database();
-            window.FIREBASE_OK = true;
-            
-            // Inicializar autenticação
-            inicializarAutenticacao();
+            // Fazer logout automático ao recarregar a página
+            window.auth.signOut().then(() => {
+                console.log('✅ Logout automático ao recarregar página');
+                window.FIREBASE_OK = true;
+                inicializarAutenticacao();
+            }).catch(error => {
+                console.warn('Aviso ao fazer logout:', error);
+                window.FIREBASE_OK = true;
+                inicializarAutenticacao();
+            });
             
             // Mostrar usuário logado no widget
             window.auth.onAuthStateChanged(user => {
@@ -481,8 +487,8 @@
                     </select>
                     <input type="date" id="inputDataInicioAuditoria" style="flex: 1; min-width: 150px; padding: 8px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 0.9em;">
                     <input type="date" id="inputDataFimAuditoria" style="flex: 1; min-width: 150px; padding: 8px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 0.9em;">
-                    <button class="btn-action" id="btnVisualizarAuditoria" style="padding: 8px 15px;">Visualizar</button>
-                    <button class="btn-export" id="btnExportarAuditoria" style="padding: 8px 15px;">Exportar CSV</button>
+                    <button class="btn-action" id="btnVisualizarAuditoria" style="padding: 6px 10px; font-size: 0.85em;">Visualizar</button>
+                    <button class="btn-export" id="btnExportarAuditoria" style="padding: 6px 10px; font-size: 0.85em;">Exportar CSV</button>
                 </div>
             </div>
         </div>

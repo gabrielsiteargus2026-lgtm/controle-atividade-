@@ -243,10 +243,16 @@
             firebase.initializeApp(FIREBASE_CONFIG);
             window.auth = firebase.auth();
             window.db = firebase.database();
-            window.FIREBASE_OK = true;
-            
-            // Inicializar autenticação
-            inicializarAutenticacao();
+            // Fazer logout automático ao recarregar a página
+            window.auth.signOut().then(() => {
+                console.log('✅ Logout automático ao recarregar página');
+                window.FIREBASE_OK = true;
+                inicializarAutenticacao();
+            }).catch(error => {
+                console.warn('Aviso ao fazer logout:', error);
+                window.FIREBASE_OK = true;
+                inicializarAutenticacao();
+            });
         } else {
             window.FIREBASE_OK = false;
         }
