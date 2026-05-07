@@ -920,10 +920,8 @@
                     
                     console.log('✅ Usuário autenticado:', usuarioAtual.email);
                     
-                    // 📌 Registrar LOGIN do usuário em tempo real
-                    registrarAtividadeUsuario('LOGIN', '-', 'Usuário conectado ao sistema', {
-                        status: 'online'
-                    });
+                    // 📌 Registrar acesso à página com nome específico
+                    registrarAcessoPagina();
                     
                     // Mostrar conteúdo da página após autenticação
                     document.body.style.display = 'block';

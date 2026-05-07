@@ -640,6 +640,9 @@
         // Criar widget de usuário após autenticação
         if (typeof window.onUsuarioAutenticadoPerformance === 'undefined') {
             window.onUsuarioAutenticadoPerformance = function(usuario) {
+                // 📄 Registrar acesso à página
+                registrarAcessoPagina();
+                
                 criarWidgetUsuario('usuarioWidget');
                 carregarGrafico();
             };

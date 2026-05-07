@@ -410,3 +410,84 @@ async function atualizarDadosUsuario(dados) {
         return false;
     }
 }
+
+/**
+ * � Registrar atividade do usuário (disponível globalmente)
+ */
+function registrarAtividadeUsuario(tipo, ticket, descricao, detalhesAdicionais = {}) {
+    if (!usuarioAtual) {
+        console.warn('❌ Não é possível registrar atividade: nenhum usuário autenticado');
+        return;
+    }
+
+    // Remover campos de usuário de detalhesAdicionais para evitar sobrescrita
+    const { usuario_id, email_usuario, nome_usuario, ...outrosDetalhes } = detalhesAdicionais;
+
+    const registro = {
+        timestamp: new Date().toISOString(),
+        usuario_id: usuarioAtual.uid,           // ✅ SEMPRE o usuário logado
+        email_usuario: usuarioAtual.email,      // ✅ SEMPRE o usuário logado
+        nome_usuario: usuarioAtual.nome,        // ✅ SEMPRE o usuário logado
+        tipo: tipo, // INICIOU, FINALIZOU, PAUSOU, RETOMOU, LOGIN, LOGOUT, ACESSOU_PAGINA
+        ticket: ticket,
+        descricao: descricao,
+        ...outrosDetalhes // ✅ Usar apenas os detalhes que não são de usuário
+    };
+
+    // Carregar registros existentes
+    const registrosJSON = localStorage.getItem('registrosAtividades');
+    let registros = registrosJSON ? JSON.parse(registrosJSON) : [];
+    
+    // Adicionar novo registro
+    registros.push(registro);
+    
+    // Salvar no localStorage
+    localStorage.setItem('registrosAtividades', JSON.stringify(registros));
+
+    // Tentar salvar no Firebase se disponível
+    if (window.FIREBASE_OK && window.db) {
+        window.db.ref('registrosAtividades').push(registro).catch(err => {
+            console.warn('Erro ao salvar registro de atividade no Firebase:', err);
+        });
+    }
+
+    console.log('📊 Atividade registrada:', tipo, ticket);
+}
+
+/**
+ * 🔍 Detectar página atual e retornar nome legível
+ */
+function obterNomePaginaAtual() {
+    const arquivo = window.location.pathname.split('/').pop() || 'index.html';
+    const mapaPaginas = {
+        'index.html': 'Controle Principal',
+        'historico.html': 'Histórico',
+        'admin.html': 'Administrador',
+        'performance.html': 'Performance',
+        'atividades-usuarios.html': 'Atividades dos Usuários',
+        'dashboard-ranking.html': 'Dashboard Ranking',
+        'api-ranking.html': 'API Ranking',
+        'login.html': 'Login'
+    };
+    
+    return mapaPaginas[arquivo] || arquivo.replace('.html', '').replace('-', ' ');
+}
+
+/**
+ * 📊 Registrar acesso à página (em vez de LOGIN genérico)
+ */
+function registrarAcessoPagina() {
+    const nomePagina = obterNomePaginaAtual();
+    const acao = nomePagina === 'Login' ? 'LOGIN' : 'ACESSOU_PAGINA';
+    const descricao = nomePagina === 'Login' 
+        ? 'Usuário conectado ao sistema' 
+        : `Acessou a página "${nomePagina}"`;
+    
+    registrarAtividadeUsuario(acao, '-', descricao, {
+        pagina: nomePagina,
+        timestamp: new Date().toISOString()
+    });
+    
+    console.log(`📄 Acesso registrado: ${descricao}`);
+}
+

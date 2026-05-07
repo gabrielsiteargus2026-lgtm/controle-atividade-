@@ -165,6 +165,9 @@
         // Criar widget de usuário após autenticação
         if (typeof window.onUsuarioAutenticadoAPI === 'undefined') {
             window.onUsuarioAutenticadoAPI = function(usuario) {
+                // 📄 Registrar acesso à página
+                registrarAcessoPagina();
+                
                 criarWidgetUsuario('usuarioWidget');
             };
         }

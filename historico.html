@@ -281,8 +281,11 @@
         // Criar widget de usuário após autenticação
         if (typeof window.onUsuarioAutenticadoHistorico === 'undefined') {
             window.onUsuarioAutenticadoHistorico = function(usuario) {
+                // 📄 Registrar acesso à página
+                registrarAcessoPagina();
+                
                 criarWidgetUsuario('usuarioWidget');
-                carregarDados();
+                carregarAtividades();
             };
         }
     </script>

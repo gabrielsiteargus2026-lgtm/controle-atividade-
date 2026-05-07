@@ -485,6 +485,9 @@
 
         // Callback chamado automaticamente quando usuário se autentica
         function onUsuarioAutenticado(usuario) {
+            // 📄 Registrar acesso à página
+            registrarAcessoPagina();
+            
             console.log('✅ Usuário autenticado:', usuario.email);
             document.getElementById('userEmail').textContent = usuario.email;
             iniciarCarregamentoTempoReal();
