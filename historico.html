@@ -349,17 +349,64 @@
 
         let atividades = [];
 
-        // Carregar dados do Firebase ou localStorage
+        // Carregar dados retroativos do Firebase
         function carregarAtividades() {
-            if (window.FIREBASE_OK) {
+            if (window.FIREBASE_OK && window.db) {
+                // Carregar atividades finalizadas
                 window.db.ref('atividades').on('value', (snapshot) => {
-                    const dados = snapshot.val();
-                    atividades = dados ? Object.values(dados) : [];
+                    const dadosAtividades = snapshot.val();
+                    let atividadesFinalizadas = [];
+                    
+                    if (dadosAtividades) {
+                        atividadesFinalizadas = Object.values(dadosAtividades);
+                    }
+
+                    // Também carregar do localStorage como fallback/complemento
+                    const dadosLocal = localStorage.getItem('atividades');
+                    let atividadesLocal = [];
+                    
+                    if (dadosLocal) {
+                        try {
+                            atividadesLocal = JSON.parse(dadosLocal);
+                        } catch (e) {
+                            console.error('Erro ao parsear atividades do localStorage:', e);
+                        }
+                    }
+
+                    // Combinar ambos e remover duplicatas
+                    atividades = [...atividadesFinalizadas, ...atividadesLocal];
+                    
+                    // Remover duplicatas por ticket
+                    const unicos = {};
+                    atividades.forEach(a => {
+                        if (a.ticket && !unicos[a.ticket]) {
+                            unicos[a.ticket] = a;
+                        }
+                    });
+                    atividades = Object.values(unicos);
+                    
+                    // Ordenar por data de fim (mais recente primeiro)
+                    atividades.sort((a, b) => {
+                        const dataA = a.dataFim ? new Date(`${a.dataFim} ${a.horaFim}`) : new Date(0);
+                        const dataB = b.dataFim ? new Date(`${b.dataFim} ${b.horaFim}`) : new Date(0);
+                        return dataB - dataA;
+                    });
+
+                    console.log('✅ Carregadas', atividades.length, 'atividades do histórico');
                     renderizarTabela();
                 });
             } else {
-                const dados = localStorage.getItem('atividades');
-                atividades = dados ? JSON.parse(dados) : [];
+                // Fallback apenas para localStorage
+                const dadosLocal = localStorage.getItem('atividades');
+                atividades = dadosLocal ? JSON.parse(dadosLocal) : [];
+                
+                // Ordenar por data
+                atividades.sort((a, b) => {
+                    const dataA = a.dataFim ? new Date(`${a.dataFim} ${a.horaFim}`) : new Date(0);
+                    const dataB = b.dataFim ? new Date(`${b.dataFim} ${b.horaFim}`) : new Date(0);
+                    return dataB - dataA;
+                });
+                
                 renderizarTabela();
             }
         }

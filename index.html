@@ -1405,12 +1405,9 @@
             atualizarKanban();
             iniciarCronometro(novaAtividade.id);
 
-            // Registrar atividade do usuário
-            registrarAtividadeUsuario('INICIOU', ticket, descricao, {
-                usuario_id: usuarioAtual?.uid || 'anonimo',
-                email_usuario: usuarioAtual?.email || 'desconhecido',
-                nome_usuario: usuarioAtual?.nome || 'Usuário'
-            });
+            // ✅ Registrar atividade do usuário
+            // O usuário logado (usuarioAtual) será sempre usado
+            registrarAtividadeUsuario('INICIOU', ticket, descricao);
 
             mostrarAlerta('sucesso', `Atividade iniciada para o ticket ${ticket}`);
             
@@ -1510,14 +1507,12 @@
             atualizarTabela();
             atualizarKanban();
 
-            // Registrar atividade do usuário
+            // ✅ Registrar atividade do usuário
+            // O usuário logado (usuarioAtual) será sempre usado
             registrarAtividadeUsuario('FINALIZOU', atividade.ticket, atividade.descricao, {
                 duracao: formatarTempo(duracao),
                 observacao: atividade.observacao,
-                colaboradores: colaboradoresAuxiliares || [],
-                usuario_id: atividade.usuario_id || usuarioAtual?.uid || 'anonimo',
-                email_usuario: atividade.email_usuario || usuarioAtual?.email || 'desconhecido',
-                nome_usuario: atividade.nome_usuario || usuarioAtual?.nome || 'Usuário'
+                colaboradores: colaboradoresAuxiliares || []
             });
 
             if (colaboradoresAuxiliares && colaboradoresAuxiliares.length > 0) {
@@ -1583,19 +1578,40 @@
             setTimeout(() => alertDiv.remove(), 4000);
         }
 
-        // Registrar atividade do usuário
+        // ================================================================
+        // ✅ RASTREAMENTO DE ATIVIDADES DO USUÁRIO
+        // ================================================================
+        // Esta função registra QUEM REALIZOU cada ação em uma atividade.
+        // 
+        // IMPORTANTE:
+        // - Sempre registra com o usuário LOGADO NO MOMENTO (usuarioAtual)
+        // - NÃO preserva dados de usuário da atividade original
+        // - Cada ação (INICIOU, PAUSOU, RETOMOU, FINALIZOU) é atribuída ao usuário correto
+        //
+        // EXEMPLO DE FLUXO CORRETO:
+        // 1. Usuário Alice inicia atividade → registra "Alice INICIOU ticket #123"
+        // 2. Usuário Bob pausa atividade    → registra "Bob PAUSOU ticket #123"
+        // 3. Usuário Alice retoma           → registra "Alice RETOMOU ticket #123"
+        // 4. Usuário Charlie finaliza       → registra "Charlie FINALIZOU ticket #123"
+        // ================================================================
         function registrarAtividadeUsuario(tipo, ticket, descricao, detalhesAdicionais = {}) {
-            if (!usuarioAtual) return;
+            if (!usuarioAtual) {
+                console.warn('❌ Não é possível registrar atividade: nenhum usuário autenticado');
+                return;
+            }
+
+            // Remover campos de usuário de detalhesAdicionais para evitar sobrescrita
+            const { usuario_id, email_usuario, nome_usuario, ...outrosDetalhes } = detalhesAdicionais;
 
             const registro = {
                 timestamp: new Date().toISOString(),
-                usuario_id: usuarioAtual.uid,
-                email_usuario: usuarioAtual.email,
-                nome_usuario: usuarioAtual.nome,
+                usuario_id: usuarioAtual.uid,           // ✅ SEMPRE o usuário logado
+                email_usuario: usuarioAtual.email,      // ✅ SEMPRE o usuário logado
+                nome_usuario: usuarioAtual.nome,        // ✅ SEMPRE o usuário logado
                 tipo: tipo, // INICIOU, FINALIZOU, PAUSOU, RETOMOU
                 ticket: ticket,
                 descricao: descricao,
-                ...detalhesAdicionais
+                ...outrosDetalhes // ✅ Usar apenas os detalhes que não são de usuário
             };
 
             // Carregar registros existentes
@@ -1685,15 +1701,13 @@
             atualizarKanban();
             fecharModalPausarAtividade();
 
-            // Registrar atividade do usuário
+            // ✅ Registrar atividade do usuário
+            // O usuário logado (usuarioAtual) será sempre usado
             const atividadePausa = atividadesEmAndamento.find(a => a.id === atividadePausando);
             if (atividadePausa) {
                 registrarAtividadeUsuario('PAUSOU', atividadePausa.ticket, atividadePausa.descricao, {
                     motivo: motivo,
-                    grupo: grupoNormalizado,
-                    usuario_id: atividadePausa.usuario_id || usuarioAtual?.uid || 'anonimo',
-                    email_usuario: atividadePausa.email_usuario || usuarioAtual?.email || 'desconhecido',
-                    nome_usuario: atividadePausa.nome_usuario || usuarioAtual?.nome || 'Usuário'
+                    grupo: grupoNormalizado
                 });
             }
 
@@ -1735,14 +1749,12 @@
             salvarDados();
             atualizarKanban();
 
-            // Registrar atividade do usuário
+            // ✅ Registrar atividade do usuário
+            // O usuário logado (usuarioAtual) será sempre usado
             const atividadeRetoma = atividadesEmAndamento.find(a => a.id === atividadeId);
             if (atividadeRetoma) {
                 registrarAtividadeUsuario('RETOMOU', atividadeRetoma.ticket, atividadeRetoma.descricao, {
-                    tempoPausa: estadoPausa && estadoPausa.tempoInicioPausa ? formatarTempo(agora.getTime() - estadoPausa.tempoInicioPausa) : '-',
-                    usuario_id: atividadeRetoma.usuario_id || usuarioAtual?.uid || 'anonimo',
-                    email_usuario: atividadeRetoma.email_usuario || usuarioAtual?.email || 'desconhecido',
-                    nome_usuario: atividadeRetoma.nome_usuario || usuarioAtual?.nome || 'Usuário'
+                    tempoPausa: estadoPausa && estadoPausa.tempoInicioPausa ? formatarTempo(agora.getTime() - estadoPausa.tempoInicioPausa) : '-'
                 });
             }
 

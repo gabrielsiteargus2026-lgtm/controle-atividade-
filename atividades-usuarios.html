@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f8f9fa;
             min-height: 100vh;
             padding: 20px;
         }
@@ -27,12 +27,13 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-left: 280px;
         }
 
         .navbar-brand {
             font-size: 1.5em;
             font-weight: bold;
-            color: #667eea;
+            color: #2c3e50;
         }
 
         .user-info {
@@ -77,14 +78,8 @@
         }
 
         .page-header h1 {
-            color: #333;
+            color: #2c3e50;
             font-size: 2em;
-        }
-
-        .page-header p {
-            color: #666;
-            font-size: 0.95em;
-            margin-top: 5px;
         }
 
         .filters {
@@ -142,13 +137,13 @@
         }
 
         .btn-primary {
-            background: #667eea;
+            background: #5b8ec6;
             color: white;
         }
 
         .btn-primary:hover {
-            background: #5568d3;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            background: #4a75b0;
+            box-shadow: 0 4px 12px rgba(91, 142, 198, 0.4);
         }
 
         .btn-secondary {
@@ -234,67 +229,26 @@
             margin-top: 10px;
         }
 
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #999;
-        }
-
-        .empty-state-icon {
-            font-size: 3em;
-            margin-bottom: 15px;
-        }
-
-        .empty-state h2 {
-            color: #666;
-            margin-bottom: 10px;
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 2.5em;
-            font-weight: bold;
-            color: #667eea;
-        }
-
-        .stat-label {
-            color: #999;
-            font-size: 0.9em;
-            margin-top: 5px;
-        }
+        /* ✅ Apenas Vista de Tabela é exibida */
 
         .sidebar {
             position: fixed;
             left: 0;
             top: 0;
-            width: 250px;
+            width: 280px;
             height: 100vh;
             background: #2c3e50;
             padding: 20px;
             z-index: 1000;
             overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
         }
 
         .sidebar-logo {
-            color: white;
-            font-size: 1.5em;
-            font-weight: bold;
+            width: 100%;
+            height: 80px;
+            object-fit: contain;
             margin-bottom: 30px;
-            text-align: center;
         }
 
         .sidebar-menu {
@@ -306,22 +260,29 @@
         }
 
         .sidebar-menu a {
-            color: #bdc3c7;
+            color: #ecf0f1;
             text-decoration: none;
-            padding: 10px 15px;
+            padding: 12px 15px;
             display: block;
             border-radius: 5px;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
+            font-weight: 500;
         }
 
-        .sidebar-menu a:hover,
-        .sidebar-menu a.active {
-            background: #667eea;
+        .sidebar-menu a:hover {
+            background: #5b8ec6;
             color: white;
+            padding-left: 20px;
+        }
+
+        .sidebar-menu a.active {
+            background: #5b8ec6;
+            color: white;
+            border-left: 4px solid #fff;
         }
 
         .main-content {
-            margin-left: 250px;
+            margin-left: 280px;
         }
 
         @media (max-width: 768px) {
@@ -347,10 +308,6 @@
             .page-header {
                 flex-direction: column;
                 text-align: center;
-            }
-
-            .stats {
-                grid-template-columns: 1fr;
             }
         }
 
@@ -383,6 +340,99 @@
         .export-btn:hover {
             background: #229954;
         }
+
+        /* View toggle removido - apenas vista de tabela */
+
+        .table-view {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .table-view thead {
+            background: #5b8ec6;
+            color: white;
+        }
+
+        .table-view th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .table-view td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.95em;
+        }
+
+        .table-view tbody tr:hover {
+            background: #f9f9f9;
+        }
+
+        .table-view tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .action-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-align: center;
+            min-width: 80px;
+        }
+
+        .action-badge.iniciou {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .action-badge.finalizou {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .action-badge.pausou {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .action-badge.retomou {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .timestamp-cell {
+            white-space: nowrap;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .user-cell {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .ticket-cell {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .details-cell {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .hidden-view {
+            display: none !important;
+        }
     </style>
 
     <!-- Firebase SDK -->
@@ -398,49 +448,100 @@
         // Estado global - usuarioAtual é declarado em firebase-auth.js
         let registrosAtividades = [];
         let registrosFiltrados = [];
-        let intervaloCarregamento = null;
+        // intervaloCarregamento removido - usando listeners em tempo real
 
         // Callback chamado automaticamente quando usuário se autentica
         function onUsuarioAutenticado(usuario) {
             console.log('✅ Usuário autenticado:', usuario.email);
             document.getElementById('userEmail').textContent = usuario.email;
-            carregarAtividades();
+            iniciarCarregamentoTempoReal();
         }
         
-        // Carregar atividades dos usuários
-        function carregarAtividades() {
-            console.log('Carregando atividades dos usuários...');
+        // Iniciar listener de tempo real do Firebase
+        function iniciarCarregamentoTempoReal() {
+            console.log('Iniciando carregamento em tempo real do Firebase...');
             const loadingElement = document.getElementById('loading');
             if (loadingElement) loadingElement.style.display = 'block';
 
-            setTimeout(() => {
-                const atividadesLocal = localStorage.getItem('registrosAtividades');
-                if (atividadesLocal) {
+            if (window.FIREBASE_OK && window.db) {
+                // Listener de tempo real - ouvirá todas as mudanças
+                const ref = window.db.ref('registrosAtividades');
+                
+                ref.on('value', (snapshot) => {
                     try {
-                        registrosAtividades = JSON.parse(atividadesLocal);
-                        console.log('✅ Carregadas', registrosAtividades.length, 'atividades do localStorage');
-                    } catch (e) {
-                        console.error('Erro ao parsear atividades:', e);
+                        const dados = snapshot.val();
                         registrosAtividades = [];
+                        
+                        if (dados) {
+                            // Converter objeto do Firebase em array
+                            Object.values(dados).forEach(registro => {
+                                if (registro && registro.timestamp) {
+                                    registrosAtividades.push(registro);
+                                }
+                            });
+                            console.log('✅ Carregadas', registrosAtividades.length, 'atividades do Firebase em tempo real');
+                        } else {
+                            console.log('ℹ️  Nenhuma atividade no Firebase ainda');
+                        }
+
+                        // Também tentar carregar fallback do localStorage se Firebase estiver vazio
+                        if (registrosAtividades.length === 0) {
+                            const atividadesLocal = localStorage.getItem('registrosAtividades');
+                            if (atividadesLocal) {
+                                try {
+                                    registrosAtividades = JSON.parse(atividadesLocal);
+                                    console.log('✅ Carregadas', registrosAtividades.length, 'atividades do localStorage (fallback)');
+                                } catch (e) {
+                                    console.error('Erro ao parsear atividades do localStorage:', e);
+                                }
+                            }
+                        }
+
+                        // Ordenar por data (mais recente primeiro)
+                        registrosAtividades.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                        registrosFiltrados = [...registrosAtividades];
+                        exibirAtividades();
+                        if (loadingElement) loadingElement.style.display = 'none';
+                    } catch (erro) {
+                        console.error('❌ Erro ao processar dados do Firebase:', erro);
+                        if (loadingElement) loadingElement.style.display = 'none';
                     }
-                } else {
-                    console.warn('⚠️ Nenhuma atividade encontrada no localStorage');
+                }, (erro) => {
+                    console.error('❌ Erro ao conectar ao Firebase:', erro);
+                    // Fallback para localStorage
+                    carregarAtividadesDoLocalStorage();
+                    if (loadingElement) loadingElement.style.display = 'none';
+                });
+            } else {
+                console.warn('⚠️ Firebase não disponível, usando localStorage');
+                carregarAtividadesDoLocalStorage();
+                if (loadingElement) loadingElement.style.display = 'none';
+            }
+        }
+
+        // Carregar atividades do localStorage (fallback)
+        function carregarAtividadesDoLocalStorage() {
+            console.log('Carregando atividades do localStorage (fallback)...');
+            const atividadesLocal = localStorage.getItem('registrosAtividades');
+            if (atividadesLocal) {
+                try {
+                    registrosAtividades = JSON.parse(atividadesLocal);
+                    console.log('✅ Carregadas', registrosAtividades.length, 'atividades do localStorage');
+                } catch (e) {
+                    console.error('Erro ao parsear atividades:', e);
                     registrosAtividades = [];
                 }
+            } else {
+                console.warn('⚠️ Nenhuma atividade encontrada no localStorage');
+                registrosAtividades = [];
+            }
 
-                // Ordenar por data (mais recente primeiro)
-                registrosAtividades.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            // Ordenar por data (mais recente primeiro)
+            registrosAtividades.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-                registrosFiltrados = [...registrosAtividades];
-                atualizarEstatisticas();
-                exibirAtividades();
-                if (loadingElement) loadingElement.style.display = 'none';
-
-                // Iniciar intervalo de recarregamento apenas na primeira vez
-                if (!intervaloCarregamento) {
-                    intervaloCarregamento = setInterval(carregarAtividades, 5000);
-                }
-            }, 500);
+            registrosFiltrados = [...registrosAtividades];
+            exibirAtividades();
         }
     </script>
     
@@ -483,21 +584,21 @@
 </head>
 <body>
     <aside class="sidebar">
-        <div class="sidebar-logo">📊 Menu</div>
+        <div class="sidebar-logo">Menu</div>
         <nav>
             <ul class="sidebar-menu">
                 <li><a href="index.html">Controle de Atividade</a></li>
                 <li><a href="historico.html">Histórico</a></li>
                 <li><a href="performance.html">Performance</a></li>
                 <li><a href="admin.html">Administrador</a></li>
-                <li><a href="atividades-usuarios.html" class="active">👥 Atividades dos Usuários</a></li>
+                <li><a href="atividades-usuarios.html" class="active">Atividades dos Usuários</a></li>
             </ul>
         </nav>
     </aside>
 
     <div class="main-content">
         <div class="navbar">
-            <div class="navbar-brand">📊 Atividades dos Usuários</div>
+            <div class="navbar-brand">Atividades dos Usuários</div>
             <div class="user-info">
                 <div class="user-email" id="userEmail">Usuário não autenticado</div>
                 <button class="logout-btn" id="logoutBtn">Sair</button>
@@ -507,23 +608,7 @@
         <div class="container">
             <div class="page-header">
                 <div>
-                    <h1>👥 Atividades dos Usuários</h1>
-                    <p>Visualize todas as ações realizadas pelos usuários no sistema</p>
-                </div>
-            </div>
-
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-value" id="totalAtividades">0</div>
-                    <div class="stat-label">Total de Ações</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="totalUsuarios">0</div>
-                    <div class="stat-label">Usuários Ativos</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="atividadesHoje">0</div>
-                    <div class="stat-label">Ações Hoje</div>
+                    <h1>Atividades dos Usuários</h1>
                 </div>
             </div>
 
@@ -547,9 +632,9 @@
                     <input type="date" id="filterData">
                 </div>
                 <div class="filter-buttons">
-                    <button class="btn btn-primary" id="btnAplicarFiltros">🔍 Aplicar</button>
-                    <button class="btn btn-secondary" id="btnLimparFiltros">🔄 Limpar</button>
-                    <button class="btn export-btn" id="btnExportarCSV">💾 Exportar CSV</button>
+                    <button class="btn btn-primary" id="btnAplicarFiltros">Aplicar</button>
+                    <button class="btn btn-secondary" id="btnLimparFiltros">Limpar</button>
+                    <button class="btn export-btn" id="btnExportarCSV">Exportar CSV</button>
                 </div>
             </div>
 
@@ -558,46 +643,35 @@
                 Carregando atividades...
             </div>
 
-            <div id="activitiesList" class="activities-list">
-                <div class="empty-state">
-                    <div class="empty-state-icon">📭</div>
-                    <h2>Nenhuma atividade registrada</h2>
-                    <p>As atividades dos usuários aparecerão aqui</p>
-                </div>
-            </div>
+            <table id="activitiesTable" class="table-view">
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Usuário</th>
+                        <th>Email</th>
+                        <th>Ação</th>
+                        <th>Ticket</th>
+                        <th>Detalhes</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
         </div>
     </div>
 
     <script>
-        // Atualizar estatísticas
-        function atualizarEstatisticas() {
-            // Total de atividades
-            document.getElementById('totalAtividades').textContent = registrosAtividades.length;
-
-            // Total de usuários únicos
-            const usuariosUnicos = new Set(registrosAtividades.map(r => r.email_usuario));
-            document.getElementById('totalUsuarios').textContent = usuariosUnicos.size;
-
-            // Atividades de hoje
-            const hoje = new Date().toISOString().split('T')[0];
-            const atividadesHoje = registrosAtividades.filter(r => {
-                const data = new Date(r.timestamp).toISOString().split('T')[0];
-                return data === hoje;
-            });
-            document.getElementById('atividadesHoje').textContent = atividadesHoje.length;
-        }
-
-        // Exibir atividades
+        // Exibir atividades em tabela (única visualização)
         function exibirAtividades() {
-            const container = document.getElementById('activitiesList');
+            const tbody = document.getElementById('tableBody');
 
             if (registrosFiltrados.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📭</div>
-                        <h2>Nenhuma atividade encontrada</h2>
-                        <p>Tente ajustar os filtros</p>
-                    </div>
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #999;">
+                            Nenhuma atividade encontrada - Tente ajustar os filtros
+                        </td>
+                    </tr>
                 `;
                 return;
             }
@@ -605,58 +679,59 @@
             let html = '';
             registrosFiltrados.forEach(registro => {
                 const data = new Date(registro.timestamp);
-                const dataFormatada = data.toLocaleDateString('pt-BR');
-                const horaFormatada = data.toLocaleTimeString('pt-BR');
+                const dataFormatada = data.toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                const horaFormatada = data.toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
 
-                let icon = '📝';
-                let acao = '';
+                let acaoTexto = '';
+                let acaoBadgeClass = '';
                 let detalhes = '';
 
                 switch (registro.tipo) {
                     case 'INICIOU':
-                        icon = '▶️';
-                        acao = `iniciou a atividade <span class="activity-ticket">#${registro.ticket}</span>`;
-                        detalhes = `Descrição: ${registro.descricao}`;
+                        acaoTexto = 'Iniciou';
+                        acaoBadgeClass = 'iniciou';
+                        detalhes = `${registro.descricao}`;
                         break;
                     case 'FINALIZOU':
-                        icon = '✅';
-                        acao = `finalizou a atividade <span class="activity-ticket">#${registro.ticket}</span>`;
-                        detalhes = `Duração: ${registro.duracao} | Observação: ${registro.observacao || '-'}`;
+                        acaoTexto = 'Finalizou';
+                        acaoBadgeClass = 'finalizou';
+                        detalhes = `Duração: ${registro.duracao}`;
                         break;
                     case 'PAUSOU':
-                        icon = '⏸️';
-                        acao = `pausou a atividade <span class="activity-ticket">#${registro.ticket}</span>`;
+                        acaoTexto = 'Pausou';
+                        acaoBadgeClass = 'pausou';
                         detalhes = `Motivo: ${registro.motivo} | Grupo: ${registro.grupo}`;
                         break;
                     case 'RETOMOU':
-                        icon = '▶️';
-                        acao = `retomou a atividade <span class="activity-ticket">#${registro.ticket}</span>`;
-                        detalhes = `Tempo de pausa: ${registro.tempoPausa}`;
+                        acaoTexto = 'Retomou';
+                        acaoBadgeClass = 'retomou';
+                        detalhes = `Pausa: ${registro.tempoPausa}`;
                         break;
                 }
 
                 html += `
-                    <div class="activity-item">
-                        <div class="activity-icon">${icon}</div>
-                        <div class="activity-content">
-                            <div class="activity-user">
-                                <span>${registro.email_usuario}</span> ${acao}
-                            </div>
-                            <div class="activity-action">
-                                ${registro.nome_usuario} (${registro.usuario_id.substring(0, 8)}...)
-                            </div>
-                            <div class="activity-details">
-                                ${detalhes}
-                            </div>
-                            <div class="activity-time">
-                                📅 ${dataFormatada} às ${horaFormatada}
-                            </div>
-                        </div>
-                    </div>
+                    <tr>
+                        <td class="timestamp-cell">${dataFormatada}<br>${horaFormatada}</td>
+                        <td class="user-cell">${registro.nome_usuario}</td>
+                        <td>${registro.email_usuario}</td>
+                        <td>
+                            <span class="action-badge ${acaoBadgeClass}">${acaoTexto}</span>
+                        </td>
+                        <td class="ticket-cell">#${registro.ticket}</td>
+                        <td class="details-cell">${detalhes}</td>
+                    </tr>
                 `;
             });
 
-            container.innerHTML = html;
+            tbody.innerHTML = html;
         }
 
         // Aplicar filtros
@@ -771,7 +846,6 @@
             document.getElementById('btnExportarCSV').addEventListener('click', exportarCSV);
 
             document.getElementById('logoutBtn').addEventListener('click', () => {
-                if (intervaloCarregamento) clearInterval(intervaloCarregamento);
                 if (window.FIREBASE_OK && window.auth) {
                     window.auth.signOut().then(() => {
                         window.location.href = 'login.html';
