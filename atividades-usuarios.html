@@ -378,6 +378,40 @@
             border-bottom: none;
         }
 
+        /* 🔄 Container com barra de rolagem para tabela */
+        .table-scroll-container {
+            max-height: calc(100vh - 350px);
+            overflow-y: auto;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .table-scroll-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .table-scroll-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .table-scroll-container::-webkit-scrollbar-thumb {
+            background: #5b8ec6;
+            border-radius: 10px;
+        }
+
+        .table-scroll-container::-webkit-scrollbar-thumb:hover {
+            background: #4a7ba7;
+        }
+
+        /* Manter header da tabela visível */
+        .table-scroll-container .table-view thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
         .action-badge {
             display: inline-block;
             padding: 4px 12px;
@@ -763,20 +797,23 @@
                 Carregando atividades...
             </div>
 
-            <table id="activitiesTable" class="table-view">
-                <thead>
-                    <tr>
-                        <th>Data/Hora</th>
-                        <th>Usuário</th>
-                        <th>Email</th>
-                        <th>Ação</th>
-                        <th>Ticket</th>
-                        <th>Detalhes</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                </tbody>
-            </table>
+            <!-- 🔄 Container com rolagem -->
+            <div class="table-scroll-container">
+                <table id="activitiesTable" class="table-view">
+                    <thead>
+                        <tr>
+                            <th>Data/Hora</th>
+                            <th>Usuário</th>
+                            <th>Email</th>
+                            <th>Ação</th>
+                            <th>Ticket</th>
+                            <th>Detalhes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
