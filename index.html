@@ -920,6 +920,11 @@
                     
                     console.log('✅ Usuário autenticado:', usuarioAtual.email);
                     
+                    // 📌 Registrar LOGIN do usuário em tempo real
+                    registrarAtividadeUsuario('LOGIN', '-', 'Usuário conectado ao sistema', {
+                        status: 'online'
+                    });
+                    
                     // Mostrar conteúdo da página após autenticação
                     document.body.style.display = 'block';
                     
@@ -951,6 +956,11 @@
                 <li><a href="atividades-usuarios.html">Atividades dos Usuários</a></li>
             </ul>
         </nav>
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.2);">
+            <button id="btnLogoutIndex" onclick="fazerLogout()" style="width: 100%; padding: 10px 15px; background: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 0.9em; font-weight: 500;">
+                🚪 Sair
+            </button>
+        </div>
     </aside>
 
     <div class="container">
@@ -1265,7 +1275,7 @@
 
                     // Reiniciar cronômetros para atividades sem timer
                     atividadesEmAndamento.forEach(atividade => {
-                        if (!atividade.intervaloTimer) {
+                        if (!atividade.intervaloTimer && atividade.id) {
                             iniciarCronometro(atividade.id);
                         }
                     });
@@ -1289,7 +1299,11 @@
             const emAndamentoSalvas = localStorage.getItem('atividadesEmAndamento');
             if (emAndamentoSalvas) {
                 atividadesEmAndamento = JSON.parse(emAndamentoSalvas).map(a => ({ ...a, tempoInicio: a.tempoInicio }));
-                atividadesEmAndamento.forEach(a => iniciarCronometro(a.id));
+                atividadesEmAndamento.forEach(a => {
+                    if (a && a.id) {
+                        iniciarCronometro(a.id);
+                    }
+                });
             }
             const kanbanSalvo = localStorage.getItem('kanbanState');
             if (kanbanSalvo) { kanbanState = JSON.parse(kanbanSalvo); }
@@ -1527,8 +1541,16 @@
 
         // Iniciar cronômetro
         function iniciarCronometro(atividadeId) {
-            const atividade = atividadesEmAndamento.find(a => a.id === atividadeId);
-            if (!atividade) return;
+            if (!atividadeId) {
+                console.warn('⚠️ iniciarCronometro: atividadeId é inválido', atividadeId);
+                return;
+            }
+            
+            const atividade = atividadesEmAndamento.find(a => a && a.id === atividadeId);
+            if (!atividade) {
+                console.warn('⚠️ Atividade não encontrada para iniciar cronômetro:', atividadeId);
+                return;
+            }
 
             atividade.intervaloTimer = setInterval(() => {
                 atualizarDuracaoCronometro(atividadeId);
@@ -1537,7 +1559,7 @@
 
         // Atualizar apenas a duração do cronômetro
         function atualizarDuracaoCronometro(atividadeId) {
-            const atividade = atividadesEmAndamento.find(a => a.id === atividadeId);
+            const atividade = atividadesEmAndamento.find(a => a && a.id === atividadeId);
             if (!atividade) return;
 
             const duracao = new Date().getTime() - atividade.tempoInicio;
@@ -1634,6 +1656,32 @@
             console.log('📊 Atividade registrada:', tipo, ticket);
         }
 
+        // 📌 Função global de logout - Registra saída do usuário
+        function fazerLogout() {
+            if (usuarioAtual) {
+                console.log('🚪 Registrando logout do usuário:', usuarioAtual.email);
+                
+                // Registrar evento de LOGOUT
+                registrarAtividadeUsuario('LOGOUT', '-', 'Usuário desconectado do sistema', {
+                    status: 'offline'
+                });
+            }
+
+            // Aguardar um pouco para garantir que o registro foi feito
+            setTimeout(() => {
+                if (window.FIREBASE_OK && window.auth) {
+                    window.auth.signOut().then(() => {
+                        window.location.href = 'login.html';
+                    }).catch(err => {
+                        console.error('Erro ao fazer logout:', err);
+                        window.location.href = 'login.html';
+                    });
+                } else {
+                    window.location.href = 'login.html';
+                }
+            }, 300);
+        }
+
         // Exportar para CSV - Movido para historico.html
         // Abrir/Fechar modal de limpar histórico - Movido para historico.html
 
@@ -1703,7 +1751,7 @@
 
             // ✅ Registrar atividade do usuário
             // O usuário logado (usuarioAtual) será sempre usado
-            const atividadePausa = atividadesEmAndamento.find(a => a.id === atividadePausando);
+            const atividadePausa = atividadesEmAndamento.find(a => a && a.id === atividadePausando);
             if (atividadePausa) {
                 registrarAtividadeUsuario('PAUSOU', atividadePausa.ticket, atividadePausa.descricao, {
                     motivo: motivo,
@@ -1722,7 +1770,7 @@
             // Calcular tempo de pausa
             if (estadoPausa && estadoPausa.tempoInicioPausa) {
                 const tempoPausaMs = agora.getTime() - estadoPausa.tempoInicioPausa;
-                const atividade = atividadesEmAndamento.find(a => a.id === atividadeId);
+                const atividade = atividadesEmAndamento.find(a => a && a.id === atividadeId);
                 
                 if (atividade) {
                     // Registrar no histórico de pausas
@@ -1751,7 +1799,7 @@
 
             // ✅ Registrar atividade do usuário
             // O usuário logado (usuarioAtual) será sempre usado
-            const atividadeRetoma = atividadesEmAndamento.find(a => a.id === atividadeId);
+            const atividadeRetoma = atividadesEmAndamento.find(a => a && a.id === atividadeId);
             if (atividadeRetoma) {
                 registrarAtividadeUsuario('RETOMOU', atividadeRetoma.ticket, atividadeRetoma.descricao, {
                     tempoPausa: estadoPausa && estadoPausa.tempoInicioPausa ? formatarTempo(agora.getTime() - estadoPausa.tempoInicioPausa) : '-'
@@ -1778,8 +1826,13 @@
 
         // Abrir modal de atribuição de colaboradores
         function abrirModalAtribuirColaboradores() {
+            if (!atividadeEmObservacao || !atividadeEmObservacao.atividadeId) {
+                console.warn('⚠️ atividadeEmObservacao inválido');
+                return;
+            }
+            
             colaboradoresSelecionados = [];
-            const atividade = atividadesEmAndamento.find(a => a.id === atividadeEmObservacao.atividadeId);
+            const atividade = atividadesEmAndamento.find(a => a && a.id === atividadeEmObservacao.atividadeId);
             
             // Criar checkboxes para cada colaborador, exceto o principal
             checkboxColaboradores.innerHTML = '';
@@ -1833,7 +1886,7 @@
         function prosseguirSemAtribuir() {
             if (!atividadeEmObservacao) return;
 
-            const index = atividadesEmAndamento.findIndex(a => a.id === atividadeEmObservacao.atividadeId);
+            const index = atividadesEmAndamento.findIndex(a => a && a.id === atividadeEmObservacao.atividadeId);
             if (index === -1) {
                 fecharModalAtribuirColaboradores();
                 return;
@@ -1858,7 +1911,7 @@
                 return;
             }
 
-            const index = atividadesEmAndamento.findIndex(a => a.id === atividadeEmObservacao.atividadeId);
+            const index = atividadesEmAndamento.findIndex(a => a && a.id === atividadeEmObservacao.atividadeId);
             if (index === -1) {
                 fecharModalAtribuirColaboradores();
                 return;
@@ -1885,7 +1938,7 @@
                 return;
             }
             
-            const atividade = atividadesEmAndamento.find(a => a.id === atividadeConcluindo);
+            const atividade = atividadesEmAndamento.find(a => a && a.id === atividadeConcluindo);
             
             if (atividade) {
                 atividade.observacao = observacao;

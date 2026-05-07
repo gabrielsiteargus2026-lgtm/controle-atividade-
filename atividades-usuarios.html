@@ -865,12 +865,18 @@
             document.getElementById('btnExportarCSV').addEventListener('click', exportarCSV);
 
             document.getElementById('logoutBtn').addEventListener('click', () => {
-                if (window.FIREBASE_OK && window.auth) {
-                    window.auth.signOut().then(() => {
-                        window.location.href = 'login.html';
-                    });
+                // Usar a função global de logout que registra o evento
+                if (typeof fazerLogout === 'function') {
+                    fazerLogout();
                 } else {
-                    window.location.href = 'login.html';
+                    // Fallback se a função não estiver disponível
+                    if (window.FIREBASE_OK && window.auth) {
+                        window.auth.signOut().then(() => {
+                            window.location.href = 'login.html';
+                        });
+                    } else {
+                        window.location.href = 'login.html';
+                    }
                 }
             });
         });
