@@ -410,6 +410,16 @@
                 </div>
             </div>
 
+            <!-- Card: Deletar Ticket Específico -->
+            <div class="admin-card delete">
+                <h3>Deletar Ticket Específico</h3>
+                <p>Remova um ticket específico e todos os seus registros de atividades. Útil para limpar atividades de teste.</p>
+                <div class="info-box">
+                    <strong>Info:</strong> Será deletado de todas as localizações (atividades, histórico, auditoria).
+                </div>
+                <button class="btn-danger" id="btnDeletarTicket" style="padding: 10px; width: 100%;">Deletar Ticket</button>
+            </div>
+
             <!-- Card: Exportar Tudo -->
             <div class="admin-card export">
                 <h3>Exportar Todos os Dados com Contadores de Pausas</h3>
@@ -475,6 +485,27 @@
             <div class="modal-footer">
                 <button class="btn-cancel" id="btnCancelarContadores">Cancelar</button>
                 <button class="btn-danger" id="btnConfirmarContadores">Limpar Permanentemente</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Pesquisar e Deletar Ticket -->
+    <div id="modalDeletarTicket" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" id="btnFecharDeletarTicket">&times;</button>
+            <div class="modal-header">Deletar Ticket</div>
+            <div class="modal-body">
+                <p>Digite o número do ticket que deseja deletar:</p>
+                <input type="text" id="inputNumeroTicket" placeholder="Ex: 001, 002, etc" autofocus>
+                <div id="infoTicketEncontrado" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;">
+                    <p><strong>Ticket encontrado:</strong></p>
+                    <p id="textoInfoTicket"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="btnCancelarDeletarTicket">Cancelar</button>
+                <button class="btn-export" id="btnPesquisarTicket" style="flex: 1;">Pesquisar</button>
+                <button class="btn-danger" id="btnConfirmarDeletarTicket" style="flex: 1; display: none;">Deletar</button>
             </div>
         </div>
     </div>
@@ -841,6 +872,169 @@
                 }
                 if (e.target === modalLimparPausas) {
                     modalLimparPausas.style.display = 'none';
+                }
+            });
+
+            // ===== DELETAR TICKET ESPECÍFICO =====
+            const btnDeletarTicket = document.getElementById('btnDeletarTicket');
+            const modalDeletarTicket = document.getElementById('modalDeletarTicket');
+            const inputNumeroTicket = document.getElementById('inputNumeroTicket');
+            const btnPesquisarTicket = document.getElementById('btnPesquisarTicket');
+            const btnConfirmarDeletarTicket = document.getElementById('btnConfirmarDeletarTicket');
+            const btnCancelarDeletarTicket = document.getElementById('btnCancelarDeletarTicket');
+            const btnFecharDeletarTicket = document.getElementById('btnFecharDeletarTicket');
+            const infoTicketEncontrado = document.getElementById('infoTicketEncontrado');
+            const textoInfoTicket = document.getElementById('textoInfoTicket');
+
+            let ticketSelecionado = null;
+
+            btnDeletarTicket.addEventListener('click', () => {
+                modalDeletarTicket.style.display = 'flex';
+                inputNumeroTicket.value = '';
+                infoTicketEncontrado.style.display = 'none';
+                btnConfirmarDeletarTicket.style.display = 'none';
+                inputNumeroTicket.focus();
+            });
+
+            btnCancelarDeletarTicket.addEventListener('click', () => {
+                modalDeletarTicket.style.display = 'none';
+                ticketSelecionado = null;
+            });
+
+            btnFecharDeletarTicket.addEventListener('click', () => {
+                modalDeletarTicket.style.display = 'none';
+                ticketSelecionado = null;
+            });
+
+            btnPesquisarTicket.addEventListener('click', () => {
+                const numeroTicket = inputNumeroTicket.value.trim();
+                if (!numeroTicket) {
+                    alert('Digite um número de ticket!');
+                    return;
+                }
+
+                // Pesquisar em atividades
+                const atividadesList = Array.isArray(atividades) ? atividades : Object.values(atividades || {});
+                const atividadeEncontrada = atividadesList.find(a => a.ticket === numeroTicket || a.ticket == parseInt(numeroTicket));
+
+                if (atividadeEncontrada) {
+                    ticketSelecionado = numeroTicket;
+                    textoInfoTicket.innerHTML = `
+                        <strong>Ticket:</strong> #${atividadeEncontrada.ticket}<br>
+                        <strong>Colaborador:</strong> ${atividadeEncontrada.colaborador || 'N/A'}<br>
+                        <strong>Descrição:</strong> ${atividadeEncontrada.descricao || 'N/A'}<br>
+                        <strong>Data de Início:</strong> ${atividadeEncontrada.dataInicio || 'N/A'} ${atividadeEncontrada.horaInicio || ''}<br>
+                        <strong>Status:</strong> Será deletado completamente do sistema
+                    `;
+                    infoTicketEncontrado.style.display = 'block';
+                    btnConfirmarDeletarTicket.style.display = 'block';
+                } else {
+                    alert(`Ticket #${numeroTicket} não encontrado no sistema!`);
+                    ticketSelecionado = null;
+                    infoTicketEncontrado.style.display = 'none';
+                    btnConfirmarDeletarTicket.style.display = 'none';
+                }
+            });
+
+            btnConfirmarDeletarTicket.addEventListener('click', () => {
+                if (!ticketSelecionado) return;
+
+                if (!confirm(`Tem certeza que deseja deletar o ticket #${ticketSelecionado} e todos os seus registros permanentemente?`)) {
+                    return;
+                }
+
+                // Deletar de atividades
+                if (window.FIREBASE_OK && window.db) {
+                    // Deletar do Firebase
+                    window.db.ref('atividades').once('value', (snapshot) => {
+                        const dados = snapshot.val();
+                        if (dados) {
+                            Object.entries(dados).forEach(([chave, atividade]) => {
+                                if (atividade && (atividade.ticket === ticketSelecionado || atividade.ticket == parseInt(ticketSelecionado))) {
+                                    window.db.ref(`atividades/${chave}`).remove();
+                                }
+                            });
+                        }
+                    });
+
+                    // Deletar de atividadesEmAndamento
+                    window.db.ref('atividadesEmAndamento').once('value', (snapshot) => {
+                        const dados = snapshot.val();
+                        if (dados) {
+                            Object.entries(dados).forEach(([chave, atividade]) => {
+                                if (atividade && (atividade.ticket === ticketSelecionado || atividade.ticket == parseInt(ticketSelecionado))) {
+                                    window.db.ref(`atividadesEmAndamento/${chave}`).remove();
+                                }
+                            });
+                        }
+                    });
+
+                    // Deletar de historicoPausas
+                    window.db.ref('historicoPausas').once('value', (snapshot) => {
+                        const dados = snapshot.val();
+                        if (dados) {
+                            Object.entries(dados).forEach(([chave, pausa]) => {
+                                if (pausa && (pausa.ticket === ticketSelecionado || pausa.ticket == parseInt(ticketSelecionado))) {
+                                    window.db.ref(`historicoPausas/${chave}`).remove();
+                                }
+                            });
+                        }
+                    });
+
+                    // Deletar de registrosAtividades (auditoria)
+                    window.db.ref('registrosAtividades').once('value', (snapshot) => {
+                        const dados = snapshot.val();
+                        if (dados) {
+                            Object.entries(dados).forEach(([chave, registro]) => {
+                                if (registro && (registro.ticket === ticketSelecionado || registro.ticket == parseInt(ticketSelecionado))) {
+                                    window.db.ref(`registrosAtividades/${chave}`).remove();
+                                }
+                            });
+                        }
+                    });
+
+                    // Deletar de kanbanState
+                    window.db.ref('kanbanState').once('value', (snapshot) => {
+                        const dados = snapshot.val();
+                        if (dados) {
+                            window.db.ref(`kanbanState/${ticketSelecionado}`).remove();
+                        }
+                    });
+                } else {
+                    // Deletar do localStorage
+                    const atividadesList = Array.isArray(atividades) ? atividades : Object.values(atividades || {});
+                    const atividadesFiltradas = atividadesList.filter(a => a.ticket !== ticketSelecionado && a.ticket != parseInt(ticketSelecionado));
+                    localStorage.setItem('atividades', JSON.stringify(atividadesFiltradas));
+
+                    const emAndamentoList = Array.isArray(atividadesEmAndamento) ? atividadesEmAndamento : Object.values(atividadesEmAndamento || {});
+                    const emAndamentoFiltrados = emAndamentoList.filter(a => a.ticket !== ticketSelecionado && a.ticket != parseInt(ticketSelecionado));
+                    localStorage.setItem('atividadesEmAndamento', JSON.stringify(emAndamentoFiltrados));
+
+                    const pausasList = Array.isArray(historicoPausas) ? historicoPausas : Object.values(historicoPausas || {});
+                    const pausasFiltradas = pausasList.filter(p => p.ticket !== ticketSelecionado && p.ticket != parseInt(ticketSelecionado));
+                    localStorage.setItem('historicoPausas', JSON.stringify(pausasFiltradas));
+
+                    // Deletar de registrosAtividades no localStorage
+                    const registrosAtividades = JSON.parse(localStorage.getItem('registrosAtividades') || '[]');
+                    const registrosFiltrados = registrosAtividades.filter(r => r.ticket !== ticketSelecionado && r.ticket != parseInt(ticketSelecionado));
+                    localStorage.setItem('registrosAtividades', JSON.stringify(registrosFiltrados));
+
+                    // Deletar de kanbanState
+                    const kanbanStateLocal = JSON.parse(localStorage.getItem('kanbanState') || '{}');
+                    delete kanbanStateLocal[ticketSelecionado];
+                    localStorage.setItem('kanbanState', JSON.stringify(kanbanStateLocal));
+                }
+
+                alert(`✅ Ticket #${ticketSelecionado} deletado com sucesso de todas as localizações!`);
+                modalDeletarTicket.style.display = 'none';
+                ticketSelecionado = null;
+                recarregarDadosAoUsuario();
+            });
+
+            // Pressionar Enter para pesquisar
+            inputNumeroTicket.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    btnPesquisarTicket.click();
                 }
             });
 

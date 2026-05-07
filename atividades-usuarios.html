@@ -473,13 +473,33 @@
                         registrosAtividades = [];
                         
                         if (dados) {
-                            // Converter objeto do Firebase em array
-                            Object.values(dados).forEach(registro => {
-                                if (registro && registro.timestamp) {
-                                    registrosAtividades.push(registro);
+                            console.log('📊 ESTRUTURA DO FIREBASE:', JSON.stringify(dados).substring(0, 500));
+                            
+                            // Converter objeto do Firebase em array - Versão corrigida
+                            Object.entries(dados).forEach(([chave, registro]) => {
+                                // Verificar se registro é um objeto com timestamp (ação) ou um objeto com múltiplas ações (usuário)
+                                if (registro && typeof registro === 'object') {
+                                    if (registro.timestamp) {
+                                        // É um registro de ação direto
+                                        registrosAtividades.push(registro);
+                                    } else if (Object.values(registro).some(r => r && r.timestamp)) {
+                                        // É um objeto de usuário com múltiplas ações dentro - expandir
+                                        Object.values(registro).forEach(acao => {
+                                            if (acao && acao.timestamp) {
+                                                registrosAtividades.push(acao);
+                                            }
+                                        });
+                                    }
                                 }
                             });
+                            
                             console.log('✅ Carregadas', registrosAtividades.length, 'atividades do Firebase em tempo real');
+                            // Log detalhado para diagnóstico
+                            const emailsUnicos = [...new Set(registrosAtividades.map(r => r.email_usuario))];
+                            console.log('📧 Usuários com atividades:', emailsUnicos.join(', '));
+                            registrosAtividades.forEach(r => {
+                                console.log(`  - ${r.email_usuario} (${r.tipo}) às ${r.timestamp}`);
+                            });
                         } else {
                             console.log('ℹ️  Nenhuma atividade no Firebase ainda');
                         }
