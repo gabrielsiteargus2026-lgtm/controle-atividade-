@@ -939,99 +939,269 @@
                 }
             });
 
+            // ===== FUNÇÃO PARA VERIFICAR SE O TICKET FOI DELETADO COMPLETAMENTE =====
+            function verificarDeletacaoCompleta(ticketId) {
+                console.log(`\n🔍 VERIFICANDO DELEÇÃO COMPLETA DO TICKET #${ticketId}...`);
+                
+                let residuos = [];
+                let locaisVerificados = [];
+
+                // Verificar no localStorage
+                if (localStorage.getItem('atividades')) {
+                    const atividades = JSON.parse(localStorage.getItem('atividades'));
+                    const encontrado = atividades.some(a => a && (String(a.ticket) === String(ticketId) || a.ticket == parseInt(ticketId)));
+                    locaisVerificados.push('atividades (localStorage)');
+                    if (encontrado) residuos.push('⚠️ Resíduo encontrado em: atividades (localStorage)');
+                }
+
+                if (localStorage.getItem('atividadesEmAndamento')) {
+                    const emAndamento = JSON.parse(localStorage.getItem('atividadesEmAndamento'));
+                    const encontrado = emAndamento.some(a => a && (String(a.ticket) === String(ticketId) || a.ticket == parseInt(ticketId)));
+                    locaisVerificados.push('atividadesEmAndamento (localStorage)');
+                    if (encontrado) residuos.push('⚠️ Resíduo encontrado em: atividadesEmAndamento (localStorage)');
+                }
+
+                if (localStorage.getItem('historicoPausas')) {
+                    const pausas = JSON.parse(localStorage.getItem('historicoPausas'));
+                    const encontrado = pausas.some(p => p && (String(p.ticket) === String(ticketId) || p.ticket == parseInt(ticketId)));
+                    locaisVerificados.push('historicoPausas (localStorage)');
+                    if (encontrado) residuos.push('⚠️ Resíduo encontrado em: historicoPausas (localStorage)');
+                }
+
+                if (localStorage.getItem('registrosAtividades')) {
+                    const registros = JSON.parse(localStorage.getItem('registrosAtividades'));
+                    const encontrado = registros.some(r => r && (String(r.ticket) === String(ticketId) || r.ticket == parseInt(ticketId)));
+                    locaisVerificados.push('registrosAtividades (localStorage)');
+                    if (encontrado) residuos.push('⚠️ Resíduo encontrado em: registrosAtividades (localStorage)');
+                }
+
+                if (localStorage.getItem('kanbanState')) {
+                    const kanban = JSON.parse(localStorage.getItem('kanbanState'));
+                    locaisVerificados.push('kanbanState (localStorage)');
+                    if (kanban[ticketId]) residuos.push('⚠️ Resíduo encontrado em: kanbanState (localStorage)');
+                }
+
+                // Verificar no Firebase (se disponível)
+                if (window.FIREBASE_OK && window.db) {
+                    window.db.ref('atividades').once('value', (snap) => {
+                        const dados = snap.val();
+                        locaisVerificados.push('atividades (Firebase)');
+                        if (dados) {
+                            const encontrado = Object.values(dados).some(a => a && (String(a.ticket) === String(ticketId) || a.ticket == parseInt(ticketId)));
+                            if (encontrado) residuos.push('⚠️ Resíduo encontrado em: atividades (Firebase)');
+                        }
+                    });
+
+                    window.db.ref('atividadesEmAndamento').once('value', (snap) => {
+                        const dados = snap.val();
+                        locaisVerificados.push('atividadesEmAndamento (Firebase)');
+                        if (dados) {
+                            const encontrado = Object.values(dados).some(a => a && (String(a.ticket) === String(ticketId) || a.ticket == parseInt(ticketId)));
+                            if (encontrado) residuos.push('⚠️ Resíduo encontrado em: atividadesEmAndamento (Firebase)');
+                        }
+                    });
+
+                    window.db.ref('historicoPausas').once('value', (snap) => {
+                        const dados = snap.val();
+                        locaisVerificados.push('historicoPausas (Firebase)');
+                        if (dados) {
+                            const encontrado = Object.values(dados).some(p => p && (String(p.ticket) === String(ticketId) || p.ticket == parseInt(ticketId)));
+                            if (encontrado) residuos.push('⚠️ Resíduo encontrado em: historicoPausas (Firebase)');
+                        }
+                    });
+
+                    window.db.ref('registrosAtividades').once('value', (snap) => {
+                        const dados = snap.val();
+                        locaisVerificados.push('registrosAtividades (Firebase)');
+                        if (dados) {
+                            const encontrado = Object.values(dados).some(r => r && (String(r.ticket) === String(ticketId) || r.ticket == parseInt(ticketId)));
+                            if (encontrado) residuos.push('⚠️ Resíduo encontrado em: registrosAtividades (Firebase)');
+                        }
+                    });
+
+                    window.db.ref('kanbanState').once('value', (snap) => {
+                        const dados = snap.val();
+                        locaisVerificados.push('kanbanState (Firebase)');
+                        if (dados && dados[ticketId]) residuos.push('⚠️ Resíduo encontrado em: kanbanState (Firebase)');
+                    });
+                }
+
+                // Exibir resultado
+                console.log(`\n📋 Locais Verificados: ${locaisVerificados.length}`);
+                locaisVerificados.forEach(local => console.log(`   ✓ ${local}`));
+                
+                if (residuos.length === 0) {
+                    console.log(`\n✅ SUCESSO! Ticket #${ticketId} foi completamente deletado de todas as localizações!`);
+                } else {
+                    console.warn(`\n❌ AVISO! Encontrados ${residuos.length} resíduo(s):`);
+                    residuos.forEach(res => console.warn(res));
+                }
+                console.log('');
+            }
+
             btnConfirmarDeletarTicket.addEventListener('click', () => {
                 if (!ticketSelecionado) return;
 
-                if (!confirm(`Tem certeza que deseja deletar o ticket #${ticketSelecionado} e todos os seus registros permanentemente?`)) {
+                if (!confirm(`Tem certeza que deseja deletar o ticket #${ticketSelecionado} e todos os seus registros permanentemente?\n\nEsta ação é IRREVERSÍVEL!`)) {
                     return;
                 }
 
-                // Deletar de atividades
-                if (window.FIREBASE_OK && window.db) {
-                    // Deletar do Firebase
-                    window.db.ref('atividades').once('value', (snapshot) => {
-                        const dados = snapshot.val();
-                        if (dados) {
-                            Object.entries(dados).forEach(([chave, atividade]) => {
-                                if (atividade && (atividade.ticket === ticketSelecionado || atividade.ticket == parseInt(ticketSelecionado))) {
-                                    window.db.ref(`atividades/${chave}`).remove();
+                // ===== FUNÇÃO PARA DELETAR DO FIREBASE =====
+                function deletarDoFirebase() {
+                    return Promise.all([
+                        // Deletar de atividades
+                        new Promise(resolve => {
+                            window.db.ref('atividades').once('value', (snapshot) => {
+                                const dados = snapshot.val();
+                                if (dados) {
+                                    let countDeletados = 0;
+                                    Object.entries(dados).forEach(([chave, atividade]) => {
+                                        if (atividade && (String(atividade.ticket) === String(ticketSelecionado) || atividade.ticket == parseInt(ticketSelecionado))) {
+                                            window.db.ref(`atividades/${chave}`).remove();
+                                            countDeletados++;
+                                        }
+                                    });
+                                    console.log(`✅ Deletados ${countDeletados} registros de "atividades"`);
                                 }
+                                resolve();
                             });
-                        }
-                    });
+                        }),
+
+                        // Deletar de atividadesEmAndamento
+                        new Promise(resolve => {
+                            window.db.ref('atividadesEmAndamento').once('value', (snapshot) => {
+                                const dados = snapshot.val();
+                                if (dados) {
+                                    let countDeletados = 0;
+                                    Object.entries(dados).forEach(([chave, atividade]) => {
+                                        if (atividade && (String(atividade.ticket) === String(ticketSelecionado) || atividade.ticket == parseInt(ticketSelecionado))) {
+                                            window.db.ref(`atividadesEmAndamento/${chave}`).remove();
+                                            countDeletados++;
+                                        }
+                                    });
+                                    console.log(`✅ Deletados ${countDeletados} registros de "atividadesEmAndamento"`);
+                                }
+                                resolve();
+                            });
+                        }),
+
+                        // Deletar de historicoPausas
+                        new Promise(resolve => {
+                            window.db.ref('historicoPausas').once('value', (snapshot) => {
+                                const dados = snapshot.val();
+                                if (dados) {
+                                    let countDeletados = 0;
+                                    Object.entries(dados).forEach(([chave, pausa]) => {
+                                        if (pausa && (String(pausa.ticket) === String(ticketSelecionado) || pausa.ticket == parseInt(ticketSelecionado))) {
+                                            window.db.ref(`historicoPausas/${chave}`).remove();
+                                            countDeletados++;
+                                        }
+                                    });
+                                    console.log(`✅ Deletados ${countDeletados} registros de "historicoPausas"`);
+                                }
+                                resolve();
+                            });
+                        }),
+
+                        // Deletar de registrosAtividades (auditoria)
+                        new Promise(resolve => {
+                            window.db.ref('registrosAtividades').once('value', (snapshot) => {
+                                const dados = snapshot.val();
+                                if (dados) {
+                                    let countDeletados = 0;
+                                    Object.entries(dados).forEach(([chave, registro]) => {
+                                        if (registro && (String(registro.ticket) === String(ticketSelecionado) || registro.ticket == parseInt(ticketSelecionado))) {
+                                            window.db.ref(`registrosAtividades/${chave}`).remove();
+                                            countDeletados++;
+                                        }
+                                    });
+                                    console.log(`✅ Deletados ${countDeletados} registros de "registrosAtividades" (auditoria)`);
+                                }
+                                resolve();
+                            });
+                        }),
+
+                        // Deletar de kanbanState (por ID de ticket)
+                        new Promise(resolve => {
+                            window.db.ref('kanbanState').once('value', (snapshot) => {
+                                const dados = snapshot.val();
+                                if (dados && dados[ticketSelecionado]) {
+                                    window.db.ref(`kanbanState/${ticketSelecionado}`).remove();
+                                    console.log(`✅ Deletado ticket ${ticketSelecionado} de "kanbanState"`);
+                                }
+                                resolve();
+                            });
+                        })
+                    ]);
+                }
+
+                // ===== FUNÇÃO PARA DELETAR DO LOCALSTORAGE =====
+                function deletarDoLocalStorage() {
+                    // Deletar de atividades
+                    const atividadesList = Array.isArray(atividades) ? atividades : Object.values(atividades || {});
+                    const atividadesFiltradas = atividadesList.filter(a => a && String(a.ticket) !== String(ticketSelecionado) && a.ticket != parseInt(ticketSelecionado));
+                    localStorage.setItem('atividades', JSON.stringify(atividadesFiltradas));
+                    console.log(`✅ Deletados registros de "atividades" (localStorage)`);
 
                     // Deletar de atividadesEmAndamento
-                    window.db.ref('atividadesEmAndamento').once('value', (snapshot) => {
-                        const dados = snapshot.val();
-                        if (dados) {
-                            Object.entries(dados).forEach(([chave, atividade]) => {
-                                if (atividade && (atividade.ticket === ticketSelecionado || atividade.ticket == parseInt(ticketSelecionado))) {
-                                    window.db.ref(`atividadesEmAndamento/${chave}`).remove();
-                                }
-                            });
-                        }
-                    });
+                    const emAndamentoList = Array.isArray(atividadesEmAndamento) ? atividadesEmAndamento : Object.values(atividadesEmAndamento || {});
+                    const emAndamentoFiltrados = emAndamentoList.filter(a => a && String(a.ticket) !== String(ticketSelecionado) && a.ticket != parseInt(ticketSelecionado));
+                    localStorage.setItem('atividadesEmAndamento', JSON.stringify(emAndamentoFiltrados));
+                    console.log(`✅ Deletados registros de "atividadesEmAndamento" (localStorage)`);
 
                     // Deletar de historicoPausas
-                    window.db.ref('historicoPausas').once('value', (snapshot) => {
-                        const dados = snapshot.val();
-                        if (dados) {
-                            Object.entries(dados).forEach(([chave, pausa]) => {
-                                if (pausa && (pausa.ticket === ticketSelecionado || pausa.ticket == parseInt(ticketSelecionado))) {
-                                    window.db.ref(`historicoPausas/${chave}`).remove();
-                                }
-                            });
-                        }
-                    });
-
-                    // Deletar de registrosAtividades (auditoria)
-                    window.db.ref('registrosAtividades').once('value', (snapshot) => {
-                        const dados = snapshot.val();
-                        if (dados) {
-                            Object.entries(dados).forEach(([chave, registro]) => {
-                                if (registro && (registro.ticket === ticketSelecionado || registro.ticket == parseInt(ticketSelecionado))) {
-                                    window.db.ref(`registrosAtividades/${chave}`).remove();
-                                }
-                            });
-                        }
-                    });
-
-                    // Deletar de kanbanState
-                    window.db.ref('kanbanState').once('value', (snapshot) => {
-                        const dados = snapshot.val();
-                        if (dados) {
-                            window.db.ref(`kanbanState/${ticketSelecionado}`).remove();
-                        }
-                    });
-                } else {
-                    // Deletar do localStorage
-                    const atividadesList = Array.isArray(atividades) ? atividades : Object.values(atividades || {});
-                    const atividadesFiltradas = atividadesList.filter(a => a && a.ticket !== ticketSelecionado && a.ticket != parseInt(ticketSelecionado));
-                    localStorage.setItem('atividades', JSON.stringify(atividadesFiltradas));
-
-                    const emAndamentoList = Array.isArray(atividadesEmAndamento) ? atividadesEmAndamento : Object.values(atividadesEmAndamento || {});
-                    const emAndamentoFiltrados = emAndamentoList.filter(a => a && a.ticket !== ticketSelecionado && a.ticket != parseInt(ticketSelecionado));
-                    localStorage.setItem('atividadesEmAndamento', JSON.stringify(emAndamentoFiltrados));
-
                     const pausasList = Array.isArray(historicoPausas) ? historicoPausas : Object.values(historicoPausas || {});
-                    const pausasFiltradas = pausasList.filter(p => p && p.ticket !== ticketSelecionado && p.ticket != parseInt(ticketSelecionado));
+                    const pausasFiltradas = pausasList.filter(p => p && String(p.ticket) !== String(ticketSelecionado) && p.ticket != parseInt(ticketSelecionado));
                     localStorage.setItem('historicoPausas', JSON.stringify(pausasFiltradas));
+                    console.log(`✅ Deletados registros de "historicoPausas" (localStorage)`);
 
-                    // Deletar de registrosAtividades no localStorage
+                    // Deletar de registrosAtividades
                     const registrosAtividades = JSON.parse(localStorage.getItem('registrosAtividades') || '[]');
-                    const registrosFiltrados = registrosAtividades.filter(r => r && r.ticket !== ticketSelecionado && r.ticket != parseInt(ticketSelecionado));
+                    const registrosFiltrados = registrosAtividades.filter(r => r && String(r.ticket) !== String(ticketSelecionado) && r.ticket != parseInt(ticketSelecionado));
                     localStorage.setItem('registrosAtividades', JSON.stringify(registrosFiltrados));
+                    console.log(`✅ Deletados registros de "registrosAtividades" (localStorage - auditoria)`);
 
                     // Deletar de kanbanState
                     const kanbanStateLocal = JSON.parse(localStorage.getItem('kanbanState') || '{}');
-                    delete kanbanStateLocal[ticketSelecionado];
-                    localStorage.setItem('kanbanState', JSON.stringify(kanbanStateLocal));
+                    if (kanbanStateLocal[ticketSelecionado]) {
+                        delete kanbanStateLocal[ticketSelecionado];
+                        localStorage.setItem('kanbanState', JSON.stringify(kanbanStateLocal));
+                        console.log(`✅ Deletado ticket ${ticketSelecionado} de "kanbanState" (localStorage)`);
+                    }
                 }
 
-                alert(`✅ Ticket #${ticketSelecionado} deletado com sucesso de todas as localizações!`);
-                modalDeletarTicket.style.display = 'none';
-                ticketSelecionado = null;
-                recarregarDadosAoUsuario();
+                // ===== EXECUTAR DELEÇÃO =====
+                console.log(`🔄 Iniciando deleção completa do ticket #${ticketSelecionado}...`);
+
+                if (window.FIREBASE_OK && window.db) {
+                    // Deletar do Firebase E do localStorage para garantir limpeza completa
+                    deletarDoFirebase().then(() => {
+                        deletarDoLocalStorage();
+                        console.log(`✅ Ticket #${ticketSelecionado} deletado de TODAS as localizações!`);
+                        
+                        // Verificar se foi realmente deletado
+                        setTimeout(() => {
+                            verificarDeletacaoCompleta(ticketSelecionado);
+                        }, 500);
+                        
+                        alert(`✅ Ticket #${ticketSelecionado} deletado com sucesso!\n\n📊 Contadores, histórico e registros foram atualizados.`);
+                        modalDeletarTicket.style.display = 'none';
+                        ticketSelecionado = null;
+                        recarregarDadosAoUsuario();
+                    });
+                } else {
+                    // Deletar apenas do localStorage (Firebase não disponível)
+                    deletarDoLocalStorage();
+                    console.log(`✅ Ticket #${ticketSelecionado} deletado do localStorage!`);
+                    
+                    // Verificar se foi realmente deletado
+                    verificarDeletacaoCompleta(ticketSelecionado);
+                    
+                    alert(`✅ Ticket #${ticketSelecionado} deletado com sucesso!\n\n📊 Contadores, histórico e registros foram atualizados.`);
+                    modalDeletarTicket.style.display = 'none';
+                    ticketSelecionado = null;
+                    recarregarDadosAoUsuario();
+                }
             });
 
             // Pressionar Enter para pesquisar
