@@ -653,36 +653,47 @@
         let filtroDataInicio = null;
         let filtroDataFim = null;
 
+        // ✅ Converter objeto em array (Firebase retorna objeto às vezes)
+        function converterParaArray(dados) {
+            if (Array.isArray(dados)) return dados;
+            if (!dados || typeof dados !== 'object') return [];
+            return Object.values(dados).filter(item => item !== null && item !== undefined);
+        }
+
         // ✅ Carregar dados
         function carregarDados() {
             if (window.FIREBASE_OK) {
                 db.ref('/').on('value', (snapshot) => {
                     const dados = snapshot.val() || {};
-                    atividades = dados.atividades || [];
-                    atividadesEmAndamento = dados.atividadesEmAndamento || [];
+                    // Converter para array se necessário
+                    atividades = converterParaArray(dados.atividades);
+                    atividadesEmAndamento = converterParaArray(dados.atividadesEmAndamento);
                     kanbanState = dados.kanbanState || {};
-                    historicoPausas = dados.historicoPausas || [];
+                    historicoPausas = converterParaArray(dados.historicoPausas);
                     atualizarDashboard();
                 });
             } else {
                 // Fallback localStorage
                 const dadosSalvos = localStorage.getItem('atividades');
-                if (dadosSalvos) atividades = JSON.parse(dadosSalvos);
+                if (dadosSalvos) atividades = converterParaArray(JSON.parse(dadosSalvos));
                 const emAndamentoSalvas = localStorage.getItem('atividadesEmAndamento');
-                if (emAndamentoSalvas) atividadesEmAndamento = JSON.parse(emAndamentoSalvas);
+                if (emAndamentoSalvas) atividadesEmAndamento = converterParaArray(JSON.parse(emAndamentoSalvas));
                 const kanbanSalvo = localStorage.getItem('kanbanState');
                 if (kanbanSalvo) kanbanState = JSON.parse(kanbanSalvo);
                 const pausasSalvas = localStorage.getItem('historicoPausas');
-                if (pausasSalvas) historicoPausas = JSON.parse(pausasSalvas);
+                if (pausasSalvas) historicoPausas = converterParaArray(JSON.parse(pausasSalvas));
                 atualizarDashboard();
             }
         }
 
         // ✅ Filtrar atividades por data
         function filtrarAtividadesPorData(ativs) {
-            if (!filtroDataInicio && !filtroDataFim) return ativs;
+            // Garantir que é um array
+            const atividadesArray = converterParaArray(ativs);
+            
+            if (!filtroDataInicio && !filtroDataFim) return atividadesArray;
 
-            return ativs.filter(ativ => {
+            return atividadesArray.filter(ativ => {
                 const dataAtiv = new Date(ativ.dataInicio.split('/').reverse().join('-'));
                 
                 if (filtroDataInicio) {
@@ -757,7 +768,8 @@
             document.getElementById('kpiPausados').textContent = pausados;
 
             // KPI - Em Andamento
-            const emAndamento = atividadesEmAndamento.filter(a => {
+            const emAndamentoArray = converterParaArray(atividadesEmAndamento);
+            const emAndamento = emAndamentoArray.filter(a => {
                 const status = kanbanState[a.id]?.status || 'em_andamento';
                 return status === 'em_andamento';
             }).length;
@@ -774,7 +786,8 @@
 
             // Total de Atividades (Total de atividades finalizadas)
             const contadores = obterContadores();
-            const totalAtividadesFinalizadas = atividades.length;
+            const atividadesArray = converterParaArray(atividades);
+            const totalAtividadesFinalizadas = atividadesArray.length;
             document.getElementById('totalAtividadesCard').textContent = totalAtividadesFinalizadas;
 
             // Pausas por Grupo (Acumulados)
@@ -795,8 +808,11 @@
 
         // ✅ Atualizar Top 3
         function atualizarTop3(ativs) {
+            // Garantir que é um array
+            const atividadesArray = converterParaArray(ativs);
+            
             const contagem = {};
-            ativs.forEach(a => {
+            atividadesArray.forEach(a => {
                 contagem[a.colaborador] = (contagem[a.colaborador] || 0) + 1;
             });
 
@@ -828,13 +844,16 @@
 
         // ✅ Atualizar Tabela
         function atualizarTabela(ativs) {
-            if (ativs.length === 0) {
+            // Garantir que é um array
+            const atividadesArray = converterParaArray(ativs);
+            
+            if (atividadesArray.length === 0) {
                 document.getElementById('tabelaAtividadesBody').innerHTML = '<tr><td colspan="6" class="empty-state">Nenhuma atividade no período</td></tr>';
                 return;
             }
 
             let html = '';
-            ativs.slice(0, 50).forEach(a => {
+            atividadesArray.slice(0, 50).forEach(a => {
                 const statusBadge = a.justificativa ? '<span class="badge badge-warning">Com Justificativa</span>' : '<span class="badge badge-success">OK</span>';
                 html += `
                     <tr>
@@ -858,11 +877,15 @@
             console.log('atividadesEmAndamento:', atividadesEmAndamento);
             console.log('kanbanState:', kanbanState);
             
+            // Garantir que são arrays
+            const historicoPausasArray = converterParaArray(historicoPausas);
+            const atividadesEmAndamentoArray = converterParaArray(atividadesEmAndamento);
+            
             // Coletar pausas: histórico retomado + pausas ativas
-            let todasAsPausas = [...historicoPausas];
+            let todasAsPausas = [...historicoPausasArray];
             
             // Adicionar pausas ATIVAS (que estão pausadas agora)
-            atividadesEmAndamento.forEach(atividade => {
+            atividadesEmAndamentoArray.forEach(atividade => {
                 const estadoPausa = kanbanState[atividade.id];
                 if (estadoPausa && estadoPausa.status === 'pausado' && estadoPausa.tempoInicioPausa) {
                     const agora = new Date();
@@ -973,11 +996,15 @@
 
         // ✅ Exportar Pausas em CSV
         function exportarPausasCSV() {
+            // Garantir que são arrays
+            const historicoPausasArray = converterParaArray(historicoPausas);
+            const atividadesEmAndamentoArray = converterParaArray(atividadesEmAndamento);
+            
             // Coletar pausas: histórico retomado + pausas ativas
-            let todasAsPausas = [...historicoPausas];
+            let todasAsPausas = [...historicoPausasArray];
             
             // Adicionar pausas ATIVAS
-            atividadesEmAndamento.forEach(atividade => {
+            atividadesEmAndamentoArray.forEach(atividade => {
                 const estadoPausa = kanbanState[atividade.id];
                 if (estadoPausa && estadoPausa.status === 'pausado' && estadoPausa.tempoInicioPausa) {
                     const agora = new Date();

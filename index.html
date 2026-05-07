@@ -1236,6 +1236,17 @@
         const btnProsseguirSemColaboradores = document.getElementById('btnProsseguirSemColaboradores');
         const btnConfirmarAtribuicao = document.getElementById('btnConfirmarAtribuicao');
 
+        // ✅ Normalizar atividades para sempre ser um array
+        function normalizarAtividades(dados) {
+            if (!dados) return [];
+            if (Array.isArray(dados)) return dados;
+            if (typeof dados === 'object' && dados !== null) {
+                // É um objeto (do Firebase) - converter para array
+                return Object.values(dados).filter(item => item && typeof item === 'object');
+            }
+            return [];
+        }
+
         // ✅ Carregar dados do Firebase (com fallback para localStorage)
         let firebaseTimeout = null;
         function carregarDados() {
@@ -1251,7 +1262,7 @@
                     if (firebaseTimeout) clearTimeout(firebaseTimeout);
                     const dados = snapshot.val() || {};
 
-                    atividades = dados.atividades || [];
+                    atividades = normalizarAtividades(dados.atividades);
 
                     const emAndamentoSalvas = dados.atividadesEmAndamento || [];
                     const novosIds = emAndamentoSalvas.map(a => a.id);
@@ -1290,7 +1301,7 @@
         // ✅ Carregar do localStorage
         function carregarDoLocalStorage() {
             const dadosSalvos = localStorage.getItem('atividades');
-            if (dadosSalvos) { atividades = JSON.parse(dadosSalvos); }
+            if (dadosSalvos) { atividades = normalizarAtividades(JSON.parse(dadosSalvos)); }
             const emAndamentoSalvas = localStorage.getItem('atividadesEmAndamento');
             if (emAndamentoSalvas) {
                 atividadesEmAndamento = JSON.parse(emAndamentoSalvas).map(a => ({ ...a, tempoInicio: a.tempoInicio }));
@@ -1458,6 +1469,12 @@
         function finalizarComDados(index, atividade, duracao, dataFim, horaFim, justificativa, colaboradoresAuxiliares = []) {
             clearInterval(atividade.intervaloTimer);
 
+            // ✅ Garantir que atividades é um array
+            if (!Array.isArray(atividades)) {
+                console.warn('⚠️ atividades não é um array. Normalizando...');
+                atividades = normalizarAtividades(atividades);
+            }
+
             // Criar registro para o colaborador principal
             atividades.unshift({
                 id: atividade.id,
@@ -1483,6 +1500,11 @@
             // Criar registros para colaboradores auxiliares (com duração reduzida ou notação de ajuda)
             if (colaboradoresAuxiliares && colaboradoresAuxiliares.length > 0) {
                 colaboradoresAuxiliares.forEach(colaboradorAux => {
+                    // ✅ Garantir que atividades ainda é um array
+                    if (!Array.isArray(atividades)) {
+                        atividades = normalizarAtividades(atividades);
+                    }
+                    
                     atividades.unshift({
                         id: atividade.id,
                         colaborador: colaboradorAux,
@@ -2025,7 +2047,10 @@
 
             // Renderizar Concluído (apenas 4 últimos)
             const hoje = new Date().toLocaleDateString('pt-BR');
-            const atividadesConcluídasHoje = atividades.filter(a => a.dataInicio === hoje);
+            
+            // ✅ Garantir que atividades é um array antes de filtrar
+            const atividadesArray = Array.isArray(atividades) ? atividades : normalizarAtividades(atividades);
+            const atividadesConcluídasHoje = atividadesArray.filter(a => a.dataInicio === hoje);
             const todasConcluídas = [...atividadesGrupadasPorStatus.concluido];
             
             // Adicionar atividades finalizadas hoje que não estão em atividadesEmAndamento
@@ -2111,7 +2136,9 @@
             });
 
             // Adicionar atividades concluídas
-            atividades.forEach(atividade => {
+            // ✅ Garantir que atividades é um array
+            const atividadesParaIterar = Array.isArray(atividades) ? atividades : normalizarAtividades(atividades);
+            atividadesParaIterar.forEach(atividade => {
                 todasAsAtividades.push({
                     id: Math.random(),
                     colaborador: atividade.colaborador,

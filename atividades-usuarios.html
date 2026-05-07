@@ -450,6 +450,39 @@
         let registrosFiltrados = [];
         // intervaloCarregamento removido - usando listeners em tempo real
 
+        // ✅ FUNÇÃO PARA ATUALIZAR DEBUG
+        function atualizarDebug() {
+            const totalElement = document.getElementById('debugTotal');
+            const usuariosElement = document.getElementById('debugUsuarios');
+            const previewElement = document.getElementById('debugPreview');
+            
+            if (totalElement) totalElement.textContent = registrosAtividades.length;
+            
+            if (usuariosElement && registrosAtividades.length > 0) {
+                const emailsUnicos = [...new Set(registrosAtividades.map(r => r.email_usuario))];
+                usuariosElement.textContent = emailsUnicos.length;
+            }
+            
+            if (previewElement) {
+                const ultimos3 = registrosAtividades.slice(0, 3);
+                let preview = '';
+                ultimos3.forEach((r, i) => {
+                    const dataBR = new Date(r.timestamp).toLocaleString('pt-BR');
+                    preview += `\n─────────────────────────\n`;
+                    preview += `${i + 1}. ${r.email_usuario || 'SEM EMAIL'}\n`;
+                    preview += `   🔹 Ação: ${r.tipo || 'DESCONHECIDA'}\n`;
+                    preview += `   🎫 Ticket: #${r.ticket || 'N/A'}\n`;
+                    preview += `   📋 Descrição: ${r.descricao || 'N/A'}\n`;
+                    if (r.duracao) preview += `   ⏱️ Duração: ${r.duracao}\n`;
+                    if (r.motivo) preview += `   ❓ Motivo: ${r.motivo}\n`;
+                    if (r.grupo) preview += `   📂 Grupo: ${r.grupo}\n`;
+                    if (r.tempoPausa) preview += `   ⏸️ Pausa: ${r.tempoPausa}\n`;
+                    preview += `   🕐 Hora: ${dataBR}\n`;
+                });
+                previewElement.textContent = preview || 'Nenhum registro carregado ainda...';
+            }
+        }
+
         // Callback chamado automaticamente quando usuário se autentica
         function onUsuarioAutenticado(usuario) {
             console.log('✅ Usuário autenticado:', usuario.email);
@@ -459,7 +492,7 @@
         
         // Iniciar listener de tempo real do Firebase
         function iniciarCarregamentoTempoReal() {
-            console.log('Iniciando carregamento em tempo real do Firebase...');
+            console.log('🔄 Iniciando carregamento em tempo real do Firebase...');
             const loadingElement = document.getElementById('loading');
             if (loadingElement) loadingElement.style.display = 'block';
 
@@ -473,46 +506,78 @@
                         registrosAtividades = [];
                         
                         if (dados) {
-                            console.log('📊 ESTRUTURA DO FIREBASE:', JSON.stringify(dados).substring(0, 500));
+                            console.log('📊 Dados brutos do Firebase:', dados);
                             
-                            // Converter objeto do Firebase em array - Versão corrigida
-                            Object.entries(dados).forEach(([chave, registro]) => {
-                                // Verificar se registro é um objeto com timestamp (ação) ou um objeto com múltiplas ações (usuário)
-                                if (registro && typeof registro === 'object') {
-                                    if (registro.timestamp) {
-                                        // É um registro de ação direto
-                                        registrosAtividades.push(registro);
-                                    } else if (Object.values(registro).some(r => r && r.timestamp)) {
-                                        // É um objeto de usuário com múltiplas ações dentro - expandir
-                                        Object.values(registro).forEach(acao => {
-                                            if (acao && acao.timestamp) {
-                                                registrosAtividades.push(acao);
+                            // ✅ Converter QUALQUER estrutura em array de registros
+                            function extrairRegistros(obj) {
+                                const registros = [];
+                                
+                                if (Array.isArray(obj)) {
+                                    // Já é um array
+                                    registros.push(...obj.filter(r => r && r.timestamp));
+                                } else if (obj && typeof obj === 'object') {
+                                    // É um objeto - precisa expandir
+                                    console.log('🔍 Processando objeto do Firebase com', Object.keys(obj).length, 'chaves');
+                                    
+                                    Object.entries(obj).forEach(([chave, valor]) => {
+                                        // Cada valor pode ser um registro ou um objeto aninhado
+                                        if (valor && typeof valor === 'object') {
+                                            if (valor.timestamp && valor.email_usuario && valor.tipo) {
+                                                // É um registro direto
+                                                registros.push(valor);
+                                            } else {
+                                                // Pode ser um objeto aninhado - expandir recursivamente
+                                                Object.values(valor).forEach(subValor => {
+                                                    if (subValor && subValor.timestamp && subValor.email_usuario && subValor.tipo) {
+                                                        registros.push(subValor);
+                                                    }
+                                                });
                                             }
-                                        });
-                                    }
+                                        }
+                                    });
                                 }
+                                
+                                console.log(`✅ Extraídos ${registros.length} registros válidos do Firebase`);
+                                return registros;
+                            }
+                            
+                            registrosAtividades = extrairRegistros(dados);
+                            
+                            // ✅ Validar e limpar registros inválidos
+                            registrosAtividades = registrosAtividades.filter(r => {
+                                const temCamposBasicos = r.timestamp && r.email_usuario && r.tipo;
+                                if (!temCamposBasicos) {
+                                    console.warn('⚠️ Registro inválido (campos básicos faltando):', r);
+                                    return false;
+                                }
+                                return true;
                             });
                             
-                            console.log('✅ Carregadas', registrosAtividades.length, 'atividades do Firebase em tempo real');
+                            console.log(`✅ Carregados ${registrosAtividades.length} registros do Firebase`);
+                            
                             // Log detalhado para diagnóstico
-                            const emailsUnicos = [...new Set(registrosAtividades.map(r => r.email_usuario))];
-                            console.log('📧 Usuários com atividades:', emailsUnicos.join(', '));
-                            registrosAtividades.forEach(r => {
-                                console.log(`  - ${r.email_usuario} (${r.tipo}) às ${r.timestamp}`);
-                            });
+                            if (registrosAtividades.length > 0) {
+                                const emailsUnicos = [...new Set(registrosAtividades.map(r => r.email_usuario))];
+                                console.log(`📧 ${emailsUnicos.length} usuários com atividades:`, emailsUnicos.join(', '));
+                                registrosAtividades.slice(0, 5).forEach(r => {
+                                    console.log(`   📌 ${r.email_usuario} | ${r.tipo} | #${r.ticket} | ${r.timestamp}`);
+                                });
+                            }
                         } else {
                             console.log('ℹ️  Nenhuma atividade no Firebase ainda');
                         }
 
                         // Também tentar carregar fallback do localStorage se Firebase estiver vazio
                         if (registrosAtividades.length === 0) {
+                            console.log('📂 Tentando carregar do localStorage como fallback...');
                             const atividadesLocal = localStorage.getItem('registrosAtividades');
                             if (atividadesLocal) {
                                 try {
-                                    registrosAtividades = JSON.parse(atividadesLocal);
-                                    console.log('✅ Carregadas', registrosAtividades.length, 'atividades do localStorage (fallback)');
+                                    const parsed = JSON.parse(atividadesLocal);
+                                    registrosAtividades = Array.isArray(parsed) ? parsed : Object.values(parsed).filter(r => r && r.timestamp);
+                                    console.log(`✅ Carregados ${registrosAtividades.length} registros do localStorage`);
                                 } catch (e) {
-                                    console.error('Erro ao parsear atividades do localStorage:', e);
+                                    console.error('❌ Erro ao parsear atividades do localStorage:', e);
                                 }
                             }
                         }
@@ -520,8 +585,10 @@
                         // Ordenar por data (mais recente primeiro)
                         registrosAtividades.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-                        registrosFiltrados = [...registrosAtividades];
-                        exibirAtividades();
+                        // Aplicar filtros e exibir
+                        aplicarFiltros();
+                        atualizarDebug();
+                        
                         if (loadingElement) loadingElement.style.display = 'none';
                     } catch (erro) {
                         console.error('❌ Erro ao processar dados do Firebase:', erro);
@@ -542,14 +609,30 @@
 
         // Carregar atividades do localStorage (fallback)
         function carregarAtividadesDoLocalStorage() {
-            console.log('Carregando atividades do localStorage (fallback)...');
+            console.log('📂 Carregando atividades do localStorage (fallback)...');
             const atividadesLocal = localStorage.getItem('registrosAtividades');
             if (atividadesLocal) {
                 try {
-                    registrosAtividades = JSON.parse(atividadesLocal);
-                    console.log('✅ Carregadas', registrosAtividades.length, 'atividades do localStorage');
+                    const parsed = JSON.parse(atividadesLocal);
+                    
+                    // Converter para array se necessário
+                    if (Array.isArray(parsed)) {
+                        registrosAtividades = parsed;
+                    } else if (parsed && typeof parsed === 'object') {
+                        registrosAtividades = Object.values(parsed).filter(r => r && r.timestamp);
+                    }
+                    
+                    // Filtrar registros válidos
+                    registrosAtividades = registrosAtividades.filter(r => r && r.timestamp && r.email_usuario && r.tipo);
+                    
+                    console.log(`✅ Carregados ${registrosAtividades.length} registros do localStorage`);
+                    
+                    if (registrosAtividades.length > 0) {
+                        const emailsUnicos = [...new Set(registrosAtividades.map(r => r.email_usuario))];
+                        console.log(`📧 ${emailsUnicos.length} usuários:`, emailsUnicos.join(', '));
+                    }
                 } catch (e) {
-                    console.error('Erro ao parsear atividades:', e);
+                    console.error('❌ Erro ao parsear atividades do localStorage:', e);
                     registrosAtividades = [];
                 }
             } else {
@@ -560,8 +643,9 @@
             // Ordenar por data (mais recente primeiro)
             registrosAtividades.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-            registrosFiltrados = [...registrosAtividades];
-            exibirAtividades();
+            // Aplicar filtros e exibir
+            aplicarFiltros();
+            atualizarDebug();
         }
     </script>
     
@@ -624,6 +708,19 @@
             </div>
         </div>
 
+        <!-- 🔧 PAINEL DE DEBUG -->
+        <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; font-size: 0.85em;">
+            <details style="cursor: pointer;">
+                <summary style="font-weight: bold; color: #666;">🔍 Debug - Dados Carregados (Clique para expandir)</summary>
+                <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 3px; max-height: 200px; overflow-y: auto;">
+                    <p><strong>Total de registros:</strong> <span id="debugTotal">0</span></p>
+                    <p><strong>Usuários únicos:</strong> <span id="debugUsuarios">0</span></p>
+                    <p><strong>Últimos 3 registros:</strong></p>
+                    <pre id="debugPreview" style="background: #f5f5f5; padding: 8px; border-radius: 3px; overflow-x: auto; font-size: 0.75em; max-height: 150px; overflow-y: auto;"></pre>
+                </div>
+            </details>
+        </div>
+
         <div class="container">
             <div class="page-header">
                 <div>
@@ -654,6 +751,7 @@
                     <button class="btn btn-primary" id="btnAplicarFiltros">Aplicar</button>
                     <button class="btn btn-secondary" id="btnLimparFiltros">Limpar</button>
                     <button class="btn export-btn" id="btnExportarCSV">Exportar CSV</button>
+                    <button class="btn btn-primary" id="btnRecarregar" style="background: #27ae60;">🔄 Recarregar</button>
                 </div>
             </div>
 
@@ -684,7 +782,7 @@
         function exibirAtividades() {
             const tbody = document.getElementById('tableBody');
 
-            if (registrosFiltrados.length === 0) {
+            if (!registrosFiltrados || registrosFiltrados.length === 0) {
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="6" style="text-align: center; padding: 40px; color: #999;">
@@ -692,65 +790,101 @@
                         </td>
                     </tr>
                 `;
+                console.log('📭 Nenhum registro para exibir');
                 return;
             }
 
+            console.log(`📋 Exibindo ${registrosFiltrados.length} registros na tabela`);
+
             let html = '';
-            registrosFiltrados.forEach(registro => {
-                const data = new Date(registro.timestamp);
-                const dataFormatada = data.toLocaleDateString('pt-BR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                });
-                const horaFormatada = data.toLocaleTimeString('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
+            registrosFiltrados.forEach((registro, index) => {
+                try {
+                    const data = new Date(registro.timestamp);
+                    const dataFormatada = data.toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+                    const horaFormatada = data.toLocaleTimeString('pt-BR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
 
-                let acaoTexto = '';
-                let acaoBadgeClass = '';
-                let detalhes = '';
+                    let acaoTexto = '';
+                    let acaoBadgeClass = '';
+                    let detalhes = '';
 
-                switch (registro.tipo) {
-                    case 'INICIOU':
-                        acaoTexto = 'Iniciou';
-                        acaoBadgeClass = 'iniciou';
-                        detalhes = `${registro.descricao}`;
-                        break;
-                    case 'FINALIZOU':
-                        acaoTexto = 'Finalizou';
-                        acaoBadgeClass = 'finalizou';
-                        detalhes = `Duração: ${registro.duracao}`;
-                        break;
-                    case 'PAUSOU':
-                        acaoTexto = 'Pausou';
-                        acaoBadgeClass = 'pausou';
-                        detalhes = `Motivo: ${registro.motivo} | Grupo: ${registro.grupo}`;
-                        break;
-                    case 'RETOMOU':
-                        acaoTexto = 'Retomou';
-                        acaoBadgeClass = 'retomou';
-                        detalhes = `Pausa: ${registro.tempoPausa}`;
-                        break;
+                    // ✅ Mapear tipos de ações com seus detalhes
+                    const tipo = registro.tipo || 'DESCONHECIDO';
+                    switch (tipo) {
+                        case 'INICIOU':
+                            acaoTexto = '▶️ Iniciou';
+                            acaoBadgeClass = 'iniciou';
+                            detalhes = `${registro.descricao || 'Sem descrição'}`;
+                            break;
+                        case 'FINALIZOU':
+                            acaoTexto = '✅ Finalizou';
+                            acaoBadgeClass = 'finalizou';
+                            detalhes = `Duração: ${registro.duracao || '-'} | ${registro.descricao || ''}`;
+                            break;
+                        case 'PAUSOU':
+                            acaoTexto = '⏸️ Pausou';
+                            acaoBadgeClass = 'pausou';
+                            detalhes = `Motivo: ${registro.motivo || '-'} | Grupo: ${registro.grupo || '-'}`;
+                            break;
+                        case 'RETOMOU':
+                            acaoTexto = '▶️ Retomou';
+                            acaoBadgeClass = 'retomou';
+                            detalhes = `Pausa: ${registro.tempoPausa || '-'}`;
+                            break;
+                        case 'LOGIN':
+                            acaoTexto = '🔓 Login';
+                            acaoBadgeClass = 'login';
+                            detalhes = 'Conectado ao sistema';
+                            break;
+                        case 'LOGOUT':
+                            acaoTexto = '🚪 Logout';
+                            acaoBadgeClass = 'logout';
+                            detalhes = 'Desconectado do sistema';
+                            break;
+                        default:
+                            acaoTexto = tipo;
+                            acaoBadgeClass = 'desconhecida';
+                            detalhes = registro.descricao || '-';
+                    }
+
+                    // ✅ Extrair ticket - pode estar em diferentes formatos
+                    const ticket = registro.ticket || registro.id || '-';
+                    const nomeUsuario = registro.nome_usuario || registro.usuario_id || 'Usuário';
+                    const emailUsuario = registro.email_usuario || 'email@desconhecido.com';
+
+                    html += `
+                        <tr>
+                            <td class="timestamp-cell"><small>${dataFormatada}</small><br><small>${horaFormatada}</small></td>
+                            <td class="user-cell"><strong>${nomeUsuario}</strong></td>
+                            <td><small>${emailUsuario}</small></td>
+                            <td>
+                                <span class="action-badge ${acaoBadgeClass}">${acaoTexto}</span>
+                            </td>
+                            <td class="ticket-cell"><strong>#${ticket}</strong></td>
+                            <td class="details-cell"><small>${detalhes}</small></td>
+                        </tr>
+                    `;
+                } catch (erro) {
+                    console.error(`❌ Erro ao processar registro ${index}:`, registro, erro);
+                    html += `
+                        <tr>
+                            <td colspan="6" style="color: #e74c3c;">
+                                ❌ Erro ao processar registro
+                            </td>
+                        </tr>
+                    `;
                 }
-
-                html += `
-                    <tr>
-                        <td class="timestamp-cell">${dataFormatada}<br>${horaFormatada}</td>
-                        <td class="user-cell">${registro.nome_usuario}</td>
-                        <td>${registro.email_usuario}</td>
-                        <td>
-                            <span class="action-badge ${acaoBadgeClass}">${acaoTexto}</span>
-                        </td>
-                        <td class="ticket-cell">#${registro.ticket}</td>
-                        <td class="details-cell">${detalhes}</td>
-                    </tr>
-                `;
             });
 
             tbody.innerHTML = html;
+            console.log('✅ Tabela atualizada com sucesso');
         }
 
         // Aplicar filtros
@@ -781,6 +915,7 @@
             });
 
             exibirAtividades();
+            atualizarDebug();
         }
 
         // Limpar filtros
@@ -790,6 +925,7 @@
             document.getElementById('filterData').value = '';
             registrosFiltrados = [...registrosAtividades];
             exibirAtividades();
+            atualizarDebug();
         }
 
         // Exportar para CSV
@@ -863,6 +999,12 @@
             document.getElementById('btnAplicarFiltros').addEventListener('click', aplicarFiltros);
             document.getElementById('btnLimparFiltros').addEventListener('click', limparFiltros);
             document.getElementById('btnExportarCSV').addEventListener('click', exportarCSV);
+            document.getElementById('btnRecarregar').addEventListener('click', () => {
+                console.log('🔄 Recarregando dados manualmente...');
+                registrosAtividades = [];
+                registrosFiltrados = [];
+                iniciarCarregamentoTempoReal();
+            });
 
             document.getElementById('logoutBtn').addEventListener('click', () => {
                 // Usar a função global de logout que registra o evento
