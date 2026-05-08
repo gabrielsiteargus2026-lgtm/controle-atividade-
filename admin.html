@@ -556,6 +556,45 @@
 
         // ===== INICIALIZAR ADMIN =====
         function inicializarAdmin() {
+            // ===== FUNÇÃO DE AUDITORIA PARA ADMIN =====
+            function registrarAuditoriaAdmin(tipo, ticket, descricao, detalhesAdicionais = {}) {
+                if (!usuarioAtual) {
+                    console.warn('❌ Não é possível registrar auditoria: nenhum usuário autenticado');
+                    return;
+                }
+
+                const registro = {
+                    timestamp: new Date().toISOString(),
+                    usuario_id: usuarioAtual.uid,
+                    email_usuario: usuarioAtual.email,
+                    nome_usuario: usuarioAtual.nome,
+                    tipo: tipo, // DELETOU, LIMPOU_HISTORICO, etc
+                    ticket: String(ticket),
+                    descricao: descricao,
+                    origem: 'ADMIN',
+                    ...detalhesAdicionais
+                };
+
+                // Salvar no localStorage
+                const registrosJSON = localStorage.getItem('registrosAtividades');
+                let registros = registrosJSON ? JSON.parse(registrosJSON) : [];
+                registros.push(registro);
+                localStorage.setItem('registrosAtividades', JSON.stringify(registros));
+
+                // Salvar no Firebase se disponível
+                if (window.FIREBASE_OK && db) {
+                    db.ref('registrosAtividades').push(registro).then(() => {
+                        console.log('✅ Auditoria registrada no Firebase:', tipo, ticket);
+                    }).catch(err => {
+                        console.error('❌ Erro ao registrar auditoria no Firebase:', err);
+                    });
+                } else {
+                    console.warn('⚠️ Firebase não disponível - usando apenas localStorage');
+                }
+
+                console.log('📊 Auditoria de Admin registrada:', tipo, ticket);
+            }
+
             // ===== GERENCIAR CONTADORES ACUMULADOS =====
             function obterContadores() {
                 const contadores = localStorage.getItem('contadoresPausas');
@@ -1182,6 +1221,12 @@
                         deletarDoLocalStorage();
                         console.log(`✅ Ticket #${ticketSelecionado} deletado de TODAS as localizações!`);
                         
+                        // 📋 Registrar a deleção no sistema de auditoria
+                        registrarAuditoriaAdmin('DELETOU', ticketSelecionado, `Ticket #${ticketSelecionado} foi deletado completamente do sistema`, {
+                            acao: 'Deleção de Ticket',
+                            localizacoes_deletadas: ['atividades', 'atividadesEmAndamento', 'historicoPausas', 'registrosAtividades', 'kanbanState']
+                        });
+                        
                         // Verificar se foi realmente deletado
                         setTimeout(() => {
                             verificarDeletacaoCompleta(ticketSelecionado);
@@ -1196,6 +1241,12 @@
                     // Deletar apenas do localStorage (Firebase não disponível)
                     deletarDoLocalStorage();
                     console.log(`✅ Ticket #${ticketSelecionado} deletado do localStorage!`);
+                    
+                    // 📋 Registrar a deleção no sistema de auditoria
+                    registrarAuditoriaAdmin('DELETOU', ticketSelecionado, `Ticket #${ticketSelecionado} foi deletado completamente do sistema`, {
+                        acao: 'Deleção de Ticket',
+                        localizacoes_deletadas: ['atividades', 'atividadesEmAndamento', 'historicoPausas', 'registrosAtividades', 'kanbanState']
+                    });
                     
                     // Verificar se foi realmente deletado
                     verificarDeletacaoCompleta(ticketSelecionado);

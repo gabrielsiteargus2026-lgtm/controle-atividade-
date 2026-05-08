@@ -1276,7 +1276,7 @@
                 }, 2000); // 2 segundos
 
                 // Listener em tempo real — sincroniza automaticamente entre computadores
-                db.ref('/').on('value', (snapshot) => {
+                window.db.ref('/').on('value', (snapshot) => {
                     if (firebaseTimeout) clearTimeout(firebaseTimeout);
                     const dados = snapshot.val() || {};
 
@@ -1376,7 +1376,7 @@
             }));
 
             if (window.FIREBASE_OK) {
-                db.ref('/').set({
+                window.db.ref('/').set({
                     atividades: atividades,
                     atividadesEmAndamento: emAndamentoParaSalvar,
                     kanbanState: kanbanState,
@@ -1682,10 +1682,15 @@
             localStorage.setItem('registrosAtividades', JSON.stringify(registros));
 
             // Tentar salvar no Firebase se disponível
-            if (window.FIREBASE_OK && db) {
-                db.ref('registrosAtividades').push(registro).catch(err => {
-                    console.warn('Erro ao salvar registro de atividade no Firebase:', err);
+            if (window.FIREBASE_OK && window.db) {
+                window.db.ref('registrosAtividades').push(registro).then(() => {
+                    console.log('✅ SUCESSO: Registrado no Firebase!', tipo, ticket);
+                }).catch(err => {
+                    console.error('❌ ERRO ao salvar no Firebase:', err);
+                    console.warn('   ⚠️ Salvando apenas em localStorage como fallback');
                 });
+            } else {
+                console.warn('⚠️ Firebase não disponível - usando apenas localStorage');
             }
 
             console.log('📊 Atividade registrada:', tipo, ticket);
@@ -1710,8 +1715,8 @@
             };
 
             // Salvar no Firebase
-            if (window.FIREBASE_OK && db) {
-                db.ref('registrosAtividades').push(registro).catch(err => {
+            if (window.FIREBASE_OK && window.db) {
+                window.db.ref('registrosAtividades').push(registro).catch(err => {
                     console.warn('Erro ao registrar acesso da página no Firebase:', err);
                 });
             }
