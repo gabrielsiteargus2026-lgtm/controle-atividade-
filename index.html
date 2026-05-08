@@ -576,11 +576,12 @@
             background: #f9f9f9;
             border-radius: 8px;
             padding: 12px;
-            height: 600px;
+            height: auto;
+            min-height: 165px;
             border: 2px solid #e0e0e0;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow: visible;
         }
 
         .kanban-column h4 {
@@ -595,10 +596,9 @@
 
         .kanban-tasks {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             gap: 10px;
-            flex: 1;
-            overflow-y: auto;
+            overflow-y: visible;
             padding-right: 6px;
         }
         
@@ -623,40 +623,59 @@
             background: white;
             border: 2px solid #5b8ec6;
             border-radius: 6px;
-            padding: 12px;
+            padding: 8px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             transition: all 0.3s;
-            min-height: 120px;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            justify-content: flex-start;
+            overflow: hidden;
         }
 
         .kanban-column:nth-child(1) .kanban-card {
-            aspect-ratio: 1;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            padding: 10px;
-            min-height: auto;
+            min-height: 165px;
+            max-height: 165px;
         }
 
         .kanban-column:nth-child(2) .kanban-card {
-            aspect-ratio: 1;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            padding: 10px;
-            min-height: auto;
+            min-height: 165px;
+            max-height: 165px;
         }
 
         .kanban-column:nth-child(3) .kanban-card {
-            aspect-ratio: 1;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            padding: 10px;
-            min-height: auto;
+            min-height: 165px;
+            max-height: 165px;
+        }
+        
+        .kanban-card-content {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 4px;
+            margin-bottom: 6px;
+            font-size: 0.75em;
+        }
+        
+        .kanban-card-content::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .kanban-card-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .kanban-card-content::-webkit-scrollbar-thumb {
+            background: #ddd;
+            border-radius: 2px;
+        }
+        
+        .kanban-card-content::-webkit-scrollbar-thumb:hover {
+            background: #999;
         }
 
         .kanban-card:hover {
@@ -696,9 +715,10 @@
         }
 
         .kanban-card-subtitle {
-            font-size: 0.85em;
+            font-size: 0.8em;
             color: #666;
-            margin-bottom: 6px;
+            margin-bottom: 3px;
+            line-height: 1.2;
         }
 
         .kanban-column:nth-child(1) .kanban-card-subtitle {
@@ -1671,6 +1691,34 @@
             console.log('📊 Atividade registrada:', tipo, ticket);
         }
 
+        // 📌 Registrar acesso do usuário à página (para auditoria)
+        function registrarAcessoPagina(nomePagina = 'atividades-usuarios') {
+            if (!usuarioAtual) {
+                console.warn('❌ Não é possível registrar acesso: nenhum usuário autenticado');
+                return;
+            }
+
+            const registro = {
+                timestamp: new Date().toISOString(),
+                usuario_id: usuarioAtual.uid,
+                email_usuario: usuarioAtual.email,
+                nome_usuario: usuarioAtual.nome,
+                tipo: 'ACESSO_PAGINA',
+                pagina: nomePagina,
+                ticket: '-',
+                descricao: `Usuário acessou a página ${nomePagina}`
+            };
+
+            // Salvar no Firebase
+            if (window.FIREBASE_OK && db) {
+                db.ref('registrosAtividades').push(registro).catch(err => {
+                    console.warn('Erro ao registrar acesso da página no Firebase:', err);
+                });
+            }
+
+            console.log('📍 Acesso registrado:', nomePagina);
+        }
+
         // 📌 Função global de logout - Registra saída do usuário
         function fazerLogout() {
             if (usuarioAtual) {
@@ -2002,14 +2050,16 @@
                     const duracao = new Date().getTime() - atividade.tempoInicio;
                     return `
                         <div class="kanban-card" data-kanban-atividade-id="${atividade.id}">
-                            <div class="kanban-card-header">
-                                <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
+                            <div class="kanban-card-content">
+                                <div class="kanban-card-header">
+                                    <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
+                                </div>
+                                <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
+                                <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.nome}</div>
+                                <div class="kanban-card-subtitle"><strong>Data:</strong> ${atividade.dataInicio}</div>
+                                <div class="kanban-card-subtitle"><strong>Início:</strong> ${atividade.horaInicio}</div>
+                                <div class="kanban-card-subtitle kanban-duracao-display" style="color: #667eea; font-weight: bold; margin-top: 2px;">⏱️ ${formatarTempo(duracao)}</div>
                             </div>
-                            <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 8px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
-                            <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.nome}</div>
-                            <div class="kanban-card-subtitle"><strong>Data:</strong> ${atividade.dataInicio}</div>
-                            <div class="kanban-card-subtitle"><strong>Início:</strong> ${atividade.horaInicio}</div>
-                            <div class="kanban-card-subtitle kanban-duracao-display" style="color: #667eea; font-weight: bold; margin-top: 4px;">⏱️ ${formatarTempo(duracao)}</div>
                             <div class="kanban-card-actions">
                                 <button class="btn-danger btn-small" onclick="abrirModalPausarAtividade(${atividade.id})">⏸️ Pausar</button>
                                 <button class="btn-success btn-small" onclick="marcarComoConcluido(${atividade.id})">✓ Concluir</button>
@@ -2027,12 +2077,14 @@
                 const cardsPausado = atividadesGrupadasPorStatus.pausado.map(atividade => {
                     return `
                         <div class="kanban-card">
-                            <div class="kanban-card-header">
-                                <span class="kanban-card-title">🎟️ ${atividade.ticket}</span>
+                            <div class="kanban-card-content">
+                                <div class="kanban-card-header">
+                                    <span class="kanban-card-title">🎟️ ${atividade.ticket}</span>
+                                </div>
+                                <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
+                                <div class="kanban-card-subtitle">${atividade.nome}</div>
+                                <div class="kanban-pause-reason">💬 ${kanbanState[atividade.id]?.motivoPausa || ''}</div>
                             </div>
-                            <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 8px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
-                            <div class="kanban-card-subtitle">${atividade.nome}</div>
-                            <div class="kanban-pause-reason">💬 ${kanbanState[atividade.id]?.motivoPausa || ''}</div>
                             <div class="kanban-card-actions">
                                 <button class="btn-primary btn-small" onclick="retomarAtividade(${atividade.id})">▶️ Retomar</button>
                                 <button class="btn-success btn-small" onclick="marcarComoConcluido(${atividade.id})">✓ Concluir</button>
@@ -2075,13 +2127,15 @@
                 const cardsConcluido = todasConcluidas.map(atividade => {
                     return `
                         <div class="kanban-card" style="opacity: 0.7;">
-                            <div class="kanban-card-header">
-                                <span class="kanban-card-title">🎟️ ${atividade.ticket}</span>
+                            <div class="kanban-card-content">
+                                <div class="kanban-card-header">
+                                    <span class="kanban-card-title">🎟️ ${atividade.ticket}</span>
+                                </div>
+                                <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
+                                <div class="kanban-card-subtitle"><strong>Por:</strong> ${atividade.nome}</div>
+                                <div class="kanban-card-subtitle" style="font-size: 0.85em; color: #888;">Duração: ${atividade.duracao || 'N/A'}</div>
+                                <div style="text-align: center; color: #51cf66; font-weight: bold; margin-top: 2px;">✓ Concluído</div>
                             </div>
-                            <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 8px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
-                            <div class="kanban-card-subtitle"><strong>Por:</strong> ${atividade.nome}</div>
-                            <div class="kanban-card-subtitle" style="font-size: 0.85em; color: #888;\">Duração: ${atividade.duracao || 'N/A'}</div>
-                            <div style="text-align: center; color: #51cf66; font-weight: bold; margin-top: 8px;">✓ Concluído</div>
                         </div>
                     `;
                 }).join('');
@@ -2218,15 +2272,17 @@
                 const cardsEmAndamento = atividadesGrupadasPorStatus.em_andamento.map(atividade => {
                     return `
                         <div class="kanban-card">
-                            <div class="kanban-card-header">
-                                <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
-                            </div>
-                            <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 8px;">📝 ${atividade.observacao || 'Sem descrição'}</div>
-                            <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.colaborador}</div>
-                            <div class="kanban-card-subtitle"><strong>Data:</strong> ${atividade.data}</div>
-                            <div class="kanban-card-subtitle"><strong>Início:</strong> ${atividade.hora}</div>
-                            <div class="kanban-card-subtitle" style="color: #667eea; font-weight: bold; margin-top: 8px;">
-                                ${atividade.observacao ? `📝 Obs: ${atividade.observacao.substring(0, 30)}...` : 'Sem observação'}
+                            <div class="kanban-card-content">
+                                <div class="kanban-card-header">
+                                    <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
+                                </div>
+                                <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.observacao || 'Sem descrição'}</div>
+                                <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.colaborador}</div>
+                                <div class="kanban-card-subtitle"><strong>Data:</strong> ${atividade.data}</div>
+                                <div class="kanban-card-subtitle"><strong>Início:</strong> ${atividade.hora}</div>
+                                <div class="kanban-card-subtitle" style="color: #667eea; font-weight: bold; margin-top: 2px;">
+                                    ${atividade.observacao ? `📝 Obs: ${atividade.observacao.substring(0, 30)}...` : 'Sem observação'}
+                                </div>
                             </div>
                         </div>
                     `;
@@ -2241,12 +2297,14 @@
                 const cardsPausado = atividadesGrupadasPorStatus.pausado.map(atividade => {
                     return `
                         <div class="kanban-card">
-                            <div class="kanban-card-header">
-                                <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
+                            <div class="kanban-card-content">
+                                <div class="kanban-card-header">
+                                    <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
+                                </div>
+                                <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.observacao || 'Sem descrição'}</div>
+                                <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.colaborador}</div>
+                                <div class="kanban-pause-reason">💬 ${atividade.motivoPausa || ''}</div>
                             </div>
-                            <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 8px;">📝 ${atividade.observacao || 'Sem descrição'}</div>
-                            <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.colaborador}</div>
-                            <div class="kanban-pause-reason">💬 ${atividade.motivoPausa || ''}</div>
                         </div>
                     `;
                 }).join('');
@@ -2260,12 +2318,14 @@
                 const cardsConcluido = atividadesGrupadasPorStatus.concluido.map(atividade => {
                     return `
                         <div class="kanban-card" style="opacity: 0.7;">
-                            <div class="kanban-card-header">
-                                <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
+                            <div class="kanban-card-content">
+                                <div class="kanban-card-header">
+                                    <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
+                                </div>
+                                <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.observacao || 'Sem descrição'}</div>
+                                <div class="kanban-card-subtitle"><strong>Por:</strong> ${atividade.colaborador}</div>
+                                <div style="text-align: center; color: #51cf66; font-weight: bold; margin-top: 2px;">✓ Concluído</div>
                             </div>
-                            <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 8px;">📝 ${atividade.observacao || 'Sem descrição'}</div>
-                            <div class="kanban-card-subtitle"><strong>Por:</strong> ${atividade.colaborador}</div>
-                            <div style="text-align: center; color: #51cf66; font-weight: bold; margin-top: 8px;">✓ Concluído</div>
                         </div>
                     `;
                 }).join('');

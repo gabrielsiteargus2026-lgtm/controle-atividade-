@@ -519,11 +519,33 @@
 
         // Callback chamado automaticamente quando usuário se autentica
         function onUsuarioAutenticado(usuario) {
-            // 📄 Registrar acesso à página
-            registrarAcessoPagina();
-            
-            console.log('✅ Usuário autenticado:', usuario.email);
+            console.log('✅ Usuário autenticado em atividades-usuarios:', usuario.email);
             document.getElementById('userEmail').textContent = usuario.email;
+            
+            // 📌 Registrar acesso à página
+            if (typeof registrarAcessoPagina === 'function') {
+                registrarAcessoPagina('atividades-usuarios');
+            } else {
+                console.warn('⚠️ registrarAcessoPagina não disponível, tentando salvar manualmente...');
+                // Fallback - salvar manualmente
+                const registroAcesso = {
+                    timestamp: new Date().toISOString(),
+                    usuario_id: usuario.uid || 'desconhecido',
+                    email_usuario: usuario.email,
+                    nome_usuario: usuario.nome || 'Usuário',
+                    tipo: 'ACESSO_PAGINA',
+                    pagina: 'atividades-usuarios',
+                    ticket: '-',
+                    descricao: 'Usuário acessou a página atividades-usuarios'
+                };
+                
+                if (window.FIREBASE_OK && window.db) {
+                    window.db.ref('registrosAtividades').push(registroAcesso).catch(err => {
+                        console.warn('Erro ao registrar acesso:', err);
+                    });
+                }
+            }
+            
             iniciarCarregamentoTempoReal();
         }
         
@@ -622,6 +644,10 @@
                         // Ordenar por data (mais recente primeiro)
                         registrosAtividades.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
+                        // ✅ SINCRONIZAR COM LOCALSTORAGE para persistência
+                        localStorage.setItem('registrosAtividades', JSON.stringify(registrosAtividades));
+                        console.log('💾 Dados sincronizados com localStorage');
+
                         // Aplicar filtros e exibir
                         aplicarFiltros();
                         atualizarDebug();
@@ -683,6 +709,137 @@
             // Aplicar filtros e exibir
             aplicarFiltros();
             atualizarDebug();
+        }
+
+        // 🔄 SINCRONIZAR PERIODICAMENTE COM FIREBASE
+        function iniciarSincronizacaoAutomatica() {
+            console.log('🔄 Iniciando sincronização automática a cada 30 segundos...');
+            
+            setInterval(() => {
+                if (window.FIREBASE_OK && window.db) {
+                    window.db.ref('registrosAtividades').once('value', (snapshot) => {
+                        const dados = snapshot.val();
+                        if (dados) {
+                            // Extrair registros (mesma lógica da leitura inicial)
+                            function extrairRegistros(obj) {
+                                const registros = [];
+                                if (Array.isArray(obj)) {
+                                    registros.push(...obj.filter(r => r && r.timestamp));
+                                } else if (obj && typeof obj === 'object') {
+                                    Object.entries(obj).forEach(([chave, valor]) => {
+                                        if (valor && typeof valor === 'object') {
+                                            if (valor.timestamp && valor.email_usuario && valor.tipo) {
+                                                registros.push(valor);
+                                            } else {
+                                                Object.values(valor).forEach(subValor => {
+                                                    if (subValor && subValor.timestamp && subValor.email_usuario && subValor.tipo) {
+                                                        registros.push(subValor);
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    });
+                                }
+                                return registros;
+                            }
+                            
+                            const novosDados = extrairRegistros(dados).filter(r => r && r.timestamp && r.email_usuario && r.tipo);
+                            
+                            if (novosDados.length !== registrosAtividades.length) {
+                                console.log(`🔄 Novos registros detectados! ${registrosAtividades.length} → ${novosDados.length}`);
+                                registrosAtividades = novosDados;
+                                registrosAtividades.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                                
+                                // Sincronizar com localStorage
+                                localStorage.setItem('registrosAtividades', JSON.stringify(registrosAtividades));
+                                
+                                // Atualizar UI
+                                aplicarFiltros();
+                                atualizarDebug();
+                            }
+                        }
+                    }).catch(err => {
+                        console.warn('⚠️ Erro na sincronização automática:', err);
+                    });
+                }
+            }, 30000); // 30 segundos
+        }
+
+        // Executar sincronização automática após carregar
+        setTimeout(() => {
+            iniciarSincronizacaoAutomatica();
+            sincronizarLocalStorageComFirebase();
+        }, 2000);
+
+        // 🔄 SINCRONIZAR LOCALSTORAGE COM FIREBASE (bidirecional)
+        function sincronizarLocalStorageComFirebase() {
+            console.log('🔄 Iniciando sincronização localStorage ↔ Firebase...');
+            
+            const localData = localStorage.getItem('registrosAtividades');
+            
+            if (localData && window.FIREBASE_OK && window.db) {
+                try {
+                    const dadosLocais = JSON.parse(localData);
+                    const dadosLocaisArray = Array.isArray(dadosLocais) ? dadosLocais : Object.values(dadosLocais).filter(r => r && r.timestamp);
+                    
+                    if (dadosLocaisArray.length > 0) {
+                        // Carregar dados atuais do Firebase
+                        window.db.ref('registrosAtividades').once('value', (snapshot) => {
+                            const firebaseData = snapshot.val();
+                            
+                            function extrairRegistros(obj) {
+                                const registros = [];
+                                if (Array.isArray(obj)) {
+                                    registros.push(...obj.filter(r => r && r.timestamp));
+                                } else if (obj && typeof obj === 'object') {
+                                    Object.entries(obj).forEach(([chave, valor]) => {
+                                        if (valor && typeof valor === 'object') {
+                                            if (valor.timestamp && valor.email_usuario && valor.tipo) {
+                                                registros.push(valor);
+                                            } else {
+                                                Object.values(valor).forEach(subValor => {
+                                                    if (subValor && subValor.timestamp && subValor.email_usuario && subValor.tipo) {
+                                                        registros.push(subValor);
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    });
+                                }
+                                return registros;
+                            }
+                            
+                            const firebaseArray = firebaseData ? extrairRegistros(firebaseData) : [];
+                            
+                            // Comparar e mesclar
+                            const localIds = new Set(dadosLocaisArray.map(r => `${r.timestamp}-${r.email_usuario}-${r.tipo}`));
+                            const firebaseIds = new Set(firebaseArray.map(r => `${r.timestamp}-${r.email_usuario}-${r.tipo}`));
+                            
+                            let novosDados = false;
+                            
+                            // Enviar registros locais que não estão no Firebase
+                            dadosLocaisArray.forEach(registro => {
+                                const id = `${registro.timestamp}-${registro.email_usuario}-${registro.tipo}`;
+                                if (!firebaseIds.has(id)) {
+                                    console.log('📤 Enviando registro local para Firebase:', id);
+                                    window.db.ref('registrosAtividades').push(registro).catch(err => {
+                                        console.warn('Erro ao enviar registro:', err);
+                                    });
+                                    novosDados = true;
+                                }
+                            });
+                            
+                            if (novosDados) {
+                                console.log('✅ Sincronização localStorage → Firebase concluída');
+                            } else {
+                                console.log('ℹ️  localStorage já está sincronizado com Firebase');
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.error('❌ Erro ao sincronizar localStorage com Firebase:', e);
+                }
+            }
         }
     </script>
     
