@@ -442,6 +442,31 @@
             color: #7b1fa2;
         }
 
+        .action-badge.exclusao {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .action-badge.login {
+            background: #e0f2f1;
+            color: #00695c;
+        }
+
+        .action-badge.logout {
+            background: #fce4ec;
+            color: #ad1457;
+        }
+
+        .action-badge.acesso {
+            background: #f1f8e9;
+            color: #558b2f;
+        }
+
+        .action-badge.desconhecida {
+            background: #eeeeee;
+            color: #616161;
+        }
+
         .timestamp-cell {
             white-space: nowrap;
             font-family: 'Courier New', monospace;
@@ -522,29 +547,8 @@
             console.log('✅ Usuário autenticado em atividades-usuarios:', usuario.email);
             document.getElementById('userEmail').textContent = usuario.email;
             
-            // 📌 Registrar acesso à página
-            if (typeof registrarAcessoPagina === 'function') {
-                registrarAcessoPagina('atividades-usuarios');
-            } else {
-                console.warn('⚠️ registrarAcessoPagina não disponível, tentando salvar manualmente...');
-                // Fallback - salvar manualmente
-                const registroAcesso = {
-                    timestamp: new Date().toISOString(),
-                    usuario_id: usuario.uid || 'desconhecido',
-                    email_usuario: usuario.email,
-                    nome_usuario: usuario.nome || 'Usuário',
-                    tipo: 'ACESSO_PAGINA',
-                    pagina: 'atividades-usuarios',
-                    ticket: '-',
-                    descricao: 'Usuário acessou a página atividades-usuarios'
-                };
-                
-                if (window.FIREBASE_OK && window.db) {
-                    window.db.ref('registrosAtividades').push(registroAcesso).catch(err => {
-                        console.warn('Erro ao registrar acesso:', err);
-                    });
-                }
-            }
+            // ✅ Remover registro de ACESSO_PAGINA - não queremos registrar acessos simples
+            // O rastreio agora é feito apenas para atividades principais (INICIOU, FINALIZOU, PAUSOU, RETOMOU)
             
             iniciarCarregamentoTempoReal();
         }
@@ -711,136 +715,18 @@
             atualizarDebug();
         }
 
-        // 🔄 SINCRONIZAR PERIODICAMENTE COM FIREBASE
-        function iniciarSincronizacaoAutomatica() {
-            console.log('🔄 Iniciando sincronização automática a cada 30 segundos...');
-            
-            setInterval(() => {
-                if (window.FIREBASE_OK && window.db) {
-                    window.db.ref('registrosAtividades').once('value', (snapshot) => {
-                        const dados = snapshot.val();
-                        if (dados) {
-                            // Extrair registros (mesma lógica da leitura inicial)
-                            function extrairRegistros(obj) {
-                                const registros = [];
-                                if (Array.isArray(obj)) {
-                                    registros.push(...obj.filter(r => r && r.timestamp));
-                                } else if (obj && typeof obj === 'object') {
-                                    Object.entries(obj).forEach(([chave, valor]) => {
-                                        if (valor && typeof valor === 'object') {
-                                            if (valor.timestamp && valor.email_usuario && valor.tipo) {
-                                                registros.push(valor);
-                                            } else {
-                                                Object.values(valor).forEach(subValor => {
-                                                    if (subValor && subValor.timestamp && subValor.email_usuario && subValor.tipo) {
-                                                        registros.push(subValor);
-                                                    }
-                                                });
-                                            }
-                                        }
-                                    });
-                                }
-                                return registros;
-                            }
-                            
-                            const novosDados = extrairRegistros(dados).filter(r => r && r.timestamp && r.email_usuario && r.tipo);
-                            
-                            if (novosDados.length !== registrosAtividades.length) {
-                                console.log(`🔄 Novos registros detectados! ${registrosAtividades.length} → ${novosDados.length}`);
-                                registrosAtividades = novosDados;
-                                registrosAtividades.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                                
-                                // Sincronizar com localStorage
-                                localStorage.setItem('registrosAtividades', JSON.stringify(registrosAtividades));
-                                
-                                // Atualizar UI
-                                aplicarFiltros();
-                                atualizarDebug();
-                            }
-                        }
-                    }).catch(err => {
-                        console.warn('⚠️ Erro na sincronização automática:', err);
-                    });
-                }
-            }, 30000); // 30 segundos
-        }
+        // ✅ REMOVIDO: Sincronização automática a cada 30 segundos (era lenta)
+        // Agora usa listener em tempo real do Firebase que atualiza instantaneamente
+        // function iniciarSincronizacaoAutomatica() { ... }
 
-        // Executar sincronização automática após carregar
+        // Executar carregamento em tempo real
         setTimeout(() => {
-            iniciarSincronizacaoAutomatica();
-            sincronizarLocalStorageComFirebase();
-        }, 2000);
+            iniciarCarregamentoTempoReal();
+        }, 1000);
 
-        // 🔄 SINCRONIZAR LOCALSTORAGE COM FIREBASE (bidirecional)
-        function sincronizarLocalStorageComFirebase() {
-            console.log('🔄 Iniciando sincronização localStorage ↔ Firebase...');
-            
-            const localData = localStorage.getItem('registrosAtividades');
-            
-            if (localData && window.FIREBASE_OK && window.db) {
-                try {
-                    const dadosLocais = JSON.parse(localData);
-                    const dadosLocaisArray = Array.isArray(dadosLocais) ? dadosLocais : Object.values(dadosLocais).filter(r => r && r.timestamp);
-                    
-                    if (dadosLocaisArray.length > 0) {
-                        // Carregar dados atuais do Firebase
-                        window.db.ref('registrosAtividades').once('value', (snapshot) => {
-                            const firebaseData = snapshot.val();
-                            
-                            function extrairRegistros(obj) {
-                                const registros = [];
-                                if (Array.isArray(obj)) {
-                                    registros.push(...obj.filter(r => r && r.timestamp));
-                                } else if (obj && typeof obj === 'object') {
-                                    Object.entries(obj).forEach(([chave, valor]) => {
-                                        if (valor && typeof valor === 'object') {
-                                            if (valor.timestamp && valor.email_usuario && valor.tipo) {
-                                                registros.push(valor);
-                                            } else {
-                                                Object.values(valor).forEach(subValor => {
-                                                    if (subValor && subValor.timestamp && subValor.email_usuario && subValor.tipo) {
-                                                        registros.push(subValor);
-                                                    }
-                                                });
-                                            }
-                                        }
-                                    });
-                                }
-                                return registros;
-                            }
-                            
-                            const firebaseArray = firebaseData ? extrairRegistros(firebaseData) : [];
-                            
-                            // Comparar e mesclar
-                            const localIds = new Set(dadosLocaisArray.map(r => `${r.timestamp}-${r.email_usuario}-${r.tipo}`));
-                            const firebaseIds = new Set(firebaseArray.map(r => `${r.timestamp}-${r.email_usuario}-${r.tipo}`));
-                            
-                            let novosDados = false;
-                            
-                            // Enviar registros locais que não estão no Firebase
-                            dadosLocaisArray.forEach(registro => {
-                                const id = `${registro.timestamp}-${registro.email_usuario}-${registro.tipo}`;
-                                if (!firebaseIds.has(id)) {
-                                    console.log('📤 Enviando registro local para Firebase:', id);
-                                    window.db.ref('registrosAtividades').push(registro).catch(err => {
-                                        console.warn('Erro ao enviar registro:', err);
-                                    });
-                                    novosDados = true;
-                                }
-                            });
-                            
-                            if (novosDados) {
-                                console.log('✅ Sincronização localStorage → Firebase concluída');
-                            } else {
-                                console.log('ℹ️  localStorage já está sincronizado com Firebase');
-                            }
-                        });
-                    }
-                } catch (e) {
-                    console.error('❌ Erro ao sincronizar localStorage com Firebase:', e);
-                }
-            }
-        }
+        // ✅ REMOVIDO: Sincronização localStorage ↔ Firebase (causava duplicatas)
+        // Os dados já são salvos diretamente em Firebase e localStorage pelas funções de rastreio
+        // function sincronizarLocalStorageComFirebase() { ... }
     </script>
     
     <script src="firebase-auth.js"></script>
@@ -931,10 +817,17 @@
                     <label>Tipo de Ação:</label>
                     <select id="filterAcao">
                         <option value="">-- Todas as ações --</option>
-                        <option value="INICIOU">Iniciou Atividade</option>
-                        <option value="FINALIZOU">Finalizou Atividade</option>
-                        <option value="PAUSOU">Pausou Atividade</option>
+                        <option value="INICIO">Iniciou Atividade</option>
+                        <option value="FIM">Finalizou Atividade</option>
+                        <option value="PAUSA">Pausou Atividade</option>
                         <option value="RETOMOU">Retomou Atividade</option>
+                        <option value="EXCLUSAO">Deletou Atividade</option>
+                        <option value="LOGIN">Login</option>
+                        <option value="LOGOUT">Logout</option>
+                        <!-- Compatibilidade com nomes antigos -->
+                        <option value="INICIOU">Iniciou (antigo)</option>
+                        <option value="FINALIZOU">Finalizou (antigo)</option>
+                        <option value="PAUSOU">Pausou (antigo)</option>
                     </select>
                 </div>
                 <div class="filter-group">
@@ -1015,6 +908,47 @@
                     // ✅ Mapear tipos de ações com seus detalhes
                     const tipo = registro.tipo || 'DESCONHECIDO';
                     switch (tipo) {
+                        case 'INICIO':
+                            acaoTexto = '▶️ Iniciou';
+                            acaoBadgeClass = 'iniciou';
+                            detalhes = `${registro.descricao || 'Sem descrição'}`;
+                            break;
+                        case 'FIM':
+                            acaoTexto = '✅ Finalizou';
+                            acaoBadgeClass = 'finalizou';
+                            detalhes = `Duração: ${registro.duracao || '-'} | ${registro.descricao || ''}`;
+                            break;
+                        case 'PAUSA':
+                            acaoTexto = '⏸️ Pausou';
+                            acaoBadgeClass = 'pausou';
+                            detalhes = `Motivo: ${registro.motivo_pausa || '-'} | Grupo: ${registro.grupo || '-'}`;
+                            break;
+                        case 'RETOMOU':
+                            acaoTexto = '▶️ Retomou';
+                            acaoBadgeClass = 'retomou';
+                            detalhes = `Pausa: ${registro.tempoPausa || '-'}`;
+                            break;
+                        case 'EXCLUSAO':
+                            acaoTexto = '❌ Deletou';
+                            acaoBadgeClass = 'exclusao';
+                            detalhes = `Motivo: ${registro.motivo_exclusao || '-'}`;
+                            break;
+                        case 'LOGIN':
+                            acaoTexto = '🔓 Login';
+                            acaoBadgeClass = 'login';
+                            detalhes = 'Conectado ao sistema';
+                            break;
+                        case 'LOGOUT':
+                            acaoTexto = '🚪 Logout';
+                            acaoBadgeClass = 'logout';
+                            detalhes = 'Desconectado do sistema';
+                            break;
+                        case 'ACESSO_PAGINA':
+                            acaoTexto = '📄 Acessou';
+                            acaoBadgeClass = 'acesso';
+                            detalhes = `Página: ${registro.pagina || 'Desconhecida'}`;
+                            break;
+                        // Manter compatibilidade com nomes antigos
                         case 'INICIOU':
                             acaoTexto = '▶️ Iniciou';
                             acaoBadgeClass = 'iniciou';
@@ -1029,21 +963,6 @@
                             acaoTexto = '⏸️ Pausou';
                             acaoBadgeClass = 'pausou';
                             detalhes = `Motivo: ${registro.motivo || '-'} | Grupo: ${registro.grupo || '-'}`;
-                            break;
-                        case 'RETOMOU':
-                            acaoTexto = '▶️ Retomou';
-                            acaoBadgeClass = 'retomou';
-                            detalhes = `Pausa: ${registro.tempoPausa || '-'}`;
-                            break;
-                        case 'LOGIN':
-                            acaoTexto = '🔓 Login';
-                            acaoBadgeClass = 'login';
-                            detalhes = 'Conectado ao sistema';
-                            break;
-                        case 'LOGOUT':
-                            acaoTexto = '🚪 Logout';
-                            acaoBadgeClass = 'logout';
-                            detalhes = 'Desconectado do sistema';
                             break;
                         default:
                             acaoTexto = tipo;
@@ -1141,23 +1060,42 @@
                 let acao = '';
                 let detalhes = '';
 
-                switch (registro.tipo) {
+                const tipo = registro.tipo || 'DESCONHECIDO';
+                switch (tipo) {
+                    case 'INICIO':
                     case 'INICIOU':
                         acao = 'Iniciou';
                         detalhes = registro.descricao;
                         break;
+                    case 'FIM':
                     case 'FINALIZOU':
                         acao = 'Finalizou';
                         detalhes = `Duração: ${registro.duracao}`;
                         break;
+                    case 'PAUSA':
                     case 'PAUSOU':
                         acao = 'Pausou';
-                        detalhes = `Motivo: ${registro.motivo}`;
+                        detalhes = `Motivo: ${registro.motivo_pausa || registro.motivo}`;
                         break;
                     case 'RETOMOU':
                         acao = 'Retomou';
                         detalhes = `Pausa: ${registro.tempoPausa}`;
                         break;
+                    case 'EXCLUSAO':
+                        acao = 'Deletou';
+                        detalhes = `Motivo: ${registro.motivo_exclusao}`;
+                        break;
+                    case 'LOGIN':
+                        acao = 'Login';
+                        detalhes = 'Conectado ao sistema';
+                        break;
+                    case 'LOGOUT':
+                        acao = 'Logout';
+                        detalhes = 'Desconectado do sistema';
+                        break;
+                    default:
+                        acao = tipo;
+                        detalhes = registro.descricao || '-';
                 }
 
                 csvContent += `"${data}","${registro.nome_usuario}","${registro.email_usuario}","${acao}","#${registro.ticket}","${detalhes}"\n`;

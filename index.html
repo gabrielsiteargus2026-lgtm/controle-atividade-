@@ -1376,11 +1376,14 @@
             }));
 
             if (window.FIREBASE_OK) {
-                window.db.ref('/').set({
+                // ✅ NÃO usar .set() que sobrescreve tudo
+                // Usar .update() para atualizar apenas estes campos
+                window.db.ref('/').update({
                     atividades: atividades,
                     atividadesEmAndamento: emAndamentoParaSalvar,
                     kanbanState: kanbanState,
                     historicoPausas: historicoPausas
+                    // ⚠️ NÃO incluir registrosAtividades aqui - deixar que a função registrarRastreioAtividade cuide
                 }).catch(err => console.error('Erro ao salvar no Firebase:', err));
             } else {
                 localStorage.setItem('atividades', JSON.stringify(atividades));
@@ -1443,9 +1446,12 @@
             atualizarKanban();
             iniciarCronometro(novaAtividade.id);
 
-            // ✅ Registrar atividade do usuário
-            // O usuário logado (usuarioAtual) será sempre usado
-            registrarAtividadeUsuario('INICIOU', ticket, descricao);
+            // ✅ Registrar início de atividade com rastreio completo
+            // Usa a nova função que registra como INICIO em vez de INICIOU
+            registrarInicioAtividade(ticket, descricao, {
+                colaborador: nome,
+                usuario_logado: usuarioAtual?.email
+            });
 
             mostrarAlerta('sucesso', `Atividade iniciada para o ticket ${ticket}`);
             
@@ -1556,12 +1562,13 @@
             atualizarTabela();
             atualizarKanban();
 
-            // ✅ Registrar atividade do usuário
-            // O usuário logado (usuarioAtual) será sempre usado
-            registrarAtividadeUsuario('FINALIZOU', atividade.ticket, atividade.descricao, {
+            // ✅ Registrar fim de atividade com rastreio completo
+            // Usa a nova função que registra como FIM em vez de FINALIZOU
+            registrarFimAtividade(atividade.ticket, atividade.descricao, {
                 duracao: formatarTempo(duracao),
                 observacao: atividade.observacao,
-                colaboradores: colaboradoresAuxiliares || []
+                colaboradores: colaboradoresAuxiliares || [],
+                usuario_logado: usuarioAtual?.email
             });
 
             if (colaboradoresAuxiliares && colaboradoresAuxiliares.length > 0) {
@@ -1817,13 +1824,13 @@
             atualizarKanban();
             fecharModalPausarAtividade();
 
-            // ✅ Registrar atividade do usuário
-            // O usuário logado (usuarioAtual) será sempre usado
+            // ✅ Registrar pausa de atividade com rastreio completo
+            // Usa a nova função que registra como PAUSA em vez de PAUSOU
             const atividadePausa = atividadesEmAndamento.find(a => a && a.id === atividadePausando);
             if (atividadePausa) {
-                registrarAtividadeUsuario('PAUSOU', atividadePausa.ticket, atividadePausa.descricao, {
-                    motivo: motivo,
-                    grupo: grupoNormalizado
+                registrarPausaAtividade(atividadePausa.ticket, atividadePausa.descricao, motivo, {
+                    grupo: grupoNormalizado,
+                    usuario_logado: usuarioAtual?.email
                 });
             }
 
@@ -1865,12 +1872,12 @@
             salvarDados();
             atualizarKanban();
 
-            // ✅ Registrar atividade do usuário
-            // O usuário logado (usuarioAtual) será sempre usado
+            // ✅ Registrar retomada de atividade com rastreio
             const atividadeRetoma = atividadesEmAndamento.find(a => a && a.id === atividadeId);
             if (atividadeRetoma) {
-                registrarAtividadeUsuario('RETOMOU', atividadeRetoma.ticket, atividadeRetoma.descricao, {
-                    tempoPausa: estadoPausa && estadoPausa.tempoInicioPausa ? formatarTempo(agora.getTime() - estadoPausa.tempoInicioPausa) : '-'
+                registrarRastreioAtividade('RETOMOU', atividadeRetoma.ticket, atividadeRetoma.descricao, {
+                    tempoPausa: estadoPausa && estadoPausa.tempoInicioPausa ? formatarTempo(agora.getTime() - estadoPausa.tempoInicioPausa) : '-',
+                    usuario_logado: usuarioAtual?.email
                 });
             }
 

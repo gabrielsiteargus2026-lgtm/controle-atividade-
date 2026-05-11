@@ -491,3 +491,157 @@ function registrarAcessoPagina() {
     console.log(`📄 Acesso registrado: ${descricao}`);
 }
 
+/**
+ * ========================================
+ * 🔍 SISTEMA COMPLETO DE RASTREIO DO USUÁRIO
+ * ========================================
+ */
+
+/**
+ * Registrar início de atividade com rastreio completo
+ * Tipos: INICIO, FIM, PAUSA, EXCLUSAO
+ */
+function registrarRastreioAtividade(tipoRastreio, ticket, descricao, detalhesAdicionais = {}) {
+    if (!usuarioAtual) {
+        console.warn('❌ Usuário não autenticado, não é possível rastrear atividade');
+        return;
+    }
+
+    const tiposValidos = ['INICIO', 'FIM', 'PAUSA', 'EXCLUSAO', 'RETOMOU'];
+    if (!tiposValidos.includes(tipoRastreio)) {
+        console.warn(`⚠️ Tipo de rastreio inválido: ${tipoRastreio}`);
+        return;
+    }
+
+    const registro = {
+        timestamp: new Date().toISOString(),
+        usuario_id: usuarioAtual.uid,
+        email_usuario: usuarioAtual.email,
+        nome_usuario: usuarioAtual.nome,
+        tipo: tipoRastreio,  // INICIO, FIM, PAUSA, EXCLUSAO, RETOMOU
+        ticket: ticket || '-',
+        descricao: descricao,
+        rastreio: true,  // Marcador para identificar registros de rastreio
+        ...detalhesAdicionais
+    };
+
+    // Salvar em localStorage
+    const registrosJSON = localStorage.getItem('registrosAtividades');
+    let registros = registrosJSON ? JSON.parse(registrosJSON) : [];
+    registros.push(registro);
+    localStorage.setItem('registrosAtividades', JSON.stringify(registros));
+
+    // Salvar em Firebase se disponível
+    if (window.FIREBASE_OK && window.db) {
+        window.db.ref('registrosAtividades').push(registro).then(() => {
+            console.log(`✅ Rastreio ${tipoRastreio} registrado em Firebase`);
+        }).catch(err => {
+            console.error(`❌ Erro ao registrar rastreio ${tipoRastreio}:`, err);
+        });
+    }
+
+    console.log(`📌 Rastreio de atividade registrado:`, tipoRastreio, ticket);
+}
+
+/**
+ * Registrar início de atividade com rastreio
+ */
+function registrarInicioAtividade(ticket, descricao, detalhes = {}) {
+    registrarRastreioAtividade('INICIO', ticket, descricao, {
+        status: 'em_andamento',
+        ...detalhes
+    });
+}
+
+/**
+ * Registrar fim de atividade com rastreio
+ */
+function registrarFimAtividade(ticket, descricao, detalhes = {}) {
+    registrarRastreioAtividade('FIM', ticket, descricao, {
+        status: 'finalizado',
+        ...detalhes
+    });
+}
+
+/**
+ * Registrar pausa de atividade com rastreio
+ */
+function registrarPausaAtividade(ticket, descricao, motivo = '', detalhes = {}) {
+    registrarRastreioAtividade('PAUSA', ticket, descricao, {
+        status: 'pausado',
+        motivo_pausa: motivo,
+        ...detalhes
+    });
+}
+
+/**
+ * Registrar exclusão de atividade com rastreio
+ */
+function registrarExclusaoAtividade(ticket, descricao, motivo = '', detalhes = {}) {
+    registrarRastreioAtividade('EXCLUSAO', ticket, descricao, {
+        status: 'excluido',
+        motivo_exclusao: motivo,
+        data_exclusao: new Date().toISOString(),
+        ...detalhes
+    });
+}
+
+/**
+ * Obter nome da página atual
+ */
+function obterNomePaginaAtual() {
+    const caminhoAtual = window.location.pathname;
+    const nomeArquivo = caminhoAtual.split('/').pop() || 'index.html';
+    
+    const mapeamento = {
+        'index.html': 'Dashboard',
+        'login.html': 'Login',
+        'atividades-usuarios.html': 'Atividades',
+        'admin.html': 'Admin',
+        'api-ranking.html': 'Ranking',
+        'performance.html': 'Performance',
+        'historico.html': 'Histórico',
+        'dashboard-ranking.html': 'Dashboard Ranking',
+        '': 'Dashboard'
+    };
+    
+    return mapeamento[nomeArquivo] || nomeArquivo.replace('.html', '');
+}
+
+/**
+ * Configurar rastreio automático de saída da página (antes de unload)
+ */
+function configurarRastreioSaidaPagina() {
+    window.addEventListener('beforeunload', function() {
+        if (usuarioAtual) {
+            // Registrar saída de forma síncrona antes de descarregar
+            const registro = {
+                timestamp: new Date().toISOString(),
+                usuario_id: usuarioAtual.uid,
+                email_usuario: usuarioAtual.email,
+                nome_usuario: usuarioAtual.nome,
+                tipo: 'SAIDA_PAGINA',
+                ticket: '-',
+                descricao: `Usuário saiu da página "${obterNomePaginaAtual()}"`,
+                pagina: obterNomePaginaAtual(),
+                rastreio: true
+            };
+
+            // Salvar imediatamente em localStorage
+            const registrosJSON = localStorage.getItem('registrosAtividades');
+            let registros = registrosJSON ? JSON.parse(registrosJSON) : [];
+            registros.push(registro);
+            localStorage.setItem('registrosAtividades', JSON.stringify(registros));
+
+            // Tentar salvar em Firebase (pode não completar antes de unload)
+            if (window.FIREBASE_OK && window.db) {
+                try {
+                    window.db.ref('registrosAtividades').push(registro);
+                } catch (e) {
+                    console.warn('Não foi possível registrar saída em Firebase');
+                }
+            }
+        }
+    });
+}
+
