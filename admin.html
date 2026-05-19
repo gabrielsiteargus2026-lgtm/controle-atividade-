@@ -744,47 +744,78 @@
                 modalLimparHistorico.style.display = 'none';
             });
 
-            btnConfirmarHistorico.addEventListener('click', () => {
+            // Função para limpar histórico completamente
+            function limparHistoricoCompletamente() {
+                console.log('🔄 Iniciando limpeza de histórico...');
+                btnConfirmarHistorico.disabled = true;
+                btnConfirmarHistorico.textContent = 'Limpando...';
+                
                 // Desinscrever de listeners ANTES de remover
                 desinscreverListeners();
                 
+                // Remover do localStorage IMEDIATAMENTE
+                console.log('📍 Removendo do localStorage...');
+                localStorage.removeItem('atividades');
+                localStorage.removeItem('atividadesEmAndamento');
+                localStorage.removeItem('kanbanState');
+                localStorage.removeItem('historicoPausas');
+                localStorage.removeItem('contadoresPausas');
+                
+                // Atualizar estado local
+                atividades = [];
+                atividadesEmAndamento = [];
+                kanbanState = {};
+                historicoPausas = [];
+                resetarContadores();
+                console.log('✅ localStorage limpo');
+                
                 if (window.FIREBASE_OK) {
+                    console.log('📍 Removendo do Firebase...');
                     // Remover múltiplos nós relacionados ao histórico
                     Promise.all([
-                        window.db.ref('atividades').remove(),
-                        window.db.ref('atividadesEmAndamento').remove(),
-                        window.db.ref('kanbanState').remove()
+                        window.db.ref('atividades').remove().catch(e => console.log('❌ Erro removendo atividades:', e)),
+                        window.db.ref('atividadesEmAndamento').remove().catch(e => console.log('❌ Erro removendo em andamento:', e)),
+                        window.db.ref('kanbanState').remove().catch(e => console.log('❌ Erro removendo kanban:', e)),
+                        window.db.ref('historicoPausas').remove().catch(e => console.log('❌ Erro removendo pausas:', e))
                     ]).then(() => {
                         console.log('✅ Histórico de atividades removido completamente do Firebase');
-                        atividades = [];
-                        atividadesEmAndamento = [];
-                        kanbanState = {};
-                        resetarContadores();
                         modalLimparHistorico.style.display = 'none';
+                        btnConfirmarHistorico.disabled = false;
+                        btnConfirmarHistorico.textContent = 'Limpar Permanentemente';
                         
                         // Reinscrever após limpeza
                         setTimeout(() => {
                             carregarDados();
-                            alert('Histórico de atividades limpo com sucesso! Contadores resetados.');
-                        }, 500);
+                            alert('✅ Histórico de atividades limpo com sucesso! Contadores resetados.\n\nA página será recarregada para sincronizar os dados.');
+                            // Aguarda um pouco e recarrega a página
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
+                        }, 1000);
                     }).catch((error) => {
-                        console.error('❌ Erro ao limpar histórico:', error);
-                        alert('Erro ao limpar histórico. Tente novamente.');
+                        console.error('❌ Erro ao limpar histórico no Firebase:', error);
+                        btnConfirmarHistorico.disabled = false;
+                        btnConfirmarHistorico.textContent = 'Limpar Permanentemente';
+                        alert('Erro ao limpar histórico no Firebase, mas localStorage foi limpo.\n\nTentando recarregar...');
                         // Reinscrever em caso de erro
-                        carregarDados();
+                        setTimeout(() => {
+                            carregarDados();
+                            window.location.reload();
+                        }, 1500);
                     });
                 } else {
-                    localStorage.removeItem('atividades');
-                    localStorage.removeItem('atividadesEmAndamento');
-                    localStorage.removeItem('kanbanState');
-                    atividades = [];
-                    atividadesEmAndamento = [];
-                    kanbanState = {};
-                    resetarContadores();
+                    console.log('⚠️ Firebase não disponível, apenas localStorage foi limpo');
                     modalLimparHistorico.style.display = 'none';
-                    alert('Histórico de atividades limpo com sucesso! Contadores resetados.');
+                    btnConfirmarHistorico.disabled = false;
+                    btnConfirmarHistorico.textContent = 'Limpar Permanentemente';
+                    alert('✅ Histórico de atividades limpo com sucesso!\n\nA página será recarregada para sincronizar os dados.');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
                 }
-            });
+            }
+
+            btnConfirmarHistorico.addEventListener('click', limparHistoricoCompletamente);
 
             // ===== LIMPAR HISTÓRICO DE PAUSAS =====
             btnLimparPausas.addEventListener('click', () => {
@@ -795,36 +826,63 @@
                 modalLimparPausas.style.display = 'none';
             });
 
-            btnConfirmarPausas.addEventListener('click', () => {
+            // Função para limpar pausas completamente
+            function limparPausasCompletamente() {
+                console.log('🔄 Iniciando limpeza de pausas...');
+                btnConfirmarPausas.disabled = true;
+                btnConfirmarPausas.textContent = 'Limpando...';
+                
                 // Desinscrever de listeners ANTES de remover
                 desinscreverListeners();
                 
+                // Remover do localStorage IMEDIATAMENTE
+                console.log('📍 Removendo pausas do localStorage...');
+                localStorage.removeItem('historicoPausas');
+                
+                // Atualizar estado local
+                historicoPausas = [];
+                resetarContadores();
+                console.log('✅ Pausas removidas do localStorage');
+                
                 if (window.FIREBASE_OK) {
+                    console.log('📍 Removendo pausas do Firebase...');
                     window.db.ref('historicoPausas').remove().then(() => {
                         console.log('✅ Histórico de pausas removido do Firebase');
-                        historicoPausas = [];
-                        resetarContadores();
                         modalLimparPausas.style.display = 'none';
+                        btnConfirmarPausas.disabled = false;
+                        btnConfirmarPausas.textContent = 'Limpar Permanentemente';
                         
                         // Reinscrever após limpeza
                         setTimeout(() => {
                             carregarDados();
-                            alert('Histórico de pausas limpo com sucesso! Contadores resetados.');
-                        }, 500);
+                            alert('✅ Histórico de pausas limpo com sucesso! Contadores resetados.\n\nA página será recarregada para sincronizar os dados.');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
+                        }, 1000);
                     }).catch((error) => {
-                        console.error('❌ Erro ao limpar pausas:', error);
-                        alert('Erro ao limpar histórico de pausas. Tente novamente.');
-                        // Reinscrever em caso de erro
-                        carregarDados();
+                        console.error('❌ Erro ao limpar pausas no Firebase:', error);
+                        btnConfirmarPausas.disabled = false;
+                        btnConfirmarPausas.textContent = 'Limpar Permanentemente';
+                        alert('Erro ao limpar pausas no Firebase, mas localStorage foi limpo.\n\nTentando recarregar...');
+                        setTimeout(() => {
+                            carregarDados();
+                            window.location.reload();
+                        }, 1500);
                     });
                 } else {
-                    localStorage.removeItem('historicoPausas');
-                    historicoPausas = [];
-                    resetarContadores();
+                    console.log('⚠️ Firebase não disponível, apenas localStorage foi limpo');
                     modalLimparPausas.style.display = 'none';
-                    alert('Histórico de pausas limpo com sucesso! Contadores resetados.');
+                    btnConfirmarPausas.disabled = false;
+                    btnConfirmarPausas.textContent = 'Limpar Permanentemente';
+                    alert('✅ Histórico de pausas limpo com sucesso!\n\nA página será recarregada para sincronizar os dados.');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
                 }
-            });
+            }
+
+            btnConfirmarPausas.addEventListener('click', limparPausasCompletamente);
 
             // ===== LIMPAR CONTADORES DE PAUSAS =====
             btnLimparContadores.addEventListener('click', () => {
