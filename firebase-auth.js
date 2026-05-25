@@ -206,122 +206,88 @@ function criarWidgetUsuario(containerId = 'usuarioWidget') {
         <style>
             .usuario-widget {
                 position: fixed;
-                top: 10px;
+                top: 15px;
                 right: 20px;
-                background: white;
+                background: transparent;
                 border-radius: 8px;
-                padding: 8px 12px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                padding: 0;
                 z-index: 999;
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-                min-width: 180px;
-            }
-
-            .usuario-widget-nome {
-                font-weight: 600;
-                font-size: 0.9em;
-                color: #2c3e50;
-                margin: 0 0 1px 0;
-                padding: 0;
-                line-height: 1.1;
+                display: flex;
+                align-items: center;
+                gap: 12px;
             }
 
             .usuario-widget-email {
                 font-size: 0.75em;
-                color: #5b8ec6;
-                margin: 0 0 6px 0;
+                color: #666;
+                margin: 0;
                 padding: 0;
-                line-height: 1.1;
-                word-break: break-word;
-            }
-
-            .usuario-widget-divider {
-                height: 1px;
-                background: #e0e0e0;
-                margin: 6px 0;
+                line-height: 1;
+                word-break: break-all;
             }
 
             .usuario-widget-btn {
-                padding: 6px 10px;
-                font-size: 0.75em;
-                background: #ff6b6b;
-                color: white;
-                border: none;
-                border-radius: 5px;
+                padding: 5px 10px;
+                font-size: 0.7em;
+                background: transparent;
+                color: #5b8ec6;
+                border: 1px solid #5b8ec6;
+                border-radius: 4px;
                 cursor: pointer;
-                font-weight: 600;
-                width: 100%;
+                font-weight: 500;
                 transition: all 0.2s ease;
+                white-space: nowrap;
             }
 
             .usuario-widget-btn:hover {
-                background: #ff5252;
-                box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
-                transform: translateY(-1px);
+                background: #5b8ec6;
+                color: white;
+                box-shadow: 0 2px 6px rgba(91, 142, 198, 0.3);
             }
 
             .usuario-widget-btn:active {
-                transform: translateY(0);
+                transform: scale(0.98);
             }
 
             @media (max-width: 768px) {
                 .usuario-widget {
-                    top: 8px;
+                    top: 10px;
                     right: 15px;
-                    min-width: 160px;
-                    padding: 7px 10px;
-                }
-
-                .usuario-widget-nome {
-                    font-size: 0.85em;
+                    gap: 8px;
                 }
 
                 .usuario-widget-email {
-                    font-size: 0.7em;
-                    margin: 0 0 5px 0;
+                    font-size: 0.65em;
                 }
 
                 .usuario-widget-btn {
-                    padding: 5px 8px;
-                    font-size: 0.7em;
-                }
-
-                .usuario-widget-divider {
-                    margin: 5px 0;
+                    padding: 4px 8px;
+                    font-size: 0.65em;
                 }
             }
 
             @media (max-width: 480px) {
                 .usuario-widget {
-                    top: 5px;
+                    top: 8px;
                     right: 10px;
-                    min-width: 150px;
-                    padding: 6px 9px;
-                }
-
-                .usuario-widget-nome {
-                    font-size: 0.8em;
+                    gap: 6px;
+                    flex-direction: column;
+                    align-items: flex-end;
                 }
 
                 .usuario-widget-email {
-                    font-size: 0.65em;
-                    margin: 0 0 4px 0;
+                    font-size: 0.6em;
                 }
 
                 .usuario-widget-btn {
-                    padding: 4px 7px;
-                    font-size: 0.65em;
-                }
-
-                .usuario-widget-divider {
-                    margin: 4px 0;
+                    padding: 3px 6px;
+                    font-size: 0.6em;
                 }
             }
         </style>
         <div class="usuario-widget">
-            <p class="usuario-widget-nome">${usuarioAtual.nome}</p>
-            <p class="usuario-widget-email">${usuarioAtual.email}</p>
-            <div class="usuario-widget-divider"></div>
+            <p class="usuario-widget-email">gabriel.faria@argusolutions.com.br</p>
             <button onclick="fazerLogout()" class="usuario-widget-btn">Sair</button>
         </div>
     `;

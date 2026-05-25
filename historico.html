@@ -388,10 +388,11 @@
                     });
                     atividades = Object.values(unicos);
                     
-                    // Ordenar por data de fim (mais recente primeiro)
+                    // Ordenar por data e hora (mais recente primeiro)
                     atividades.sort((a, b) => {
-                        const dataA = a.dataFim ? new Date(`${a.dataFim} ${a.horaFim}`) : new Date(0);
-                        const dataB = b.dataFim ? new Date(`${b.dataFim} ${b.horaFim}`) : new Date(0);
+                        // Se tem dataFim, usar data de fim; senão, usar data de início
+                        const dataA = a.dataFim ? new Date(`${a.dataFim} ${a.horaFim}`) : new Date(`${a.dataInicio} ${a.horaInicio}`);
+                        const dataB = b.dataFim ? new Date(`${b.dataFim} ${b.horaFim}`) : new Date(`${b.dataInicio} ${b.horaInicio}`);
                         return dataB - dataA;
                     });
 
@@ -403,10 +404,11 @@
                 const dadosLocal = localStorage.getItem('atividades');
                 atividades = dadosLocal ? JSON.parse(dadosLocal) : [];
                 
-                // Ordenar por data
+                // Ordenar por data e hora (mais recente primeiro)
                 atividades.sort((a, b) => {
-                    const dataA = a.dataFim ? new Date(`${a.dataFim} ${a.horaFim}`) : new Date(0);
-                    const dataB = b.dataFim ? new Date(`${b.dataFim} ${b.horaFim}`) : new Date(0);
+                    // Se tem dataFim, usar data de fim; senão, usar data de início
+                    const dataA = a.dataFim ? new Date(`${a.dataFim} ${a.horaFim}`) : new Date(`${a.dataInicio} ${a.horaInicio}`);
+                    const dataB = b.dataFim ? new Date(`${b.dataFim} ${b.horaFim}`) : new Date(`${b.dataInicio} ${b.horaInicio}`);
                     return dataB - dataA;
                 });
                 
