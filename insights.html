@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insights - Controle</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="firebase-auth.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Menu Lateral */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: #2c3e50;
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .sidebar-logo {
+            width: 100%;
+            height: 80px;
+            object-fit: contain;
+            margin-bottom: 30px;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 10px;
+        }
+
+        .sidebar-menu a {
+            display: block;
+            padding: 12px 15px;
+            color: #ecf0f1;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .sidebar-menu a:hover {
+            background: #5b8ec6;
+            color: white;
+            padding-left: 20px;
+        }
+
+        .sidebar-menu a.active {
+            background: #5b8ec6;
+            color: white;
+            border-left: 4px solid #fff;
+        }
+
+        .container {
+            max-width: calc(100% - 300px);
+            margin: 0 auto;
+            margin-left: 280px;
+        }
+
+        .header {
+            position: relative;
+            margin-bottom: 30px;
+            padding-top: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 5px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.05em;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        /* KPI Cards */
+        .kpi-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .kpi-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 25px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border-left: 4px solid #5b8ec6;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .kpi-card.success {
+            border-left-color: #51cf66;
+        }
+
+        .kpi-card.warning {
+            border-left-color: #ffc93c;
+        }
+
+        .kpi-card.danger {
+            border-left-color: #ff6b6b;
+        }
+
+        .kpi-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .kpi-label {
+            color: #666;
+            font-size: 0.95em;
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .kpi-subtitle {
+            font-size: 0.85em;
+            color: #999;
+            margin-top: 8px;
+        }
+
+        /* Gráficos */
+        .chart-wrapper {
+            position: relative;
+            height: 350px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chart-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 25px;
+            position: relative;
+        }
+
+        .chart-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .chart-legend {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+        }
+
+        svg {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* Tabelas */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        thead {
+            background: #5b8ec6;
+            color: white;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tbody tr:hover {
+            background: #f5f5f5;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d3f9d8;
+            color: #2f9e44;
+        }
+
+        .badge-warning {
+            background: #fff3bf;
+            color: #856404;
+        }
+
+        .badge-danger {
+            background: #ffe0e0;
+            color: #c92a2a;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .filter-section {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-size: 0.9em;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+
+        button {
+            background: #5b8ec6;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #4a7ba7;
+        }
+
+        .section-title {
+            font-size: 1.4em;
+            color: #2c3e50;
+            margin: 30px 0 15px 0;
+            font-weight: 600;
+            border-bottom: 2px solid #5b8ec6;
+            padding-bottom: 10px;
+        }
+
+        @media (max-width: 1200px) {
+            .container {
+                max-width: 100%;
+                margin-left: 0;
+            }
+
+            .sidebar {
+                width: 200px;
+            }
+
+            .chart-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+
+            .kpi-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Menu Lateral -->
+    <aside class="sidebar">
+        <img src="argus-logo 1.png" alt="Argus" class="sidebar-logo">
+        <nav>
+            <ul class="sidebar-menu">
+                <li><a href="index.html">Controle de Atividade</a></li>
+                <li><a href="historico.html">Histórico</a></li>
+                <li><a href="performance.html">Performance</a></li>
+                <li><a href="insights.html" class="active">Insights</a></li>
+                <li><a href="admin.html">Administrador</a></li>
+                <li><a href="atividades-usuarios.html">Atividades dos Usuários</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <div class="container">
+        <div class="header">
+            <h1>📊 Insights de Atividades</h1>
+            <p>Análise detalhada de métricas e performance</p>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filter-section">
+            <div class="filter-group">
+                <label for="filtroColaborador">Colaborador:</label>
+                <select id="filtroColaborador">
+                    <option value="">-- Todos --</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filtroStatus">Status:</label>
+                <select id="filtroStatus">
+                    <option value="">-- Todos --</option>
+                    <option value="concluida">Concluída</option>
+                    <option value="pendente">Pendente</option>
+                </select>
+            </div>
+            <button onclick="aplicarFiltros()">Aplicar Filtros</button>
+            <button onclick="resetarFiltros()" style="background: #999;">Resetar</button>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-container" id="kpiContainer"></div>
+
+        <!-- Seção de Gráficos -->
+        <h2 class="section-title">📈 Gráficos e Análises</h2>
+        <div class="chart-container">
+            <!-- Gráfico de Colunas -->
+            <div class="chart-card">
+                <div class="chart-title">Atividades por Colaborador</div>
+                <div class="chart-wrapper">
+                    <svg id="graficoColuna" width="100%" height="300" viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg"></svg>
+                </div>
+                <div class="chart-legend" id="legendaColuna"></div>
+            </div>
+
+            <!-- Gráfico de Pizza -->
+            <div class="chart-card">
+                <div class="chart-title">Status das Atividades</div>
+                <div class="chart-wrapper">
+                    <svg id="graficoPizza" width="100%" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg"></svg>
+                </div>
+                <div class="chart-legend" id="legendaPizza"></div>
+            </div>
+        </div>
+
+        <!-- Gráficos Adicionais -->
+        <div class="chart-container">
+            <!-- Tempo Total por Colaborador -->
+            <div class="chart-card">
+                <div class="chart-title">Tempo Total por Colaborador (Barras Horizontal)</div>
+                <div class="chart-wrapper">
+                    <svg id="graficoTempoColaborador" width="100%" height="300" viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg"></svg>
+                </div>
+                <div class="chart-legend" id="legendaTempoColaborador"></div>
+            </div>
+
+            <!-- Distribuição de Tickets -->
+            <div class="chart-card">
+                <div class="chart-title">Distribuição de Tickets por Colaborador (Donut)</div>
+                <div class="chart-wrapper">
+                    <svg id="graficoDonut" width="100%" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg"></svg>
+                </div>
+                <div class="chart-legend" id="legendaDonut"></div>
+            </div>
+        </div>
+
+        <!-- Gráficos de Análise -->
+        <div class="chart-container">
+            <!-- Top Tickets -->
+            <div class="chart-card">
+                <div class="chart-title">Top 5 Tickets por Tempo</div>
+                <div class="chart-wrapper">
+                    <svg id="graficoTopTickets" width="100%" height="300" viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg"></svg>
+                </div>
+                <div class="chart-legend" id="legendaTopTickets"></div>
+            </div>
+
+            <!-- Taxa Média de Conclusão por Colaborador -->
+            <div class="chart-card">
+                <div class="chart-title">Taxa de Conclusão (%)</div>
+                <div class="chart-wrapper">
+                    <svg id="graficoTaxaConclusao" width="100%" height="300" viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg"></svg>
+                </div>
+                <div class="chart-legend" id="legendaTaxaConclusao"></div>
+            </div>
+        </div>
+
+        <!-- Cartões de Resumo Rápido -->
+        <h2 class="section-title">📊 Cartões de Análise Rápida</h2>
+        <div class="kpi-container" id="cartoesResumoRapido"></div>
+
+        <!-- Tabela de Resumo -->
+        <h2 class="section-title">Resumo por Colaborador</h2>
+        <div class="card">
+            <div class="table-container">
+                <table id="tabelaResumo">
+                    <thead>
+                        <tr>
+                            <th>Colaborador</th>
+                            <th>Atividades</th>
+                            <th>Concluídas</th>
+                            <th>Tempo Total</th>
+                            <th>Tempo Médio</th>
+                            <th>Taxa de Conclusão</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaResumoBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tabela de Top 10 Atividades -->
+        <h2 class="section-title">Top 10 Atividades Mais Longas</h2>
+        <div class="card">
+            <div class="table-container">
+                <table id="tabelaTop10">
+                    <thead>
+                        <tr>
+                            <th>Ticket</th>
+                            <th>Colaborador</th>
+                            <th>Duração</th>
+                            <th>Data</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaTop10Body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ⭐ Inicializar Firebase
+        if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('COLE_AQUI')) {
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(FIREBASE_CONFIG);
+                }
+                window.auth = firebase.auth();
+                window.db = firebase.database();
+                window.FIREBASE_OK = true;
+                console.log('✅ Firebase inicializado com sucesso');
+            } catch (error) {
+                console.error('❌ Erro ao inicializar Firebase:', error);
+                window.FIREBASE_OK = false;
+            }
+        } else {
+            window.FIREBASE_OK = false;
+            console.warn('⚠️ Firebase não configurado. Usando apenas localStorage.');
+        }
+
+        // Cores para gráficos
+        const CORES = ['#5b8ec6', '#51cf66', '#ffc93c', '#ff6b6b', '#a78bfa', '#f472b6', '#06b6d4', '#ec4899'];
+        let atividadesGlobais = [];
+        let atividadesFiltradas = [];
+
+        // 🛡️ Fallback para localStorage bloqueado
+        let memoryStorage = {};
+        function obterDoStorage(key) {
+            try {
+                const valor = localStorage.getItem(key);
+                return valor ? JSON.parse(valor) : null;
+            } catch (e) {
+                console.warn(`⚠️ localStorage bloqueado. Usando memória para ${key}`);
+                return memoryStorage[key] ? JSON.parse(memoryStorage[key]) : null;
+            }
+        }
+
+        function salvarNoStorage(key, value) {
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+            } catch (e) {
+                console.warn(`⚠️ localStorage bloqueado. Salvando em memória para ${key}`);
+                memoryStorage[key] = JSON.stringify(value);
+            }
+        }
+
+        // Carregar dados ao iniciar
+        function carregarDados() {
+            // Tentar carregar do Firebase primeiro
+            if (window.FIREBASE_OK && window.db) {
+                console.log('📡 Carregando dados do Firebase...');
+                
+                // Timeout para fallback ao localStorage se Firebase não responder
+                const timeoutId = setTimeout(() => {
+                    console.warn('⚠️ Firebase não respondeu. Carregando do localStorage...');
+                    carregarDoLocalStorage();
+                }, 5000);
+
+                window.db.ref('atividades').once('value', snapshot => {
+                    clearTimeout(timeoutId);
+                    if (snapshot.exists()) {
+                        const dados = snapshot.val();
+                        atividadesGlobais = normalizarDados(dados);
+                        atividadesFiltradas = [...atividadesGlobais];
+                        console.log('✅ Atividades carregadas do Firebase:', atividadesGlobais.length);
+                        preencherFiltros();
+                        atualizarDashboard();
+                    } else {
+                        console.log('ℹ️ Nenhum dado no Firebase. Usando localStorage...');
+                        carregarDoLocalStorage();
+                    }
+                }).catch(error => {
+                    clearTimeout(timeoutId);
+                    console.error('❌ Erro ao carregar do Firebase:', error);
+                    carregarDoLocalStorage();
+                });
+            } else {
+                console.log('⚠️ Firebase não disponível. Carregando do localStorage...');
+                carregarDoLocalStorage();
+            }
+        }
+
+        // Carregar do localStorage como fallback
+        function carregarDoLocalStorage() {
+            const dadosSalvos = obterDoStorage('atividades');
+            atividadesGlobais = normalizarDados(dadosSalvos);
+            atividadesFiltradas = [...atividadesGlobais];
+            console.log('✅ Atividades carregadas do localStorage/memória:', atividadesGlobais.length);
+            preencherFiltros();
+            atualizarDashboard();
+        }
+
+        // Preencher dropdown de colaboradores
+        function preencherFiltros() {
+            const colaboradores = [...new Set(atividadesGlobais.filter(a => a && a.colaborador).map(a => a.colaborador))].sort();
+            const select = document.getElementById('filtroColaborador');
+            
+            // Limpar opções anteriores (manter apenas --Todos--)
+            while (select.children.length > 1) {
+                select.removeChild(select.lastChild);
+            }
+            
+            // Adicionar colaboradores
+            colaboradores.forEach(col => {
+                const option = document.createElement('option');
+                option.value = col;
+                option.textContent = col;
+                select.appendChild(option);
+            });
+        }
+
+        // Aplicar filtros
+        function aplicarFiltros() {
+            const colaborador = document.getElementById('filtroColaborador').value;
+            const status = document.getElementById('filtroStatus').value;
+
+            atividadesFiltradas = atividadesGlobais.filter(a => {
+                if (!a || typeof a !== 'object') return false;
+                if (colaborador && a.colaborador !== colaborador) return false;
+                if (status === 'concluida' && (a.finalizada !== true && a.finalizada !== 'true')) return false;
+                if (status === 'pendente' && (a.finalizada === true || a.finalizada === 'true')) return false;
+                return true;
+            });
+
+            atualizarDashboard();
+        }
+
+        // Resetar filtros
+        function resetarFiltros() {
+            document.getElementById('filtroColaborador').value = '';
+            document.getElementById('filtroStatus').value = '';
+            atividadesFiltradas = [...atividadesGlobais];
+            atualizarDashboard();
+        }
+
+        // Converter tempo (minutos) em formato legível
+        function formatarTempo(minutos) {
+            if (!minutos) return '0m';
+            const horas = Math.floor(minutos / 60);
+            const mins = minutos % 60;
+            if (horas === 0) return `${mins}m`;
+            if (mins === 0) return `${horas}h`;
+            return `${horas}h ${mins}m`;
+        }
+
+        // Normalizar dados do Firebase
+        function normalizarDados(dados) {
+            if (!dados) return [];
+            if (Array.isArray(dados)) {
+                return dados.filter(a => a && typeof a === 'object');
+            }
+            // Se vem como objeto chave-valor
+            return Object.values(dados).filter(a => a && typeof a === 'object');
+        }
+
+        // Calcular KPIs
+        function calcularKPIs() {
+            // Garantir que temos apenas objetos válidos
+            const atividades = atividadesFiltradas.filter(a => a && typeof a === 'object');
+            
+            const totalAtividades = atividades.length;
+            const ativConcluidas = atividades.filter(a => a.finalizada === true || a.finalizada === 'true').length;
+            const tempoTotal = atividades.reduce((sum, a) => {
+                const duracao = parseInt(a.duracao) || 0;
+                return sum + duracao;
+            }, 0);
+            const tempoMedio = totalAtividades > 0 ? Math.round(tempoTotal / totalAtividades) : 0;
+            const taxaConclusao = totalAtividades > 0 ? Math.round((ativConcluidas / totalAtividades) * 100) : 0;
+            const colaboradoresUnicos = new Set(atividades.filter(a => a.colaborador).map(a => a.colaborador)).size;
+
+            return {
+                totalAtividades,
+                ativConcluidas,
+                tempoTotal,
+                tempoMedio,
+                taxaConclusao,
+                colaboradoresUnicos
+            };
+        }
+
+        // Renderizar KPI Cards
+        function renderizarKPIs() {
+            const kpis = calcularKPIs();
+            const container = document.getElementById('kpiContainer');
+            container.innerHTML = `
+                <div class="kpi-card">
+                    <div class="kpi-icon">📋</div>
+                    <div class="kpi-label">Total de Atividades</div>
+                    <div class="kpi-value">${kpis.totalAtividades}</div>
+                </div>
+                <div class="kpi-card success">
+                    <div class="kpi-icon">✅</div>
+                    <div class="kpi-label">Atividades Concluídas</div>
+                    <div class="kpi-value">${kpis.ativConcluidas}</div>
+                    <div class="kpi-subtitle">${kpis.taxaConclusao}% de conclusão</div>
+                </div>
+                <div class="kpi-card warning">
+                    <div class="kpi-icon">⏱️</div>
+                    <div class="kpi-label">Tempo Total Gasto</div>
+                    <div class="kpi-value">${formatarTempo(kpis.tempoTotal)}</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon">🕐</div>
+                    <div class="kpi-label">Tempo Médio por Atividade</div>
+                    <div class="kpi-value">${formatarTempo(kpis.tempoMedio)}</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon">👥</div>
+                    <div class="kpi-label">Colaboradores Ativos</div>
+                    <div class="kpi-value">${kpis.colaboradoresUnicos}</div>
+                </div>
+                <div class="kpi-card danger">
+                    <div class="kpi-icon">⏳</div>
+                    <div class="kpi-label">Pendentes</div>
+                    <div class="kpi-value">${kpis.totalAtividades - kpis.ativConcluidas}</div>
+                </div>
+            `;
+        }
+
+        // Gráfico de Colunas - Atividades por Colaborador
+        function renderizarGraficoColuna() {
+            const resumo = {};
+            atividadesFiltradas.forEach(a => {
+                if (!a || !a.colaborador) return;
+                if (!resumo[a.colaborador]) resumo[a.colaborador] = 0;
+                resumo[a.colaborador]++;
+            });
+
+            const dados = Object.entries(resumo)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 8);
+
+            const svg = document.getElementById('graficoColuna');
+            svg.innerHTML = '';
+
+            if (dados.length === 0) {
+                svg.innerHTML = '<text x="300" y="150" text-anchor="middle" fill="#999">Sem dados para exibir</text>';
+                document.getElementById('legendaColuna').innerHTML = '';
+                return;
+            }
+
+            const marginLeft = 60, marginRight = 20, marginTop = 20, marginBottom = 40;
+            const width = 600 - marginLeft - marginRight;
+            const height = 300 - marginTop - marginBottom;
+            const maxValor = Math.max(...dados.map(d => d[1]));
+            const barWidth = width / dados.length * 0.8;
+            const spacing = width / dados.length;
+
+            // Desenhar eixo Y
+            const svg_ns = 'http://www.w3.org/2000/svg';
+            const linha_y = document.createElementNS(svg_ns, 'line');
+            linha_y.setAttribute('x1', marginLeft);
+            linha_y.setAttribute('y1', marginTop);
+            linha_y.setAttribute('x2', marginLeft);
+            linha_y.setAttribute('y2', marginTop + height);
+            linha_y.setAttribute('stroke', '#ddd');
+            linha_y.setAttribute('stroke-width', '2');
+            svg.appendChild(linha_y);
+
+            // Desenhar eixo X
+            const linha_x = document.createElementNS(svg_ns, 'line');
+            linha_x.setAttribute('x1', marginLeft);
+            linha_x.setAttribute('y1', marginTop + height);
+            linha_x.setAttribute('x2', 600 - marginRight);
+            linha_x.setAttribute('y2', marginTop + height);
+            linha_x.setAttribute('stroke', '#ddd');
+            linha_x.setAttribute('stroke-width', '2');
+            svg.appendChild(linha_x);
+
+            // Desenhar barras
+            dados.forEach((item, idx) => {
+                const barHeight = (item[1] / maxValor) * height;
+                const x = marginLeft + idx * spacing + (spacing - barWidth) / 2;
+                const y = marginTop + height - barHeight;
+
+                const rect = document.createElementNS(svg_ns, 'rect');
+                rect.setAttribute('x', x);
+                rect.setAttribute('y', y);
+                rect.setAttribute('width', barWidth);
+                rect.setAttribute('height', barHeight);
+                rect.setAttribute('fill', CORES[idx % CORES.length]);
+                rect.setAttribute('opacity', '0.8');
+                rect.setAttribute('rx', '4');
+                svg.appendChild(rect);
+
+                // Valor acima da barra
+                const text_val = document.createElementNS(svg_ns, 'text');
+                text_val.setAttribute('x', x + barWidth / 2);
+                text_val.setAttribute('y', y - 5);
+                text_val.setAttribute('text-anchor', 'middle');
+                text_val.setAttribute('fill', '#333');
+                text_val.setAttribute('font-weight', 'bold');
+                text_val.setAttribute('font-size', '12');
+                text_val.textContent = item[1];
+                svg.appendChild(text_val);
+
+                // Label (nome do colaborador)
+                const text_label = document.createElementNS(svg_ns, 'text');
+                text_label.setAttribute('x', x + barWidth / 2);
+                text_label.setAttribute('y', marginTop + height + 20);
+                text_label.setAttribute('text-anchor', 'middle');
+                text_label.setAttribute('fill', '#666');
+                text_label.setAttribute('font-size', '11');
+                text_label.textContent = item[0].substring(0, 10);
+                svg.appendChild(text_label);
+            });
+
+            // Legenda
+            const legenda = document.getElementById('legendaColuna');
+            legenda.innerHTML = dados.map((item, idx) => 
+                `<div class="legend-item"><div class="legend-color" style="background: ${CORES[idx % CORES.length]}"></div><span>${item[0]}: ${item[1]} atividades</span></div>`
+            ).join('');
+        }
+
+        // Gráfico de Pizza - Status das Atividades
+        function renderizarGraficoPizza() {
+            const concluidas = atividadesFiltradas.filter(a => a && (a.finalizada === true || a.finalizada === 'true')).length;
+            const pendentes = atividadesFiltradas.length - concluidas;
+            const total = atividadesFiltradas.length;
+
+            const svg = document.getElementById('graficoPizza');
+            svg.innerHTML = '';
+
+            if (total === 0) {
+                svg.innerHTML = '<text x="200" y="150" text-anchor="middle" fill="#999">Sem dados para exibir</text>';
+                document.getElementById('legendaPizza').innerHTML = '';
+                return;
+            }
+
+            const svg_ns = 'http://www.w3.org/2000/svg';
+            const cx = 150, cy = 130, raio = 90;
+
+            // Calular ângulos
+            const pctConcluidas = concluidas / total;
+            const anguloConc = pctConcluidas * 360;
+
+            // Função para desenhar fatia
+            function desenharFatia(anguloInicio, anguloFim, cor) {
+                const rad1 = (anguloInicio * Math.PI) / 180;
+                const rad2 = (anguloFim * Math.PI) / 180;
+
+                const x1 = cx + raio * Math.cos(rad1);
+                const y1 = cy + raio * Math.sin(rad1);
+                const x2 = cx + raio * Math.cos(rad2);
+                const y2 = cy + raio * Math.sin(rad2);
+
+                const largeArc = anguloFim - anguloInicio > 180 ? 1 : 0;
+                const path = document.createElementNS(svg_ns, 'path');
+                path.setAttribute('d', `M ${cx} ${cy} L ${x1} ${y1} A ${raio} ${raio} 0 ${largeArc} 1 ${x2} ${y2} Z`);
+                path.setAttribute('fill', cor);
+                path.setAttribute('opacity', '0.85');
+                path.setAttribute('stroke', 'white');
+                path.setAttribute('stroke-width', '2');
+                svg.appendChild(path);
+            }
+
+            // Desenhar fatias
+            desenharFatia(0, anguloConc, '#51cf66');
+            desenharFatia(anguloConc, 360, '#ff6b6b');
+
+            // Etiquetas percentuais
+            const angMeioConc = (anguloConc / 2 * Math.PI) / 180;
+            const x_conc = cx + (raio * 0.65) * Math.cos(angMeioConc);
+            const y_conc = cy + (raio * 0.65) * Math.sin(angMeioConc);
+
+            const text_conc = document.createElementNS(svg_ns, 'text');
+            text_conc.setAttribute('x', x_conc);
+            text_conc.setAttribute('y', y_conc);
+            text_conc.setAttribute('text-anchor', 'middle');
+            text_conc.setAttribute('fill', 'white');
+            text_conc.setAttribute('font-weight', 'bold');
+            text_conc.setAttribute('font-size', '16');
+            text_conc.textContent = `${Math.round(pctConcluidas * 100)}%`;
+            svg.appendChild(text_conc);
+
+            const angMeioPend = (anguloConc + (360 - anguloConc) / 2) * Math.PI / 180;
+            const x_pend = cx + (raio * 0.65) * Math.cos(angMeioPend);
+            const y_pend = cy + (raio * 0.65) * Math.sin(angMeioPend);
+
+            const text_pend = document.createElementNS(svg_ns, 'text');
+            text_pend.setAttribute('x', x_pend);
+            text_pend.setAttribute('y', y_pend);
+            text_pend.setAttribute('text-anchor', 'middle');
+            text_pend.setAttribute('fill', 'white');
+            text_pend.setAttribute('font-weight', 'bold');
+            text_pend.setAttribute('font-size', '16');
+            text_pend.textContent = `${Math.round((1 - pctConcluidas) * 100)}%`;
+            svg.appendChild(text_pend);
+
+            // Legenda
+            const legenda = document.getElementById('legendaPizza');
+            legenda.innerHTML = `
+                <div class="legend-item"><div class="legend-color" style="background: #51cf66"></div><span>✅ Concluídas: ${concluidas}</span></div>
+                <div class="legend-item"><div class="legend-color" style="background: #ff6b6b"></div><span>⏳ Pendentes: ${pendentes}</span></div>
+            `;
+        }
+
+        // Gráfico Tempo por Colaborador (Horizontal)
+        function renderizarGraficoTempoColaborador() {
+            const tempoColaborador = {};
+            atividadesFiltradas.forEach(a => {
+                if (!a || !a.colaborador) return;
+                if (!tempoColaborador[a.colaborador]) tempoColaborador[a.colaborador] = 0;
+                tempoColaborador[a.colaborador] += parseInt(a.duracao) || 0;
+            });
+            const dados = Object.entries(tempoColaborador).sort((a, b) => b[1] - a[1]);
+            const svg = document.getElementById('graficoTempoColaborador');
+            if (!svg) return;
+            svg.innerHTML = '';
+            if (dados.length === 0) {
+                svg.innerHTML = '<text x="300" y="150" text-anchor="middle" fill="#999">Sem dados</text>';
+                return;
+            }
+            const svg_ns = 'http://www.w3.org/2000/svg';
+            const barH = 30, sp = 15, ml = 150, mt = 20;
+            const maxT = Math.max(...dados.map(d => d[1]));
+            const cw = 600 - ml - 40;
+            dados.forEach((item, idx) => {
+                const bw = (item[1] / maxT) * cw;
+                const y = mt + idx * (barH + sp);
+                const rect = document.createElementNS(svg_ns, 'rect');
+                rect.setAttribute('x', ml);
+                rect.setAttribute('y', y);
+                rect.setAttribute('width', bw);
+                rect.setAttribute('height', barH);
+                rect.setAttribute('fill', CORES[idx % CORES.length]);
+                rect.setAttribute('rx', '4');
+                svg.appendChild(rect);
+                const t1 = document.createElementNS(svg_ns, 'text');
+                t1.setAttribute('x', ml - 10);
+                t1.setAttribute('y', y + barH / 2);
+                t1.setAttribute('text-anchor', 'end');
+                t1.setAttribute('dominant-baseline', 'middle');
+                t1.setAttribute('fill', '#333');
+                t1.setAttribute('font-size', '11');
+                t1.setAttribute('font-weight', 'bold');
+                t1.textContent = item[0].substring(0, 12);
+                svg.appendChild(t1);
+                const t2 = document.createElementNS(svg_ns, 'text');
+                t2.setAttribute('x', ml + bw + 5);
+                t2.setAttribute('y', y + barH / 2);
+                t2.setAttribute('dominant-baseline', 'middle');
+                t2.setAttribute('fill', '#333');
+                t2.setAttribute('font-size', '11');
+                t2.setAttribute('font-weight', 'bold');
+                t2.textContent = formatarTempo(item[1]);
+                svg.appendChild(t2);
+            });
+            const legenda = document.getElementById('legendaTempoColaborador');
+            if (legenda) legenda.innerHTML = dados.map((item, idx) => 
+                `<div class="legend-item"><div class="legend-color" style="background: ${CORES[idx % CORES.length]}"></div><span>${item[0]}: ${formatarTempo(item[1])}</span></div>`
+            ).join('');
+        }
+
+        // Gráfico Donut
+        function renderizarGraficoDonut() {
+            const ticketsPorColaborador = {};
+            atividadesFiltradas.forEach(a => {
+                if (!a || !a.colaborador) return;
+                if (!ticketsPorColaborador[a.colaborador]) ticketsPorColaborador[a.colaborador] = 0;
+                ticketsPorColaborador[a.colaborador]++;
+            });
+            const dados = Object.entries(ticketsPorColaborador);
+            const svg = document.getElementById('graficoDonut');
+            if (!svg) return;
+            svg.innerHTML = '';
+            if (dados.length === 0) {
+                svg.innerHTML = '<text x="200" y="150" text-anchor="middle" fill="#999">Sem dados</text>';
+                return;
+            }
+            const svg_ns = 'http://www.w3.org/2000/svg';
+            const cx = 150, cy = 130, raioExt = 90, raioInt = 55;
+            const total = dados.reduce((sum, d) => sum + d[1], 0);
+            let anguloAtual = 0;
+            dados.forEach((item, idx) => {
+                const pct = item[1] / total;
+                const ang = pct * 360;
+                const rad1 = (anguloAtual * Math.PI) / 180;
+                const rad2 = ((anguloAtual + ang) * Math.PI) / 180;
+                const x1e = cx + raioExt * Math.cos(rad1);
+                const y1e = cy + raioExt * Math.sin(rad1);
+                const x2e = cx + raioExt * Math.cos(rad2);
+                const y2e = cy + raioExt * Math.sin(rad2);
+                const x1i = cx + raioInt * Math.cos(rad1);
+                const y1i = cy + raioInt * Math.sin(rad1);
+                const x2i = cx + raioInt * Math.cos(rad2);
+                const y2i = cy + raioInt * Math.sin(rad2);
+                const la = ang > 180 ? 1 : 0;
+                const path = document.createElementNS(svg_ns, 'path');
+                path.setAttribute('d', `M ${x1e} ${y1e} A ${raioExt} ${raioExt} 0 ${la} 1 ${x2e} ${y2e} L ${x2i} ${y2i} A ${raioInt} ${raioInt} 0 ${la} 0 ${x1i} ${y1i} Z`);
+                path.setAttribute('fill', CORES[idx % CORES.length]);
+                path.setAttribute('opacity', '0.85');
+                path.setAttribute('stroke', 'white');
+                path.setAttribute('stroke-width', '2');
+                svg.appendChild(path);
+                const angMeio = (anguloAtual + ang / 2) * Math.PI / 180;
+                const rioLabel = (raioExt + raioInt) / 2;
+                const xl = cx + rioLabel * Math.cos(angMeio);
+                const yl = cy + rioLabel * Math.sin(angMeio);
+                const text = document.createElementNS(svg_ns, 'text');
+                text.setAttribute('x', xl);
+                text.setAttribute('y', yl);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dominant-baseline', 'middle');
+                text.setAttribute('fill', 'white');
+                text.setAttribute('font-weight', 'bold');
+                text.setAttribute('font-size', '12');
+                text.textContent = `${Math.round(pct * 100)}%`;
+                svg.appendChild(text);
+                anguloAtual += ang;
+            });
+            const legenda = document.getElementById('legendaDonut');
+            if (legenda) legenda.innerHTML = dados.map((item, idx) => 
+                `<div class="legend-item"><div class="legend-color" style="background: ${CORES[idx % CORES.length]}"></div><span>${item[0]}: ${item[1]} tickets</span></div>`
+            ).join('');
+        }
+
+        // Gráfico Top Tickets
+        function renderizarGraficoTopTickets() {
+            const ticketsDados = {};
+            atividadesFiltradas.forEach(a => {
+                if (!a || !a.ticket) return;
+                if (!ticketsDados[a.ticket]) ticketsDados[a.ticket] = { tempo: 0, colaborador: '' };
+                ticketsDados[a.ticket].tempo += parseInt(a.duracao) || 0;
+                if (!ticketsDados[a.ticket].colaborador) ticketsDados[a.ticket].colaborador = a.colaborador || '';
+            });
+            const dados = Object.entries(ticketsDados).map(([t, d]) => ({ ticket: t, ...d })).sort((a, b) => b.tempo - a.tempo).slice(0, 5);
+            const svg = document.getElementById('graficoTopTickets');
+            if (!svg) return;
+            svg.innerHTML = '';
+            if (dados.length === 0) {
+                svg.innerHTML = '<text x="300" y="150" text-anchor="middle" fill="#999">Sem dados</text>';
+                return;
+            }
+            const ml = 60, mr = 20, mt = 20, mb = 40;
+            const w = 600 - ml - mr;
+            const h = 300 - mt - mb;
+            const maxT = Math.max(...dados.map(d => d.tempo));
+            const bw = w / dados.length * 0.7;
+            const sp = w / dados.length;
+            const svg_ns = 'http://www.w3.org/2000/svg';
+            const ly = document.createElementNS(svg_ns, 'line');
+            ly.setAttribute('x1', ml);
+            ly.setAttribute('y1', mt);
+            ly.setAttribute('x2', ml);
+            ly.setAttribute('y2', mt + h);
+            ly.setAttribute('stroke', '#ddd');
+            ly.setAttribute('stroke-width', '2');
+            svg.appendChild(ly);
+            const lx = document.createElementNS(svg_ns, 'line');
+            lx.setAttribute('x1', ml);
+            lx.setAttribute('y1', mt + h);
+            lx.setAttribute('x2', 600 - mr);
+            lx.setAttribute('y2', mt + h);
+            lx.setAttribute('stroke', '#ddd');
+            lx.setAttribute('stroke-width', '2');
+            svg.appendChild(lx);
+            dados.forEach((item, idx) => {
+                const bh = (item.tempo / maxT) * h;
+                const x = ml + idx * sp + (sp - bw) / 2;
+                const y = mt + h - bh;
+                const rect = document.createElementNS(svg_ns, 'rect');
+                rect.setAttribute('x', x);
+                rect.setAttribute('y', y);
+                rect.setAttribute('width', bw);
+                rect.setAttribute('height', bh);
+                rect.setAttribute('fill', CORES[idx % CORES.length]);
+                rect.setAttribute('rx', '4');
+                svg.appendChild(rect);
+                const tv = document.createElementNS(svg_ns, 'text');
+                tv.setAttribute('x', x + bw / 2);
+                tv.setAttribute('y', y - 5);
+                tv.setAttribute('text-anchor', 'middle');
+                tv.setAttribute('fill', '#333');
+                tv.setAttribute('font-weight', 'bold');
+                tv.setAttribute('font-size', '11');
+                tv.textContent = formatarTempo(item.tempo);
+                svg.appendChild(tv);
+                const tl = document.createElementNS(svg_ns, 'text');
+                tl.setAttribute('x', x + bw / 2);
+                tl.setAttribute('y', mt + h + 20);
+                tl.setAttribute('text-anchor', 'middle');
+                tl.setAttribute('fill', '#666');
+                tl.setAttribute('font-size', '10');
+                tl.textContent = item.ticket.substring(0, 8);
+                svg.appendChild(tl);
+            });
+            const legenda = document.getElementById('legendaTopTickets');
+            if (legenda) legenda.innerHTML = dados.map((item, idx) => 
+                `<div class="legend-item"><div class="legend-color" style="background: ${CORES[idx % CORES.length]}"></div><span>${item.ticket}: ${formatarTempo(item.tempo)}</span></div>`
+            ).join('');
+        }
+
+        // Gráfico Taxa de Conclusão
+        function renderizarGraficoTaxaConclusao() {
+            const taxaColaborador = {};
+            atividadesFiltradas.forEach(a => {
+                if (!a || !a.colaborador) return;
+                if (!taxaColaborador[a.colaborador]) taxaColaborador[a.colaborador] = { total: 0, concluidas: 0 };
+                taxaColaborador[a.colaborador].total++;
+                if (a.finalizada === true || a.finalizada === 'true' || a.finalizada === 1 || a.finalizada === '1') {
+                    taxaColaborador[a.colaborador].concluidas++;
+                }
+            });
+            const dados = Object.entries(taxaColaborador).map(([nome, dados]) => ({
+                nome, taxa: dados.total > 0 ? Math.round((dados.concluidas / dados.total) * 100) : 0
+            })).sort((a, b) => b.taxa - a.taxa);
+            const svg = document.getElementById('graficoTaxaConclusao');
+            if (!svg) return;
+            svg.innerHTML = '';
+            if (dados.length === 0) {
+                svg.innerHTML = '<text x="300" y="150" text-anchor="middle" fill="#999">Sem dados</text>';
+                return;
+            }
+            const ml = 150, mr = 20, mt = 20, mb = 40;
+            const w = 600 - ml - mr;
+            const h = 300 - mt - mb;
+            const bw = w / dados.length * 0.7;
+            const sp = w / dados.length;
+            const svg_ns = 'http://www.w3.org/2000/svg';
+            const ly = document.createElementNS(svg_ns, 'line');
+            ly.setAttribute('x1', ml);
+            ly.setAttribute('y1', mt);
+            ly.setAttribute('x2', ml);
+            ly.setAttribute('y2', mt + h);
+            ly.setAttribute('stroke', '#ddd');
+            ly.setAttribute('stroke-width', '2');
+            svg.appendChild(ly);
+            const lx = document.createElementNS(svg_ns, 'line');
+            lx.setAttribute('x1', ml);
+            lx.setAttribute('y1', mt + h);
+            lx.setAttribute('x2', 600 - mr);
+            lx.setAttribute('y2', mt + h);
+            lx.setAttribute('stroke', '#ddd');
+            lx.setAttribute('stroke-width', '2');
+            svg.appendChild(lx);
+            dados.forEach((item, idx) => {
+                const bh = (item.taxa / 100) * h;
+                const x = ml + idx * sp + (sp - bw) / 2;
+                const y = mt + h - bh;
+                let cor = '#51cf66';
+                if (item.taxa < 50) cor = '#ff6b6b';
+                else if (item.taxa < 80) cor = '#ffc93c';
+                const rect = document.createElementNS(svg_ns, 'rect');
+                rect.setAttribute('x', x);
+                rect.setAttribute('y', y);
+                rect.setAttribute('width', bw);
+                rect.setAttribute('height', bh);
+                rect.setAttribute('fill', cor);
+                rect.setAttribute('rx', '4');
+                svg.appendChild(rect);
+                const tv = document.createElementNS(svg_ns, 'text');
+                tv.setAttribute('x', x + bw / 2);
+                tv.setAttribute('y', y - 5);
+                tv.setAttribute('text-anchor', 'middle');
+                tv.setAttribute('fill', '#333');
+                tv.setAttribute('font-weight', 'bold');
+                tv.setAttribute('font-size', '12');
+                tv.textContent = `${item.taxa}%`;
+                svg.appendChild(tv);
+                const tl = document.createElementNS(svg_ns, 'text');
+                tl.setAttribute('x', x + bw / 2);
+                tl.setAttribute('y', mt + h + 20);
+                tl.setAttribute('text-anchor', 'middle');
+                tl.setAttribute('fill', '#666');
+                tl.setAttribute('font-size', '10');
+                tl.textContent = item.nome.substring(0, 12);
+                svg.appendChild(tl);
+            });
+            const legenda = document.getElementById('legendaTaxaConclusao');
+            if (legenda) legenda.innerHTML = dados.map((item, idx) => 
+                `<div class="legend-item"><div class="legend-color" style="background: ${item.taxa >= 80 ? '#51cf66' : item.taxa >= 50 ? '#ffc93c' : '#ff6b6b'}"></div><span>${item.nome}: ${item.taxa}%</span></div>`
+            ).join('');
+        }
+
+        // Cartões de Análise Rápida
+        function renderizarCartoesResumoRapido() {
+            const resumoColaboradores = {};
+            atividadesFiltradas.forEach(a => {
+                if (!a || !a.colaborador) return;
+                if (!resumoColaboradores[a.colaborador]) {
+                    resumoColaboradores[a.colaborador] = {
+                        total: 0,
+                        concluidas: 0,
+                        tempo: 0
+                    };
+                }
+                resumoColaboradores[a.colaborador].total++;
+                if (a.finalizada === true || a.finalizada === 'true') resumoColaboradores[a.colaborador].concluidas++;
+                resumoColaboradores[a.colaborador].tempo += parseInt(a.duracao) || 0;
+            });
+
+            const colaboradores = Object.entries(resumoColaboradores)
+                .map(([nome, dados]) => ({
+                    nome,
+                    taxa: Math.round((dados.concluidas / dados.total) * 100),
+                    tempo: formatarTempo(dados.tempo),
+                    atividades: dados.total
+                }))
+                .sort((a, b) => b.atividades - a.atividades)
+                .slice(0, 6);
+
+            const container = document.getElementById('cartoesResumoRapido');
+            if (colaboradores.length === 0) {
+                container.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;">Sem dados de colaboradores</div>';
+                return;
+            }
+
+            container.innerHTML = colaboradores.map(col => `
+                <div class="kpi-card">
+                    <div class="kpi-label">${col.nome}</div>
+                    <div style="font-size: 0.9em; margin: 10px 0; color: #666;">
+                        <div>📋 ${col.atividades} atividades</div>
+                        <div>✅ ${col.taxa}% concluídas</div>
+                        <div>⏱️ ${col.tempo}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Tabela de Resumo por Colaborador
+        function renderizarTabelaResumo() {
+            const resumo = {};
+            atividadesFiltradas.forEach(a => {
+                if (!a || !a.colaborador) return;
+                if (!resumo[a.colaborador]) {
+                    resumo[a.colaborador] = {
+                        total: 0,
+                        concluidas: 0,
+                        tempoTotal: 0
+                    };
+                }
+                resumo[a.colaborador].total++;
+                if (a.finalizada === true || a.finalizada === 'true') resumo[a.colaborador].concluidas++;
+                resumo[a.colaborador].tempoTotal += parseInt(a.duracao) || 0;
+            });
+
+            const tbody = document.getElementById('tabelaResumoBody');
+            tbody.innerHTML = '';
+
+            if (Object.keys(resumo).length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhuma atividade encontrada</td></tr>';
+                return;
+            }
+
+            Object.keys(resumo).sort().forEach(colaborador => {
+                const dados = resumo[colaborador];
+                if (dados.total === 0) return;
+                const taxa = Math.round((dados.concluidas / dados.total) * 100);
+                const tempoMedio = Math.round(dados.tempoTotal / dados.total);
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${colaborador}</strong></td>
+                    <td>${dados.total}</td>
+                    <td><span class="badge badge-success">${dados.concluidas}</span></td>
+                    <td>${formatarTempo(dados.tempoTotal)}</td>
+                    <td>${formatarTempo(tempoMedio)}</td>
+                    <td><strong>${taxa}%</strong></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Tabela: Top 10 Atividades Mais Longas
+        // Tabela: Top 10 Atividades Mais Longas
+        function renderizarTabelaTop10() {
+            const ordenadas = atividadesFiltradas
+                .filter(a => a && typeof a === 'object' && a.ticket)
+                .sort((a, b) => (parseInt(b.duracao) || 0) - (parseInt(a.duracao) || 0))
+                .slice(0, 10);
+
+            const tbody = document.getElementById('tabelaTop10Body');
+            tbody.innerHTML = '';
+
+            if (ordenadas.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhuma atividade encontrada</td></tr>';
+                return;
+            }
+
+            ordenadas.forEach(atividade => {
+                const status = (atividade.finalizada === true || atividade.finalizada === 'true') ? 
+                    '<span class="badge badge-success">✓ Concluída</span>' : 
+                    '<span class="badge badge-warning">⏳ Pendente</span>';
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${atividade.ticket || 'N/A'}</strong></td>
+                    <td>${atividade.colaborador || 'N/A'}</td>
+                    <td><strong>${formatarTempo(parseInt(atividade.duracao) || 0)}</strong></td>
+                    <td>${atividade.dataInicio || '-'}</td>
+                    <td>${status}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Atualizar dashboard completo
+        function atualizarDashboard() {
+            renderizarKPIs();
+            renderizarGraficoColuna();
+            renderizarGraficoPizza();
+            renderizarGraficoTempoColaborador();
+            renderizarGraficoDonut();
+            renderizarGraficoTopTickets();
+            renderizarGraficoTaxaConclusao();
+            renderizarCartoesResumoRapido();
+            renderizarTabelaResumo();
+            renderizarTabelaTop10();
+        }
+
+        // Gráficos removidos para evitar bloqueio por Tracking Prevention
+        function criarGraficoAtividadesColaborador() {}
+        function criarGraficoTempoColaborador() {}
+        function criarGraficoStatus() {}
+        function criarGraficoTickets() {}
+
+        // Inicializar ao carregar
+        window.addEventListener('load', carregarDados);
+
+        // Auto-atualizar a cada 10 segundos
+        setInterval(() => {
+            if (window.FIREBASE_OK && window.db) {
+                try {
+                    window.db.ref('atividades').once('value', snapshot => {
+                        if (snapshot.exists()) {
+                            const dados = snapshot.val();
+                            const novosDados = normalizarDados(dados);
+                            if (JSON.stringify(novosDados) !== JSON.stringify(atividadesGlobais)) {
+                                atividadesGlobais = novosDados;
+                                preencherFiltros();
+                                aplicarFiltros();
+                            }
+                        }
+                    }).catch(() => {
+                        // Fallback para localStorage em caso de erro
+                        const novosDados = obterDoStorage('atividades') || [];
+                        if (JSON.stringify(novosDados) !== JSON.stringify(atividadesGlobais)) {
+                            atividadesGlobais = novosDados;
+                            preencherFiltros();
+                            aplicarFiltros();
+                        }
+                    });
+                } catch (error) {
+                    console.warn('⚠️ Erro ao sincronizar Firebase:', error);
+                    const novosDados = normalizarDados(obterDoStorage('atividades'));
+                    if (JSON.stringify(novosDados) !== JSON.stringify(atividadesGlobais)) {
+                        atividadesGlobais = novosDados;
+                        preencherFiltros();
+                        aplicarFiltros();
+                    }
+                }
+            } else {
+                // Se Firebase não disponível, usar apenas localStorage/memória
+                const novosDados = normalizarDados(obterDoStorage('atividades'));
+                if (JSON.stringify(novosDados) !== JSON.stringify(atividadesGlobais)) {
+                    atividadesGlobais = novosDados;
+                    preencherFiltros();
+                    aplicarFiltros();
+                }
+            }
+        }, 10000);
+    </script>
+</body>
+</html>

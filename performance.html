@@ -548,6 +548,17 @@
             margin-bottom: 5px;
         }
 
+        .atividade-descricao {
+            color: #333;
+            font-size: 0.95em;
+            margin-top: 10px;
+            padding: 8px 10px;
+            background: #f5f5f5;
+            border-left: 3px solid #5b8ec6;
+            border-radius: 3px;
+            line-height: 1.4;
+        }
+
         .atividade-observacao {
             color: #555;
             font-size: 0.95em;
@@ -632,6 +643,7 @@
                 <li><a href="index.html">Controle de Atividade</a></li>
                 <li><a href="historico.html">Histórico</a></li>
                 <li><a href="performance.html" class="active">Performance</a></li>
+                <li><a href="insights.html">Insights</a></li>
                 <li><a href="admin.html">Administrador</a></li>
                 <li><a href="atividades-usuarios.html">Atividades dos Usuários</a></li>
             </ul>
@@ -1320,6 +1332,7 @@
                                 </div>
                                 <div class="atividade-duracao">${atividade.duracao}</div>
                             </div>
+                            ${atividade.descricao ? `<div class="atividade-descricao"><strong>Descrição:</strong> ${atividade.descricao}</div>` : ''}
                             ${atividade.observacao ? `<div class="atividade-observacao"><strong>Observação:</strong> ${atividade.observacao}</div>` : ''}
                         </div>
                     `;
