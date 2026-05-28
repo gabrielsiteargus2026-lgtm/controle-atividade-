@@ -1385,10 +1385,18 @@
 
                     atividadesEmAndamento = emAndamentoSalvas.map(a => {
                         const existente = atividadesEmAndamento.find(e => e.id === a.id);
+                        let chave = a.chaveAtividade;
+                        
+                        // 🔑 IMPORTANTE: NÃO regenerar chave - preservar exatamente como está
+                        if (!chave) {
+                            console.warn('⚠️ Atividade sem chave encontrada:', a.id);
+                            console.warn('   Isso não deveria acontecer. Chave sendo mantida como undefined.');
+                        }
+                        
                         return { 
                             ...a, 
                             intervaloTimer: existente ? existente.intervaloTimer : null,
-                            chaveAtividade: a.chaveAtividade || gerarChaveAtividade() // ✅ Garantir chave
+                            chaveAtividade: chave // ✅ PRESERVAR chave exatamente como está, sem gerar nova
                         };
                     });
 
@@ -1417,7 +1425,7 @@
             if (dadosSalvos) { 
                 atividades = normalizarAtividades(JSON.parse(dadosSalvos)).map(a => ({
                     ...a,
-                    chaveAtividade: a.chaveAtividade || gerarChaveAtividade() // ✅ Garantir chave
+                    chaveAtividade: a.chaveAtividade // ✅ PRESERVAR chave exatamente como está
                 }));
             }
             const emAndamentoSalvas = localStorage.getItem('atividadesEmAndamento');
@@ -1425,7 +1433,7 @@
                 atividadesEmAndamento = JSON.parse(emAndamentoSalvas).map(a => ({ 
                     ...a, 
                     tempoInicio: a.tempoInicio,
-                    chaveAtividade: a.chaveAtividade || gerarChaveAtividade() // ✅ Garantir chave
+                    chaveAtividade: a.chaveAtividade // ✅ PRESERVAR chave exatamente como está
                 }));
                 atividadesEmAndamento.forEach(a => {
                     if (a && a.id) {
@@ -1464,7 +1472,7 @@
         function salvarDados() {
             const emAndamentoParaSalvar = atividadesEmAndamento.map(a => ({
                 id: a.id,
-                chaveAtividade: a.chaveAtividade || gerarChaveAtividade(), // ✅ Gerar se não existir
+                chaveAtividade: a.chaveAtividade, // ✅ SEMPRE preservar chave como está
                 nome: a.nome,
                 ticket: a.ticket,
                 descricao: a.descricao || '',
@@ -1522,35 +1530,97 @@
             return emAtividades || emAndamento;
         }
 
-        // ✅ Gerar chave de identificação única (UUID)
-        function gerarChaveAtividade() {
+        // ✅ NOVO SISTEMA: Chave Alfanumérica Curta (5 caracteres) - PERSISTENTE
+        // Carrega registro de chaves já usadas
+        function carregarRegistroChaves() {
+            const registro = localStorage.getItem('registroChavesUsadas');
+            if (!registro) {
+                return {};
+            }
+            return JSON.parse(registro);
+        }
+
+        // Salva registro de chaves já usadas
+        function salvarRegistroChaves(registro) {
+            localStorage.setItem('registroChavesUsadas', JSON.stringify(registro));
+        }
+
+        // Gera uma chave alfanumérica simples (5 caracteres - apenas números e letras MAIÚSCULAS)
+        function gerarChaveAlfanumerica() {
+            const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             let chave;
             let tentativas = 0;
-            const maxTentativas = 10;
+            const maxTentativas = 100;
+            const registroChaves = carregarRegistroChaves();
             
             do {
-                const agora = new Date();
-                const ano = agora.getFullYear();
-                const mes = String(agora.getMonth() + 1).padStart(2, '0');
-                const dia = String(agora.getDate()).padStart(2, '0');
-                const hora = String(agora.getHours()).padStart(2, '0');
-                const minuto = String(agora.getMinutes()).padStart(2, '0');
-                const segundo = String(agora.getSeconds()).padStart(2, '0');
-                const aleatorio = Math.random().toString(36).substring(2, 8).toUpperCase();
-                
-                chave = `ATIV-${ano}${mes}${dia}-${hora}${minuto}${segundo}-${aleatorio}`;
+                chave = '';
+                for (let i = 0; i < 5; i++) {
+                    const indice = Math.floor(Math.random() * caracteres.length);
+                    chave += caracteres[indice];
+                }
                 tentativas++;
-            } while (validarChaveDuplicada(chave) && tentativas < maxTentativas);
+            } while (registroChaves[chave] && tentativas < maxTentativas);
+            
+            if (tentativas >= maxTentativas) {
+                console.error('⚠️ Não foi possível gerar chave única após 100 tentativas');
+                return null;
+            }
             
             return chave;
         }
 
-        // ✅ Validar se chave já existe
+        // Registra uma chave como usada (PERSISTÊNCIA GARANTIDA)
+        function registrarChaveUsada(chave) {
+            if (!chave) return false;
+            
+            const registroChaves = carregarRegistroChaves();
+            const agora = new Date().toISOString();
+            
+            // Armazenar com timestamp de criação
+            registroChaves[chave] = {
+                dataCriacao: agora,
+                status: 'ativa'
+            };
+            
+            salvarRegistroChaves(registroChaves);
+            console.log('✅ Chave registrada como usada:', chave);
+            
+            // Tentar salvar no Firebase também
+            if (window.FIREBASE_OK && window.db) {
+                window.db.ref('/registroChavesUsadas/' + chave).set({
+                    dataCriacao: agora,
+                    status: 'ativa'
+                }).catch(err => console.warn('Erro ao salvar chave no Firebase:', err));
+            }
+            
+            return true;
+        }
+
+        // Verifica se uma chave já foi usada
+        function validarChaveJaUsada(chave) {
+            if (!chave) return false;
+            const registroChaves = carregarRegistroChaves();
+            return registroChaves.hasOwnProperty(chave);
+        }
+
+        // ✅ Função principal para GERAR e REGISTRAR chave de forma persistente
+        function gerarChaveAtividade() {
+            const chave = gerarChaveAlfanumerica();
+            
+            if (chave) {
+                registrarChaveUsada(chave);
+                console.log('✅ Nova chave gerada e registrada:', chave);
+            }
+            
+            return chave;
+        }
+
+        // ✅ Validar se chave já existe em atividades (para compatibilidade)
         function validarChaveDuplicada(chave) {
             if (!chave) return false;
-            const emAtividades = atividades.some(a => a.chaveAtividade === chave);
-            const emAndamento = atividadesEmAndamento.some(a => a.chaveAtividade === chave);
-            return emAtividades || emAndamento;
+            // Usar o novo sistema de registro
+            return validarChaveJaUsada(chave);
         }
 
         // ✅ Pesquisar atividades por chave
@@ -1672,6 +1742,7 @@
                 console.log('📌 Registrando rastreio...');
                 try {
                     registrarInicioAtividade(ticket, descricao, {
+                        chaveAtividade: novaAtividade.chaveAtividade,
                         colaborador: nome,
                         usuario_logado: usuarioAtual?.email
                     });
@@ -1741,7 +1812,7 @@
             // Criar registro para o colaborador principal
             atividades.unshift({
                 id: atividade.id,
-                chaveAtividade: atividade.chaveAtividade || gerarChaveAtividade(), // ✅ Garantir chave
+                chaveAtividade: atividade.chaveAtividade, // ✅ SEMPRE preservar chave
                 colaborador: atividade.nome,
                 ticket: atividade.ticket,
                 dataInicio: atividade.dataInicio,
@@ -1772,7 +1843,7 @@
                     
                     atividades.unshift({
                         id: atividade.id,
-                        chaveAtividade: atividade.chaveAtividade || gerarChaveAtividade(), // ✅ Garantir chave
+                        chaveAtividade: atividade.chaveAtividade, // ✅ SEMPRE preservar chave
                         colaborador: colaboradorAux,
                         ticket: atividade.ticket,
                         dataInicio: atividade.dataInicio,
@@ -1808,6 +1879,7 @@
             // ✅ Registrar fim de atividade com rastreio completo
             // Usa a nova função que registra como FIM em vez de FINALIZOU
             registrarFimAtividade(atividade.ticket, atividade.descricao, {
+                chaveAtividade: atividade.chaveAtividade,
                 duracao: formatarTempo(duracao),
                 observacao: atividade.observacao,
                 colaboradores: colaboradoresAuxiliares || [],
@@ -2072,6 +2144,7 @@
             const atividadePausa = atividadesEmAndamento.find(a => a && a.id === atividadePausando);
             if (atividadePausa) {
                 registrarPausaAtividade(atividadePausa.ticket, atividadePausa.descricao, motivo, {
+                    chaveAtividade: atividadePausa.chaveAtividade,
                     grupo: grupoNormalizado,
                     usuario_logado: usuarioAtual?.email
                 });

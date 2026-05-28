@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Chaves Alfanuméricas Persistentes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #5b8ec6;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 4px solid #5b8ec6;
+            border-radius: 5px;
+        }
+        button {
+            background: #5b8ec6;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #4a75b0;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e8f5e9;
+            border-radius: 5px;
+            border-left: 4px solid #51cf66;
+            word-break: break-all;
+            font-family: monospace;
+        }
+        .error {
+            background: #ffebee;
+            border-left-color: #ff6b6b;
+        }
+        .warning {
+            background: #fff3e0;
+            border-left-color: #ff8c00;
+        }
+        .info {
+            background: #e3f2fd;
+            border-left-color: #2196f3;
+        }
+        #output {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            border: 2px solid #ddd;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .stat {
+            display: inline-block;
+            margin: 10px;
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 5px;
+            border-left: 4px solid #2196f3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #5b8ec6;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔑 Teste - Sistema de Chaves Alfanuméricas Persistentes</h1>
+
+        <div class="test-section">
+            <h2>📋 Objetivo</h2>
+            <p>Validar o novo sistema de chaves que:</p>
+            <ul>
+                <li>✅ Gera chaves de exatamente 5 caracteres alfanuméricos</li>
+                <li>✅ Garante unicidade via registro persistente</li>
+                <li>✅ Persiste em localStorage</li>
+                <li>✅ Nunca regenera (preserva ao recarregar)</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2>🧪 Testes Rápidos</h2>
+            <button onclick="testeGeracaoChave()">1. Gerar 1 Chave</button>
+            <button onclick="testeGerarVarias(5)">2. Gerar 5 Chaves</button>
+            <button onclick="testeGerarVarias(20)">3. Gerar 20 Chaves (Stress)</button>
+            <button onclick="testeValidarUnicidade()">4. Validar Unicidade</button>
+            <button onclick="testeSimularRecarregamento()">5. Simular Recarregamento</button>
+            <button onclick="testeLimparRegistro()">🗑️ Limpar Registro</button>
+            <button onclick="testeCompleto()">✅ Teste Completo</button>
+        </div>
+
+        <div id="output"></div>
+
+        <div id="stats" style="margin-top: 20px;"></div>
+    </div>
+
+    <script>
+        // ===== Implementação do Sistema de Chaves =====
+        
+        function carregarRegistroChaves() {
+            const registro = localStorage.getItem('registroChavesUsadas');
+            if (!registro) {
+                return {};
+            }
+            return JSON.parse(registro);
+        }
+
+        function salvarRegistroChaves(registro) {
+            localStorage.setItem('registroChavesUsadas', JSON.stringify(registro));
+        }
+
+        function gerarChaveAlfanumerica() {
+            const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let chave;
+            let tentativas = 0;
+            const maxTentativas = 100;
+            const registroChaves = carregarRegistroChaves();
+            
+            do {
+                chave = '';
+                for (let i = 0; i < 5; i++) {
+                    const indice = Math.floor(Math.random() * caracteres.length);
+                    chave += caracteres[indice];
+                }
+                tentativas++;
+            } while (registroChaves[chave] && tentativas < maxTentativas);
+            
+            if (tentativas >= maxTentativas) {
+                console.error('⚠️ Não foi possível gerar chave única após 100 tentativas');
+                return null;
+            }
+            
+            return chave;
+        }
+
+        function registrarChaveUsada(chave) {
+            if (!chave) return false;
+            
+            const registroChaves = carregarRegistroChaves();
+            const agora = new Date().toISOString();
+            
+            registroChaves[chave] = {
+                dataCriacao: agora,
+                status: 'ativa'
+            };
+            
+            salvarRegistroChaves(registroChaves);
+            return true;
+        }
+
+        function gerarChaveAtividade() {
+            const chave = gerarChaveAlfanumerica();
+            
+            if (chave) {
+                registrarChaveUsada(chave);
+            }
+            
+            return chave;
+        }
+
+        function validarChaveJaUsada(chave) {
+            if (!chave) return false;
+            const registroChaves = carregarRegistroChaves();
+            return registroChaves.hasOwnProperty(chave);
+        }
+
+        // ===== Funções de Teste =====
+
+        const output = document.getElementById('output');
+        const stats = document.getElementById('stats');
+
+        function log(mensagem) {
+            const timestamp = new Date().toLocaleTimeString('pt-BR');
+            output.innerHTML += `[${timestamp}] ${mensagem}\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function limparOutput() {
+            output.innerHTML = '';
+        }
+
+        function testeGeracaoChave() {
+            limparOutput();
+            log('🔄 Iniciando teste de geração de chave única...\n');
+
+            const chave = gerarChaveAtividade();
+            
+            if (!chave) {
+                log('❌ FALHA: Não foi possível gerar chave');
+                return;
+            }
+
+            log(`✅ Chave gerada: ${chave}`);
+            log(`   - Comprimento: ${chave.length} caracteres`);
+            log(`   - Padrão alfanumérico: ${/^[A-Z0-9]{5}$/.test(chave) ? 'SIM ✅' : 'NÃO ❌'}`);
+            log(`   - Registrada em localStorage: ${validarChaveJaUsada(chave) ? 'SIM ✅' : 'NÃO ❌'}\n`);
+
+            atualizarEstatisticas();
+        }
+
+        function testeGerarVarias(quantidade) {
+            limparOutput();
+            log(`🔄 Gerando ${quantidade} chaves...\n`);
+
+            const chaves = [];
+            const chavesSet = new Set();
+
+            for (let i = 1; i <= quantidade; i++) {
+                const chave = gerarChaveAtividade();
+                chaves.push(chave);
+                chavesSet.add(chave);
+                log(`${i}. ${chave}`);
+            }
+
+            log(`\n📊 Resultado:`);
+            log(`   - Total gerado: ${chaves.length}`);
+            log(`   - Chaves únicas: ${chavesSet.size}`);
+            log(`   - Duplicatas: ${chaves.length - chavesSet.size}`);
+            
+            if (chaves.length === chavesSet.size) {
+                log(`   ✅ Todas as chaves são únicas!`);
+            } else {
+                log(`   ❌ ERRO: Foram geradas chaves duplicadas!`);
+            }
+
+            log(`\n📋 Chaves geradas:`);
+            chaves.forEach((c, i) => log(`   ${i + 1}. ${c}`));
+
+            atualizarEstatisticas();
+        }
+
+        function testeValidarUnicidade() {
+            limparOutput();
+            log('🔍 Validando unicidade de chaves no registro...\n');
+
+            const registroChaves = carregarRegistroChaves();
+            const chaVesArray = Object.keys(registroChaves);
+
+            log(`Total de chaves no registro: ${chaVesArray.length}\n`);
+
+            if (chaVesArray.length === 0) {
+                log('⚠️ Nenhuma chave foi registrada ainda.');
+                return;
+            }
+
+            log('Primeiras 10 chaves:');
+            chaVesArray.slice(0, 10).forEach((chave, i) => {
+                const info = registroChaves[chave];
+                log(`   ${i + 1}. ${chave} (criada em ${new Date(info.dataCriacao).toLocaleString('pt-BR')})`);
+            });
+
+            const chavesUnicas = new Set(chaVesArray);
+            if (chavesUnicas.size === chaVesArray.length) {
+                log(`\n✅ Todas as ${chaVesArray.length} chaves são únicas!`);
+            } else {
+                log(`\n❌ Encontradas ${chaVesArray.length - chavesUnicas.size} duplicatas!`);
+            }
+
+            atualizarEstatisticas();
+        }
+
+        function testeSimularRecarregamento() {
+            limparOutput();
+            log('🔄 Simulando recarregamento da página...\n');
+
+            const registroAntes = carregarRegistroChaves();
+            const chaVesAntes = Object.keys(registroAntes).length;
+
+            log(`Chaves antes do "recarregamento": ${chaVesAntes}`);
+            log('Simulando uma atividade sendo criada e salva...\n');
+
+            const novaChave = gerarChaveAtividade();
+            log(`Nova chave gerada: ${novaChave}`);
+
+            // Simular recarregamento (não limpa localStorage)
+            log('\n🔄 "Página recarregada" (localStorage preservado)...\n');
+
+            const registroDepois = carregarRegistroChaves();
+            const chaVesDepois = Object.keys(registroDepois).length;
+
+            log(`Chaves após o "recarregamento": ${chaVesDepois}`);
+            log(`Diferença: ${chaVesDepois - chaVesAntes} nova(s) chave(s)`);
+
+            // Verificar se a chave nova ainda existe
+            if (validarChaveJaUsada(novaChave)) {
+                log(`\n✅ A chave ${novaChave} foi PRESERVADA após recarregamento!`);
+            } else {
+                log(`\n❌ ERRO: A chave ${novaChave} foi PERDIDA após recarregamento!`);
+            }
+
+            atualizarEstatisticas();
+        }
+
+        function testeCompleto() {
+            limparOutput();
+            log('🚀 INICIANDO TESTE COMPLETO\n');
+            log('=' .repeat(50) + '\n');
+
+            // Teste 1: Gerar 10 chaves
+            log('Teste 1: Gerando 10 chaves...');
+            const chaves = [];
+            for (let i = 0; i < 10; i++) {
+                chaves.push(gerarChaveAtividade());
+            }
+
+            const chaVesUniques = new Set(chaves);
+            if (chaves.length === chaVesUniques.size) {
+                log(`✅ Todas as 10 chaves são únicas\n`);
+            } else {
+                log(`❌ Duplicatas encontradas\n`);
+                return;
+            }
+
+            // Teste 2: Validar formato
+            log('Teste 2: Validando formato das chaves...');
+            const todosFormatoCorreto = chaves.every(c => /^[A-Z0-9]{5}$/.test(c));
+            if (todosFormatoCorreto) {
+                log(`✅ Todas as chaves têm formato correto (5 caracteres alfanuméricos)\n`);
+            } else {
+                log(`❌ Algumas chaves têm formato inválido\n`);
+                return;
+            }
+
+            // Teste 3: Validar persistência
+            log('Teste 3: Validando persistência em localStorage...');
+            const todasRegistradas = chaves.every(c => validarChaveJaUsada(c));
+            if (todasRegistradas) {
+                log(`✅ Todas as 10 chaves estão registradas\n`);
+            } else {
+                log(`❌ Nem todas as chaves foram registradas\n`);
+                return;
+            }
+
+            // Teste 4: Listar todas as chaves
+            log('Teste 4: Listar todas as chaves no registro...');
+            const registroChaves = carregarRegistroChaves();
+            const todasChaves = Object.keys(registroChaves);
+            log(`Total de chaves no sistema: ${todasChaves.length}\n`);
+
+            log('🎉 TESTE COMPLETO FINALIZADO COM SUCESSO! ✅\n');
+            log('=' .repeat(50) + '\n');
+
+            log('📊 Resultado Final:');
+            log(`   ✅ 10 chaves geradas e únicas`);
+            log(`   ✅ Formato correto (5 caracteres)`);
+            log(`   ✅ Persistência em localStorage`);
+            log(`   ✅ Sistema funcionando corretamente!`);
+
+            atualizarEstatisticas();
+        }
+
+        function testeLimparRegistro() {
+            localStorage.removeItem('registroChavesUsadas');
+            limparOutput();
+            log('🗑️ Registro de chaves limpo com sucesso!');
+            atualizarEstatisticas();
+        }
+
+        function atualizarEstatisticas() {
+            const registroChaves = carregarRegistroChaves();
+            const totalChaves = Object.keys(registroChaves).length;
+
+            stats.innerHTML = `
+                <div class="stat">
+                    🔑 Total de chaves no registro: <strong>${totalChaves}</strong>
+                </div>
+                <div class="stat">
+                    💾 Espaço em localStorage: <strong>${(JSON.stringify(registroChaves).length / 1024).toFixed(2)} KB</strong>
+                </div>
+                <div class="stat">
+                    ⏰ Últimas chaves: <strong>${Object.keys(registroChaves).slice(-3).join(', ') || 'Nenhuma'}</strong>
+                </div>
+            `;
+        }
+
+        // Atualizar estatísticas ao carregar
+        atualizarEstatisticas();
+    </script>
+</body>
+</html>
