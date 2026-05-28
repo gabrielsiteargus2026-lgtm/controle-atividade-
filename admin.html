@@ -614,12 +614,16 @@
     <div id="modalDeletarTicket" class="modal">
         <div class="modal-content">
             <button class="close-btn" id="btnFecharDeletarTicket">&times;</button>
-            <div class="modal-header">Deletar Ticket</div>
+            <div class="modal-header">Deletar Ticket ou Atividade</div>
             <div class="modal-body">
-                <p>Digite o número do ticket que deseja deletar:</p>
-                <input type="text" id="inputNumeroTicket" placeholder="Ex: 001, 002, etc" autofocus>
+                <p><strong>Opção 1 - Por Ticket:</strong></p>
+                <input type="text" id="inputNumeroTicket" placeholder="Ex: 001, 002, etc">
+                
+                <p style="margin-top: 15px; margin-bottom: 5px;"><strong>Opção 2 - Por Chave (🔑):</strong></p>
+                <input type="text" id="inputNumeroChave" placeholder="Ex: ATIV-20260528-143052-ABC123" style="margin-bottom: 15px;">
+                
                 <div id="infoTicketEncontrado" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;">
-                    <p><strong>Ticket encontrado:</strong></p>
+                    <p><strong>Atividade encontrada:</strong></p>
                     <p id="textoInfoTicket"></p>
                 </div>
             </div>
@@ -1160,6 +1164,7 @@
             const btnDeletarTicket = document.getElementById('btnDeletarTicket');
             const modalDeletarTicket = document.getElementById('modalDeletarTicket');
             const inputNumeroTicket = document.getElementById('inputNumeroTicket');
+            const inputNumeroChave = document.getElementById('inputNumeroChave');
             const btnPesquisarTicket = document.getElementById('btnPesquisarTicket');
             const btnConfirmarDeletarTicket = document.getElementById('btnConfirmarDeletarTicket');
             const btnCancelarDeletarTicket = document.getElementById('btnCancelarDeletarTicket');
@@ -1172,6 +1177,7 @@
             btnDeletarTicket.addEventListener('click', () => {
                 modalDeletarTicket.style.display = 'flex';
                 inputNumeroTicket.value = '';
+                inputNumeroChave.value = '';
                 infoTicketEncontrado.style.display = 'none';
                 btnConfirmarDeletarTicket.style.display = 'none';
                 inputNumeroTicket.focus();
@@ -1179,29 +1185,47 @@
 
             btnCancelarDeletarTicket.addEventListener('click', () => {
                 modalDeletarTicket.style.display = 'none';
+                inputNumeroTicket.value = '';
+                inputNumeroChave.value = '';
                 ticketSelecionado = null;
             });
 
             btnFecharDeletarTicket.addEventListener('click', () => {
                 modalDeletarTicket.style.display = 'none';
+                inputNumeroTicket.value = '';
+                inputNumeroChave.value = '';
                 ticketSelecionado = null;
             });
 
             btnPesquisarTicket.addEventListener('click', () => {
                 const numeroTicket = inputNumeroTicket.value.trim();
-                if (!numeroTicket) {
-                    alert('Digite um número de ticket!');
+                const numeroChave = inputNumeroChave.value.trim().toUpperCase();
+                
+                if (!numeroTicket && !numeroChave) {
+                    alert('Digite um número de ticket ou uma chave de atividade!');
                     return;
                 }
 
                 // Pesquisar em atividades
                 const atividadesList = Array.isArray(atividades) ? atividades : Object.values(atividades || {});
-                const atividadesFiltradas = atividadesList.filter(a => a && a.ticket); // Filtrar valores inválidos
-                const atividadeEncontrada = atividadesFiltradas.find(a => String(a.ticket) === String(numeroTicket) || a.ticket == parseInt(numeroTicket));
+                const atividadesFiltradas = atividadesList.filter(a => a && (a.ticket || a.chaveAtividade)); // Filtrar valores inválidos
+                
+                let atividadeEncontrada = null;
+                
+                // Procurar por ticket se fornecido
+                if (numeroTicket) {
+                    atividadeEncontrada = atividadesFiltradas.find(a => String(a.ticket) === String(numeroTicket) || a.ticket == parseInt(numeroTicket));
+                }
+                
+                // Procurar por chave se fornecido
+                if (!atividadeEncontrada && numeroChave) {
+                    atividadeEncontrada = atividadesFiltradas.find(a => a.chaveAtividade && a.chaveAtividade.toUpperCase().includes(numeroChave));
+                }
 
                 if (atividadeEncontrada) {
-                    ticketSelecionado = numeroTicket;
+                    ticketSelecionado = numeroTicket || numeroChave;
                     textoInfoTicket.innerHTML = `
+                        ${atividadeEncontrada.chaveAtividade ? `<strong>🔑 Chave:</strong> ${atividadeEncontrada.chaveAtividade}<br>` : ''}
                         <strong>Ticket:</strong> #${atividadeEncontrada.ticket}<br>
                         <strong>Colaborador:</strong> ${atividadeEncontrada.colaborador || 'N/A'}<br>
                         <strong>Descrição:</strong> ${atividadeEncontrada.descricao || 'N/A'}<br>
@@ -1211,7 +1235,8 @@
                     infoTicketEncontrado.style.display = 'block';
                     btnConfirmarDeletarTicket.style.display = 'block';
                 } else {
-                    alert(`Ticket #${numeroTicket} não encontrado no sistema!`);
+                    const pesquisa = numeroTicket ? `Ticket #${numeroTicket}` : `Chave ${numeroChave}`;
+                    alert(`${pesquisa} não encontrado no sistema!`);
                     ticketSelecionado = null;
                     infoTicketEncontrado.style.display = 'none';
                     btnConfirmarDeletarTicket.style.display = 'none';

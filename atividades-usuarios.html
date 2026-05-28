@@ -841,6 +841,7 @@
                 <table id="activitiesTable" class="table-view">
                     <thead>
                         <tr>
+                            <th>🔑 Chave</th>
                             <th>Data/Hora</th>
                             <th>Usuário</th>
                             <th>Email</th>
@@ -976,9 +977,11 @@
                     const ticket = registro.ticket || registro.id || '-';
                     const nomeUsuario = registro.nome_usuario || registro.usuario_id || 'Usuário';
                     const emailUsuario = registro.email_usuario || 'email@desconhecido.com';
+                    const chave = registro.chaveAtividade || '-';
 
                     html += `
                         <tr>
+                            <td class="chave-cell"><small style="color: #9c27b0; font-weight: 600;">🔑 ${chave}</small></td>
                             <td class="timestamp-cell"><small>${dataFormatada}</small><br><small>${horaFormatada}</small></td>
                             <td class="user-cell"><strong>${nomeUsuario}</strong></td>
                             <td><small>${emailUsuario}</small></td>
@@ -993,7 +996,7 @@
                     console.error(`❌ Erro ao processar registro ${index}:`, registro, erro);
                     html += `
                         <tr>
-                            <td colspan="6" style="color: #e74c3c;">
+                            <td colspan="7" style="color: #e74c3c;">
                                 ❌ Erro ao processar registro
                             </td>
                         </tr>

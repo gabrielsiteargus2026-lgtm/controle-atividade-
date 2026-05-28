@@ -321,6 +321,7 @@
                 <table id="tabelaAtividades">
                     <thead>
                         <tr>
+                            <th>🔑 Chave</th>
                             <th>Colaborador</th>
                             <th>Ticket</th>
                             <th>Data de Início</th>
@@ -335,7 +336,7 @@
                     </thead>
                     <tbody id="bodyTabela">
                         <tr>
-                            <td colspan="10" class="empty-state">Nenhuma atividade registrada ainda</td>
+                            <td colspan="11" class="empty-state">Nenhuma atividade registrada ainda</td>
                         </tr>
                     </tbody>
                 </table>
@@ -419,12 +420,13 @@
         // Renderizar tabela
         function renderizarTabela() {
             if (atividades.length === 0) {
-                bodyTabela.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhuma atividade registrada ainda</td></tr>';
+                bodyTabela.innerHTML = '<tr><td colspan="11" class="empty-state">Nenhuma atividade registrada ainda</td></tr>';
                 return;
             }
 
             bodyTabela.innerHTML = atividades.map((atividade, index) => `
                 <tr>
+                    <td><strong style="color: #9c27b0;">🔑 ${atividade.chaveAtividade || 'N/A'}</strong></td>
                     <td>${atividade.colaborador}</td>
                     <td>${atividade.ticket}</td>
                     <td>${atividade.dataInicio}</td>
@@ -446,10 +448,10 @@
                 return;
             }
 
-            const headers = ['Colaborador', 'Ticket', 'Data de Início', 'Hora de Início', 'Data de Fim', 'Hora de Fim', 'Duração', 'Descrição', 'Observação', 'Justificativa'];
+            const headers = ['Chave', 'Colaborador', 'Ticket', 'Data de Início', 'Hora de Início', 'Data de Fim', 'Hora de Fim', 'Duração', 'Descrição', 'Observação', 'Justificativa'];
             const csv = [
                 headers.join(','),
-                ...atividades.map(a => [a.colaborador, a.ticket, a.dataInicio, a.horaInicio, a.dataFim || '', a.horaFim, a.duracao, a.descricao || '', a.observacao || '', a.justificativa || ''].join(','))
+                ...atividades.map(a => [a.chaveAtividade || 'N/A', a.colaborador, a.ticket, a.dataInicio, a.horaInicio, a.dataFim || '', a.horaFim, a.duracao, a.descricao || '', a.observacao || '', a.justificativa || ''].join(','))
             ].join('\n');
 
             const blob = new Blob([csv], { type: 'text/csv' });

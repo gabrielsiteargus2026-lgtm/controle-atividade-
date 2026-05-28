@@ -447,10 +447,183 @@
                 content: '...';
             }
         }
+
+        /* Modal Atividades Colaborador */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 50px auto;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 1000px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #5b8ec6;
+            padding-bottom: 15px;
+        }
+
+        .modal-header h2 {
+            color: #2c3e50;
+            margin: 0;
+            font-size: 1.8em;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 2em;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .atividade-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 12px;
+            border-left: 4px solid #5b8ec6;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        .atividade-item:hover {
+            background: #f0f4f8;
+            transform: translateX(5px);
+        }
+
+        .atividade-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .atividade-ticket {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+
+        .atividade-duracao {
+            background: #51cf66;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .atividade-data {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .atividade-observacao {
+            color: #555;
+            font-size: 0.95em;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .modal-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f0f4f8;
+            border-radius: 8px;
+        }
+
+        .modal-stat-item {
+            text-align: center;
+        }
+
+        .modal-stat-label {
+            color: #666;
+            font-size: 0.85em;
+            margin-bottom: 5px;
+        }
+
+        .modal-stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #5b8ec6;
+        }
+
+        .colaborador-nome {
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #5b8ec6;
+        }
+
+        .colaborador-nome:hover {
+            color: #4a75b0;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
     <div id="usuarioWidget"></div>
+    
+    <!-- Modal de Atividades do Colaborador -->
+    <div id="modalAtividades" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitulo">Atividades do Colaborador</h2>
+                <button class="modal-close" onclick="fecharModalAtividades()">×</button>
+            </div>
+            
+            <div class="modal-stats">
+                <div class="modal-stat-item">
+                    <div class="modal-stat-label">Total de Atividades</div>
+                    <div class="modal-stat-value" id="modalTotalAtividades">0</div>
+                </div>
+                <div class="modal-stat-item">
+                    <div class="modal-stat-label">Tempo Total</div>
+                    <div class="modal-stat-value" id="modalTempoTotal">0h</div>
+                </div>
+                <div class="modal-stat-item">
+                    <div class="modal-stat-label">Tempo Médio</div>
+                    <div class="modal-stat-value" id="modalTempoMedio">0h</div>
+                </div>
+            </div>
+            
+            <div id="modalAtividadesList"></div>
+        </div>
+    </div>
+    
     <!-- Menu Lateral -->
     <aside class="sidebar">
         <img src="argus-logo 1.png" alt="Argus" class="sidebar-logo">
@@ -834,7 +1007,7 @@
                         <div class="ranking-item">
                             <span class="ranking-position ${classes[idx]}">${posicoes[idx]}</span>
                             <div class="ranking-info">
-                                <div class="ranking-name">${item[0]}</div>
+                                <div class="ranking-name colaborador-nome" onclick="abrirModalAtividades('${item[0]}')" data-colaborador="${item[0]}" title="Clique para ver todas as atividades">${item[0]}</div>
                                 <div class="ranking-stats">${item[1]} ${item[1] === 1 ? 'atividade' : 'atividades'} finalizadas</div>
                             </div>
                             <div class="ranking-value">#${idx + 1}</div>
@@ -1085,6 +1258,84 @@
                 atualizarPausas();
             }
         }, 5000);
+
+        // ✅ Abrir Modal de Atividades do Colaborador
+        function abrirModalAtividades(nomeColaborador) {
+            mostrarAtividadesColaborador(nomeColaborador);
+            document.getElementById('modalAtividades').style.display = 'block';
+        }
+
+        // ✅ Fechar Modal
+        function fecharModalAtividades() {
+            document.getElementById('modalAtividades').style.display = 'none';
+        }
+
+        // ✅ Mostrar Atividades do Colaborador
+        function mostrarAtividadesColaborador(nomeColaborador) {
+            // Garantir que é um array
+            const atividadesArray = converterParaArray(atividades);
+            
+            // Filtrar atividades do colaborador
+            const atividadesColaborador = atividadesArray.filter(a => a.colaborador === nomeColaborador);
+            
+            // Atualizar título do modal
+            document.getElementById('modalTitulo').innerHTML = `Atividades de <strong>${nomeColaborador}</strong>`;
+            
+            // Calcular estatísticas
+            const totalAtividades = atividadesColaborador.length;
+            const tempoTotal = atividadesColaborador.reduce((acc, a) => acc + converterParaHoras(a.duracao), 0);
+            const tempoMedio = totalAtividades > 0 ? tempoTotal / totalAtividades : 0;
+            
+            // Atualizar cards de estatísticas
+            document.getElementById('modalTotalAtividades').textContent = totalAtividades;
+            document.getElementById('modalTempoTotal').textContent = formatarHoras(tempoTotal);
+            document.getElementById('modalTempoMedio').textContent = formatarHoras(tempoMedio);
+            
+            // Renderizar lista de atividades
+            let html = '';
+            
+            if (atividadesColaborador.length === 0) {
+                html = '<div class="empty-state">Nenhuma atividade registrada para este colaborador no período selecionado</div>';
+            } else {
+                // Ordena atividades por data (mais recentes primeiro)
+                const atividadesOrdenadas = atividadesColaborador.sort((a, b) => {
+                    const dataA = new Date(a.dataInicio.split('/').reverse().join('-'));
+                    const dataB = new Date(b.dataInicio.split('/').reverse().join('-'));
+                    return dataB - dataA;
+                });
+                
+                atividadesOrdenadas.forEach(atividade => {
+                    const statusBadge = atividade.justificativa 
+                        ? '<span class="badge badge-warning">Com Justificativa</span>' 
+                        : '<span class="badge badge-success">OK</span>';
+                    
+                    html += `
+                        <div class="atividade-item">
+                            <div class="atividade-header">
+                                <div>
+                                    ${atividade.chaveAtividade ? `<div class="atividade-chave" style="color: #9c27b0; font-weight: 600; font-size: 0.85em;">🔑 ${atividade.chaveAtividade}</div>` : ''}
+                                    <div class="atividade-ticket">#${atividade.ticket}</div>
+                                    <div class="atividade-data">${atividade.dataInicio}</div>
+                                    ${statusBadge}
+                                </div>
+                                <div class="atividade-duracao">${atividade.duracao}</div>
+                            </div>
+                            ${atividade.observacao ? `<div class="atividade-observacao"><strong>Observação:</strong> ${atividade.observacao}</div>` : ''}
+                        </div>
+                    `;
+                });
+            }
+            
+            document.getElementById('modalAtividadesList').innerHTML = html;
+        }
+
+        // ✅ Fechar modal ao clicar fora dele
+        window.onclick = function(event) {
+            const modal = document.getElementById('modalAtividades');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
     </script>
 </body>
 </html>

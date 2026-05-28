@@ -548,6 +548,63 @@
             margin-bottom: 20px;
         }
 
+        /* Checkbox para Escrever Título */
+        .titulo-checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            margin-bottom: 8px;
+            font-size: 0.75em;
+        }
+
+        .titulo-checkbox-group input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #5b8ec6;
+        }
+
+        .titulo-checkbox-group label {
+            margin: 0;
+            font-weight: 500;
+            color: #666;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* Campo de Título - inicialmente escondido */
+        .campo-titulo-wrapper {
+            display: none;
+            margin-bottom: 8px;
+        }
+
+        .campo-titulo-wrapper.ativo {
+            display: block;
+        }
+
+        .campo-titulo-wrapper input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.85em;
+            transition: border-color 0.3s;
+        }
+
+        .campo-titulo-wrapper input:focus {
+            outline: none;
+            border-color: #5b8ec6;
+        }
+
+        .campo-titulo-wrapper label {
+            display: block;
+            font-size: 0.75em;
+            font-weight: 500;
+            color: #666;
+            margin-bottom: 3px;
+        }
+
         .action-buttons button {
             flex: 1;
         }
@@ -988,6 +1045,11 @@
                 <div style="background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); padding: 12px; margin-bottom: 12px;">
                     <h2 style="color: #5b8ec6; margin-bottom: 8px; font-size: 1.1em;">Filtros</h2>
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; align-items: flex-end;">
+                        <!-- Campo de Pesquisa por Chave -->
+                        <div style="display: flex; flex-direction: column;">
+                            <label for="filtroChave" style="font-size: 0.85em; margin-bottom: 3px; font-weight: 500;">🔑 Chave</label>
+                            <input type="text" id="filtroChave" placeholder="Ex: ATIV-20260528..." style="padding: 6px; font-size: 0.9em; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
                         <div style="display: flex; flex-direction: column;">
                             <label for="filtroColaborador" style="font-size: 0.85em; margin-bottom: 3px; font-weight: 500;">Colaborador</label>
                             <select id="filtroColaborador" style="padding: 6px; font-size: 0.9em; border: 1px solid #ddd; border-radius: 4px;">
@@ -1040,7 +1102,7 @@
                     </div>
                 
                 <!-- Botão Flutuante para Iniciar Atividade -->
-                <button id="btnIniciarFlutante" class="btn-iniciar-flutuante" title="Iniciar Nova Atividade">Iniciar Atividade</button>
+                <button type="button" id="btnIniciarFlutante" class="btn-iniciar-flutuante" title="Iniciar Nova Atividade">Iniciar Atividade</button>
 
         <!-- Modal para Justificativa -->
         <div id="modalJustificativa" class="modal">
@@ -1051,7 +1113,7 @@
                     <textarea id="txtJustificativa" placeholder="Digite a justificativa aqui..."></textarea>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn-primary" id="btnConfirmarJustificativa">Confirmar</button>
+                    <button type="button" class="btn-primary" id="btnConfirmarJustificativa">Confirmar</button>
                 </div>
             </div>
         </div>
@@ -1074,8 +1136,8 @@
                     </select>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn-danger" id="btnCancelarPausa" style="background: #999;">Cancelar</button>
-                    <button class="btn-primary" id="btnConfirmarPausa">Pausar</button>
+                    <button type="button" class="btn-danger" id="btnCancelarPausa" style="background: #999;">Cancelar</button>
+                    <button type="button" class="btn-primary" id="btnConfirmarPausa">Pausar</button>
                 </div>
             </div>
         </div>
@@ -1089,8 +1151,8 @@
                     <textarea id="txtObservacaoConcluir" placeholder="Digite a observação aqui..." style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 1em; min-height: 100px; resize: vertical;" required></textarea>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn-danger" id="btnCancelarObsConcluir" style="background: #999;">Cancelar</button>
-                    <button class="btn-success" id="btnConfirmarComObs" style="background: #51cf66;">Próximo</button>
+                    <button type="button" class="btn-danger" id="btnCancelarObsConcluir" style="background: #999;">Cancelar</button>
+                    <button type="button" class="btn-success" id="btnConfirmarComObs" style="background: #51cf66;">Próximo</button>
                 </div>
             </div>
         </div>
@@ -1108,9 +1170,9 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn-danger" id="btnCancelarColaboradores" style="background: #999;">Cancelar</button>
-                    <button class="btn-primary" id="btnProsseguirSemColaboradores" style="background: #5b8ec6;">Concluir Sem Atribuir</button>
-                    <button class="btn-success" id="btnConfirmarAtribuicao" style="background: #51cf66;">Concluir e Atribuir</button>
+                    <button type="button" class="btn-danger" id="btnCancelarColaboradores" style="background: #999;">Cancelar</button>
+                    <button type="button" class="btn-primary" id="btnProsseguirSemColaboradores" style="background: #5b8ec6;">Concluir Sem Atribuir</button>
+                    <button type="button" class="btn-success" id="btnConfirmarAtribuicao" style="background: #51cf66;">Concluir e Atribuir</button>
                 </div>
             </div>
         </div>
@@ -1136,7 +1198,21 @@
                         <div class="dados-form-group">
                             <label for="ticketModal">Ticket</label>
                             <input type="number" id="ticketModal" placeholder="Número" autocomplete="off">
+                            <div id="ticketWarning" style="display: none; color: #c92a2a; font-size: 0.75em; margin-top: 3px;">⚠️ Este ticket já foi utilizado</div>
                         </div>
+                        
+                        <!-- Opção de Escrever Título -->
+                        <div class="titulo-checkbox-group">
+                            <input type="checkbox" id="ativarTitulo" autocomplete="off">
+                            <label for="ativarTitulo">Escrever título</label>
+                        </div>
+                        
+                        <!-- Campo de Título - inicialmente escondido -->
+                        <div class="campo-titulo-wrapper" id="campoTituloWrapper">
+                            <label for="tituloModal">Título do Ticket</label>
+                            <input type="text" id="tituloModal" placeholder="Insira o título do ticket..." autocomplete="off">
+                        </div>
+                        
                         <div class="dados-form-group">
                             <label for="descricaoModal">Descrição</label>
                             <textarea id="descricaoModal" placeholder="Descreva..." autocomplete="off"></textarea>
@@ -1144,8 +1220,8 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn-danger" id="btnCancelarIniciar" style="background: #999;">Cancelar</button>
-                    <button class="btn-primary" id="btnConfirmarIniciar">Iniciar</button>
+                    <button type="button" class="btn-danger" id="btnCancelarIniciar" style="background: #999;">Cancelar</button>
+                    <button type="button" class="btn-primary" id="btnConfirmarIniciar">Iniciar</button>
                 </div>
             </div>
         </div>
@@ -1172,6 +1248,16 @@
         let atividadesFiltradas = [];
         let historicoPausas = []; // Rastreamento de todas as pausas
         let colaboradoresSelecionados = []; // Armazenar colaboradores selecionados
+
+        // ✅ LISTENER GLOBAL PARA DEBUG
+        window.addEventListener('beforeunload', function(e) {
+            console.warn('⚠️ beforeunload disparado!', e);
+        });
+
+        // Capturar qualquer erro não tratado
+        window.addEventListener('error', function(e) {
+            console.error('❌ Erro global capturado:', e.message, e.error);
+        });
 
         // Lista de todos os colaboradores
         const todosColaboradores = [
@@ -1229,6 +1315,10 @@
         const btnIniciarFlutante = document.getElementById('btnIniciarFlutante');
         const modalIniciarAtividade = document.getElementById('modalIniciarAtividade');
         const btnCancelarIniciar = document.getElementById('btnCancelarIniciar');
+        const checkboxTitulo = document.getElementById('ativarTitulo');
+        const campoTituloWrapper = document.getElementById('campoTituloWrapper');
+        const inputTitulo = document.getElementById('tituloModal');
+        const ticketWarning = document.getElementById('ticketWarning');
         const modalJustificativa = document.getElementById('modalJustificativa');
         const txtJustificativa = document.getElementById('txtJustificativa');
         const btnConfirmarJustificativa = document.getElementById('btnConfirmarJustificativa');
@@ -1246,6 +1336,7 @@
         const filtroColaborador = document.getElementById('filtroColaborador');
         const filtroData = document.getElementById('filtroData');
         const filtroStatus = document.getElementById('filtroStatus');
+        const filtroChave = document.getElementById('filtroChave'); // ✅ Adicionar filtro de chave
         const btnAplicarFiltros = document.getElementById('btnAplicarFiltros');
         const btnLimparFiltros = document.getElementById('btnLimparFiltros');
         const modalAtribuirColaboradores = document.getElementById('modalAtribuirColaboradores');
@@ -1294,7 +1385,11 @@
 
                     atividadesEmAndamento = emAndamentoSalvas.map(a => {
                         const existente = atividadesEmAndamento.find(e => e.id === a.id);
-                        return { ...a, intervaloTimer: existente ? existente.intervaloTimer : null };
+                        return { 
+                            ...a, 
+                            intervaloTimer: existente ? existente.intervaloTimer : null,
+                            chaveAtividade: a.chaveAtividade || gerarChaveAtividade() // ✅ Garantir chave
+                        };
                     });
 
                     // Reiniciar cronômetros para atividades sem timer
@@ -1319,10 +1414,19 @@
         // ✅ Carregar do localStorage
         function carregarDoLocalStorage() {
             const dadosSalvos = localStorage.getItem('atividades');
-            if (dadosSalvos) { atividades = normalizarAtividades(JSON.parse(dadosSalvos)); }
+            if (dadosSalvos) { 
+                atividades = normalizarAtividades(JSON.parse(dadosSalvos)).map(a => ({
+                    ...a,
+                    chaveAtividade: a.chaveAtividade || gerarChaveAtividade() // ✅ Garantir chave
+                }));
+            }
             const emAndamentoSalvas = localStorage.getItem('atividadesEmAndamento');
             if (emAndamentoSalvas) {
-                atividadesEmAndamento = JSON.parse(emAndamentoSalvas).map(a => ({ ...a, tempoInicio: a.tempoInicio }));
+                atividadesEmAndamento = JSON.parse(emAndamentoSalvas).map(a => ({ 
+                    ...a, 
+                    tempoInicio: a.tempoInicio,
+                    chaveAtividade: a.chaveAtividade || gerarChaveAtividade() // ✅ Garantir chave
+                }));
                 atividadesEmAndamento.forEach(a => {
                     if (a && a.id) {
                         iniciarCronometro(a.id);
@@ -1360,17 +1464,19 @@
         function salvarDados() {
             const emAndamentoParaSalvar = atividadesEmAndamento.map(a => ({
                 id: a.id,
+                chaveAtividade: a.chaveAtividade || gerarChaveAtividade(), // ✅ Gerar se não existir
                 nome: a.nome,
                 ticket: a.ticket,
                 descricao: a.descricao || '',
+                titulo: a.titulo || '', // ✅ Incluir título
                 dataInicio: a.dataInicio,
                 horaInicio: a.horaInicio,
                 observacao: a.observacao || '',
                 tempoInicio: a.tempoInicio,
                 // ✅ Rastreamento de usuário
-                usuario_id: usuarioAtual?.uid || 'anonimo',
-                email_usuario: usuarioAtual?.email || 'desconhecido',
-                nome_usuario: usuarioAtual?.nome || 'Usuário',
+                usuario_id: a.usuario_id || usuarioAtual?.uid || 'anonimo',
+                email_usuario: a.email_usuario || usuarioAtual?.email || 'desconhecido',
+                nome_usuario: a.nome_usuario || usuarioAtual?.nome || 'Usuário',
                 data_criacao: a.data_criacao || new Date().toISOString(),
                 data_atualizacao: new Date().toISOString()
             }));
@@ -1403,63 +1509,196 @@
             return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
         }
 
+        // ✅ Validar se o ticket já foi utilizado
+        function validarTicketDuplicado(numeroTicket) {
+            if (!numeroTicket) return false;
+            
+            // Verificar em atividades finalizadas
+            const emAtividades = atividades.some(a => a.ticket === numeroTicket);
+            
+            // Verificar em atividades em andamento
+            const emAndamento = atividadesEmAndamento.some(a => a.ticket === numeroTicket);
+            
+            return emAtividades || emAndamento;
+        }
+
+        // ✅ Gerar chave de identificação única (UUID)
+        function gerarChaveAtividade() {
+            let chave;
+            let tentativas = 0;
+            const maxTentativas = 10;
+            
+            do {
+                const agora = new Date();
+                const ano = agora.getFullYear();
+                const mes = String(agora.getMonth() + 1).padStart(2, '0');
+                const dia = String(agora.getDate()).padStart(2, '0');
+                const hora = String(agora.getHours()).padStart(2, '0');
+                const minuto = String(agora.getMinutes()).padStart(2, '0');
+                const segundo = String(agora.getSeconds()).padStart(2, '0');
+                const aleatorio = Math.random().toString(36).substring(2, 8).toUpperCase();
+                
+                chave = `ATIV-${ano}${mes}${dia}-${hora}${minuto}${segundo}-${aleatorio}`;
+                tentativas++;
+            } while (validarChaveDuplicada(chave) && tentativas < maxTentativas);
+            
+            return chave;
+        }
+
+        // ✅ Validar se chave já existe
+        function validarChaveDuplicada(chave) {
+            if (!chave) return false;
+            const emAtividades = atividades.some(a => a.chaveAtividade === chave);
+            const emAndamento = atividadesEmAndamento.some(a => a.chaveAtividade === chave);
+            return emAtividades || emAndamento;
+        }
+
+        // ✅ Pesquisar atividades por chave
+        function pesquisarPorChave(chave) {
+            if (!chave) return [];
+            const chaveUpper = chave.toUpperCase();
+            const encontradas = atividades.filter(a => 
+                a.chaveAtividade && a.chaveAtividade.includes(chaveUpper)
+            );
+            return encontradas;
+        }
+
+        // ✅ Mostrar aviso de ticket duplicado em tempo real
+        function verificarTicketEmTempo() {
+            const ticket = inputTicket.value.trim();
+            
+            if (ticket && validarTicketDuplicado(ticket)) {
+                ticketWarning.style.display = 'block';
+            } else {
+                ticketWarning.style.display = 'none';
+            }
+        }
+
+        // ✅ Alternar visibilidade do campo de título
+        function alternarCampoTitulo() {
+            if (checkboxTitulo.checked) {
+                campoTituloWrapper.classList.add('ativo');
+                inputTitulo.focus();
+            } else {
+                campoTituloWrapper.classList.remove('ativo');
+                inputTitulo.value = ''; // Limpar o campo ao desativar
+            }
+        }
+
         // Iniciar atividade
         function iniciarAtividade() {
-            const nome = inputNome.value.trim();
-            const ticket = inputTicket.value.trim();
-            const descricao = document.getElementById('descricaoModal').value.trim();
-
-            if (!nome || nome === '') {
-                mostrarAlerta('erro', 'Por favor, selecione um colaborador');
-                return;
-            }
-
-            if (!ticket) {
-                mostrarAlerta('erro', 'Por favor, insira o número do ticket');
-                return;
-            }
-
-            const agora = new Date();
-            const novaAtividade = {
-                id: Date.now(),
-                nome: nome,
-                ticket: ticket,
-                descricao: descricao,
-                dataInicio: agora.toLocaleDateString('pt-BR'),
-                horaInicio: agora.toLocaleTimeString('pt-BR'),
-                tempoInicio: agora.getTime(),
-                observacao: '',
-                intervaloTimer: null,
-                // ✅ Adicionar rastreamento de usuário no início
-                usuario_id: usuarioAtual?.uid || 'anonimo',
-                email_usuario: usuarioAtual?.email || 'desconhecido',
-                nome_usuario: usuarioAtual?.nome || 'Usuário',
-                data_criacao: agora.toISOString()
-            };
-
-            atividadesEmAndamento.push(novaAtividade);
+            console.log('📌 Função iniciarAtividade() chamada');
             
-            // Adicionar ao estado do kanban
-            kanbanState[novaAtividade.id] = { status: 'em_andamento', motivoPausa: '' };
+            try {
+                const nome = inputNome.value.trim();
+                const ticket = inputTicket.value.trim();
+                const descricao = document.getElementById('descricaoModal').value.trim();
+                const titulo = checkboxTitulo.checked ? inputTitulo.value.trim() : '';
 
-            salvarDados();
-            atualizarKanban();
-            iniciarCronometro(novaAtividade.id);
+                console.log('✅ Valores capturados:', { nome, ticket, descricao, titulo });
 
-            // ✅ Registrar início de atividade com rastreio completo
-            // Usa a nova função que registra como INICIO em vez de INICIOU
-            registrarInicioAtividade(ticket, descricao, {
-                colaborador: nome,
-                usuario_logado: usuarioAtual?.email
-            });
+                if (!nome || nome === '') {
+                    mostrarAlerta('erro', 'Por favor, selecione um colaborador');
+                    console.warn('❌ Erro: Nome vazio');
+                    return;
+                }
 
-            mostrarAlerta('sucesso', `Atividade iniciada para o ticket ${ticket}`);
-            
-            // Fechar modal e limpar campos após iniciar
-            modalIniciarAtividade.style.display = 'none';
-            inputNome.value = '';
-            inputTicket.value = '';
-            document.getElementById('descricaoModal').value = '';
+                if (!ticket) {
+                    mostrarAlerta('erro', 'Por favor, insira o número do ticket');
+                    console.warn('❌ Erro: Ticket vazio');
+                    return;
+                }
+
+                // ✅ Validar ticket duplicado
+                if (validarTicketDuplicado(ticket)) {
+                    mostrarAlerta('erro', '⚠️ Este número de ticket já foi utilizado. Por favor, insira um número diferente.');
+                    console.warn('❌ Erro: Ticket duplicado');
+                    return;
+                }
+
+                const agora = new Date();
+                const novaAtividade = {
+                    id: Date.now(),
+                    chaveAtividade: gerarChaveAtividade(), // ✅ Gerar chave única
+                    nome: nome,
+                    ticket: ticket,
+                    descricao: descricao,
+                    titulo: titulo, // ✅ Armazenar título do ticket
+                    dataInicio: agora.toLocaleDateString('pt-BR'),
+                    horaInicio: agora.toLocaleTimeString('pt-BR'),
+                    tempoInicio: agora.getTime(),
+                    observacao: '',
+                    intervaloTimer: null,
+                    // ✅ Adicionar rastreamento de usuário no início
+                    usuario_id: usuarioAtual?.uid || 'anonimo',
+                    email_usuario: usuarioAtual?.email || 'desconhecido',
+                    nome_usuario: usuarioAtual?.nome || 'Usuário',
+                    data_criacao: agora.toISOString()
+                };
+
+                console.log('✅ Nova atividade criada:', novaAtividade);
+
+                atividadesEmAndamento.push(novaAtividade);
+                console.log('✅ Atividade adicionada ao array:', atividadesEmAndamento.length);
+                
+                // Adicionar ao estado do kanban
+                kanbanState[novaAtividade.id] = { status: 'em_andamento', motivoPausa: '' };
+
+                console.log('📌 Salvando dados...');
+                try {
+                    salvarDados();
+                    console.log('✅ salvarDados() completou');
+                } catch(err) {
+                    console.error('❌ Erro em salvarDados():', err);
+                }
+                
+                console.log('📌 Atualizando Kanban...');
+                try {
+                    atualizarKanban();
+                    console.log('✅ atualizarKanban() completou');
+                } catch(err) {
+                    console.error('❌ Erro em atualizarKanban():', err);
+                }
+                
+                console.log('📌 Iniciando cronômetro...');
+                try {
+                    iniciarCronometro(novaAtividade.id);
+                    console.log('✅ iniciarCronometro() completou');
+                } catch(err) {
+                    console.error('❌ Erro em iniciarCronometro():', err);
+                }
+
+                // ✅ Registrar início de atividade com rastreio completo
+                console.log('📌 Registrando rastreio...');
+                try {
+                    registrarInicioAtividade(ticket, descricao, {
+                        colaborador: nome,
+                        usuario_logado: usuarioAtual?.email
+                    });
+                    console.log('✅ registrarInicioAtividade() completou');
+                } catch(err) {
+                    console.error('❌ Erro em registrarInicioAtividade():', err);
+                }
+
+                console.log('✅ Atividade iniciada com sucesso!');
+                mostrarAlerta('sucesso', `Atividade iniciada para o ticket ${ticket}`);
+                
+                // Fechar modal e limpar campos após iniciar
+                console.log('📌 Fechando modal...');
+                modalIniciarAtividade.style.display = 'none';
+                inputNome.value = '';
+                inputTicket.value = '';
+                document.getElementById('descricaoModal').value = '';
+                checkboxTitulo.checked = false; // ✅ Desmarcar checkbox
+                inputTitulo.value = ''; // ✅ Limpar campo de título
+                campoTituloWrapper.classList.remove('ativo'); // ✅ Esconder campo
+                ticketWarning.style.display = 'none'; // ✅ Esconder aviso
+                
+                console.log('✅ Modal fechado e campos limpos');
+            } catch(err) {
+                console.error('❌ Erro geral em iniciarAtividade():', err);
+                mostrarAlerta('erro', 'Erro ao iniciar atividade: ' + err.message);
+            }
         }
 
         // Finalizar atividade
@@ -1502,6 +1741,7 @@
             // Criar registro para o colaborador principal
             atividades.unshift({
                 id: atividade.id,
+                chaveAtividade: atividade.chaveAtividade || gerarChaveAtividade(), // ✅ Garantir chave
                 colaborador: atividade.nome,
                 ticket: atividade.ticket,
                 dataInicio: atividade.dataInicio,
@@ -1510,6 +1750,7 @@
                 horaFim: horaFim,
                 duracao: formatarTempo(duracao),
                 descricao: atividade.descricao || '',
+                titulo: atividade.titulo || '', // ✅ Armazenar título
                 observacao: atividade.observacao || '',
                 justificativa: justificativa,
                 colaboradoresAuxiliares: colaboradoresAuxiliares || [],
@@ -1531,6 +1772,7 @@
                     
                     atividades.unshift({
                         id: atividade.id,
+                        chaveAtividade: atividade.chaveAtividade || gerarChaveAtividade(), // ✅ Garantir chave
                         colaborador: colaboradorAux,
                         ticket: atividade.ticket,
                         dataInicio: atividade.dataInicio,
@@ -1539,6 +1781,7 @@
                         horaFim: horaFim,
                         duracao: formatarTempo(duracao),
                         descricao: atividade.descricao || '',
+                        titulo: atividade.titulo || '', // ✅ Armazenar título
                         observacao: `[AJUDA] ${atividade.observacao || ''}`,
                         justificativa: justificativa,
                         ehAjudante: true,
@@ -2040,6 +2283,12 @@
             kanbanPausado.innerHTML = '';
             kanbanConcluido.innerHTML = '';
 
+            // ✅ Garantir que todas as atividades têm chaveAtividade
+            atividadesEmAndamento = atividadesEmAndamento.map(a => ({
+                ...a,
+                chaveAtividade: a.chaveAtividade || gerarChaveAtividade()
+            }));
+
             const atividadesGrupadasPorStatus = {
                 em_andamento: [],
                 pausado: [],
@@ -2066,6 +2315,8 @@
                                 <div class="kanban-card-header">
                                     <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
                                 </div>
+                                ${atividade.chaveAtividade ? `<div class="kanban-card-subtitle" style="color: #9c27b0; font-weight: 600; font-size: 0.8em; margin-bottom: 3px; padding: 3px 6px; background: #f3e5f5; border-radius: 3px; display: inline-block;">🔑 ${atividade.chaveAtividade}</div>` : ''}
+                                ${atividade.titulo ? `<div class="kanban-card-subtitle" style="color: #51cf66; font-weight: 600; margin-bottom: 3px;">📌 ${atividade.titulo}</div>` : ''}
                                 <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
                                 <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.nome}</div>
                                 <div class="kanban-card-subtitle"><strong>Data:</strong> ${atividade.dataInicio}</div>
@@ -2093,6 +2344,8 @@
                                 <div class="kanban-card-header">
                                     <span class="kanban-card-title">🎟️ ${atividade.ticket}</span>
                                 </div>
+                                ${atividade.chaveAtividade ? `<div class="kanban-card-subtitle" style="color: #9c27b0; font-weight: 600; font-size: 0.8em; margin-bottom: 3px; padding: 3px 6px; background: #f3e5f5; border-radius: 3px; display: inline-block;">🔑 ${atividade.chaveAtividade}</div>` : ''}
+                                ${atividade.titulo ? `<div class="kanban-card-subtitle" style="color: #51cf66; font-weight: 600; margin-bottom: 3px;">📌 ${atividade.titulo}</div>` : ''}
                                 <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
                                 <div class="kanban-card-subtitle">${atividade.nome}</div>
                                 <div class="kanban-pause-reason">💬 ${kanbanState[atividade.id]?.motivoPausa || ''}</div>
@@ -2143,6 +2396,8 @@
                                 <div class="kanban-card-header">
                                     <span class="kanban-card-title">🎟️ ${atividade.ticket}</span>
                                 </div>
+                                ${atividade.chaveAtividade ? `<div class="kanban-card-subtitle" style="color: #9c27b0; font-weight: 600; font-size: 0.8em; margin-bottom: 3px; padding: 3px 6px; background: #f3e5f5; border-radius: 3px; display: inline-block;">🔑 ${atividade.chaveAtividade}</div>` : ''}
+                                ${atividade.titulo ? `<div class="kanban-card-subtitle" style="color: #51cf66; font-weight: 600; margin-bottom: 3px;">📌 ${atividade.titulo}</div>` : ''}
                                 <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
                                 <div class="kanban-card-subtitle"><strong>Por:</strong> ${atividade.nome}</div>
                                 <div class="kanban-card-subtitle" style="font-size: 0.85em; color: #888;">Duração: ${atividade.duracao || 'N/A'}</div>
@@ -2222,12 +2477,17 @@
             const colaborador = filtroColaborador.value;
             const data = filtroData.value;
             const status = filtroStatus.value;
+            const chave = filtroChave.value.trim().toUpperCase(); // ✅ Adicionar filtro por chave
 
             let todasAsAtividades = obterTodasAsAtividades();
 
             // Aplicar filtros
             atividadesFiltradas = todasAsAtividades.filter(atividade => {
                 let passa = true;
+
+                if (chave && (!atividade.chaveAtividade || !atividade.chaveAtividade.includes(chave))) {
+                    passa = false;
+                }
 
                 if (colaborador && atividade.colaborador !== colaborador) {
                     passa = false;
@@ -2250,6 +2510,7 @@
         }
 
         function limparFiltros() {
+            filtroChave.value = ''; // ✅ Limpar filtro de chave
             filtroColaborador.value = '';
             filtroData.value = '';
             filtroStatus.value = '';
@@ -2372,9 +2633,28 @@
             inputNome.value = '';
             inputTicket.value = '';
             document.getElementById('descricaoModal').value = '';
+            checkboxTitulo.checked = false; // ✅ Desmarcar checkbox
+            inputTitulo.value = ''; // ✅ Limpar campo de título
+            campoTituloWrapper.classList.remove('ativo'); // ✅ Esconder campo
+            ticketWarning.style.display = 'none'; // ✅ Esconder aviso
         });
 
-        btnIniciar.addEventListener('click', iniciarAtividade);
+        btnIniciar.addEventListener('click', function(e) {
+            console.log('🚀 Event listener chamado');
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🚀 preventDefault e stopPropagation executados');
+            
+            try {
+                console.log('🚀 Clicou em Iniciar Atividade');
+                iniciarAtividade();
+                console.log('✅ iniciarAtividade() completou');
+                return false;
+            } catch(err) {
+                console.error('❌ Erro na função iniciarAtividade():', err);
+                return false;
+            }
+        });
         btnConfirmarJustificativa.addEventListener('click', confirmarJustificativa);
         btnCancelarPausa.addEventListener('click', fecharModalPausarAtividade);
         btnConfirmarPausa.addEventListener('click', confirmarPausarAtividade);
@@ -2397,6 +2677,10 @@
         // Event Listeners dos Filtros
         btnAplicarFiltros.addEventListener('click', aplicarFiltros);
         btnLimparFiltros.addEventListener('click', limparFiltros);
+
+        // ✅ Event Listeners para o formulário de iniciar atividade
+        checkboxTitulo.addEventListener('change', alternarCampoTitulo);
+        inputTicket.addEventListener('input', verificarTicketEmTempo);
 
         // ✅ Dados serão carregados após autenticação (veja onUsuarioAutenticado)
     </script>
