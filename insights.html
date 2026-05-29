@@ -486,10 +486,10 @@
             </div>
         </div>
 
-        <!-- PERCENTUAL DE ATIVIDADES ABERTAS POR COLABORADOR -->
-        <div class="section-title">% de Atividades Abertas por Colaborador</div>
-        <div class="chart-card">
-            <canvas id="chartAtividadesAbertas"></canvas>
+        <!-- PERCENTUAL DE ATIVIDADES POR COLABORADOR (Gráficos de Pizza) -->
+        <div class="section-title">Porcentagem de Atividades por Colaborador</div>
+        <div id="containerGraficosPizza" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px;">
+            <!-- Os gráficos de pizza serão inseridos dinamicamente aqui -->
         </div>
 
         <!-- INDICADORES DE CADA COLABORADOR -->
@@ -508,10 +508,24 @@
             <canvas id="chartAtividadesPausadas"></canvas>
         </div>
 
-        <!-- GRÁFICO DE BARRAS - PAUSAS POR COLABORADOR -->
-        <div class="section-title">Pausas Registradas por Colaborador</div>
+        <!-- GRÁFICO DE BARRAS - ATIVIDADES REALIZADAS POR COLABORADOR -->
+        <div class="section-title">Atividades Realizadas por Colaborador</div>
         <div class="chart-card">
             <canvas id="chartAtividadesRealizadas"></canvas>
+        </div>
+
+        <!-- GRÁFICO CONSOLIDADO - RESUMO DE ATIVIDADES -->
+        <div class="section-title">Resumo de Atividades - Período Atual</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+            <!-- Gráfico de Barras Simples -->
+            <div class="chart-card">
+                <canvas id="chartResumoAtividades"></canvas>
+            </div>
+            <!-- Tabela de Pausas por Setor -->
+            <div class="chart-card" style="display: flex; flex-direction: column; justify-content: center;">
+                <h3 style="color: #5b8ec6; margin-bottom: 15px; text-align: center;">Pausas por Setor</h3>
+                <div id="tabelaPausasSetores" style="font-size: 0.9em;"></div>
+            </div>
         </div>
     </div>
 
@@ -696,34 +710,47 @@
             return 'em_andamento';
         }
 
-        // Calcular KPIs
+        // Calcular KPIs com dados do histórico (Performance)
         function calcularKPIs() {
-            const atividades = atividadesGlobais.filter(a => a && typeof a === 'object');
+            // Usar dados reais do histórico de atividades finalizadas
+            const atividades = normalizarDados(atividadesGlobais) || [];
             
+            // Total de atividades finalizadas
             const totalAtividades = atividades.length;
-            const ativConcluidas = atividades.filter(a => obterStatusAtividade(a) === 'concluido').length;
             
-            // Atividades abertas
-            const ativAbertas = totalAtividades - ativConcluidas;
+            // Atividades concluídas (todas as que estão no histórico são concluídas)
+            const ativConcluidas = totalAtividades;
             
-            // Tempo médio das atividades ABERTAS
-            const tempoAbertos = atividades.filter(a => obterStatusAtividade(a) === 'em_andamento');
-            const tempoMedioAberto = tempoAbertos.length > 0 ? 
-                Math.round(tempoAbertos.reduce((sum, a) => sum + (parseInt(a.duracao) || 0), 0) / tempoAbertos.length) : 0;
+            // Tempo médio das atividades finalizadas
+            let tempoMedioMs = 0;
+            if (atividades.length > 0) {
+                // Converter duração em formato HH:MM:SS para milissegundos
+                let totalMs = 0;
+                atividades.forEach(a => {
+                    if (a.duracao) {
+                        const partes = a.duracao.split(':');
+                        if (partes.length === 3) {
+                            const horas = parseInt(partes[0]) || 0;
+                            const minutos = parseInt(partes[1]) || 0;
+                            const segundos = parseInt(partes[2]) || 0;
+                            totalMs += (horas * 3600 + minutos * 60 + segundos) * 1000;
+                        }
+                    }
+                });
+                tempoMedioMs = Math.round(totalMs / atividades.length);
+            }
 
-            console.log('KPIs calculados:', {
+            console.log('KPIs calculados (Performance):', {
                 totalAtividades,
                 ativConcluidas,
-                ativAbertas,
-                tempoMedioAberto,
-                tempoAbertosCount: tempoAbertos.length
+                tempoMedioMs
             });
 
             return {
                 totalAtividades,
                 ativConcluidas,
-                ativAbertas,
-                tempoMedioAberto
+                ativAbertas: 0, // Não usado mais
+                tempoMedioAberto: tempoMedioMs
             };
         }
 
@@ -732,69 +759,147 @@
             const kpis = calcularKPIs();
             document.getElementById('totalAtividades').textContent = kpis.totalAtividades;
             document.getElementById('atividadesConcluidas').textContent = kpis.ativConcluidas;
-            document.getElementById('tempoMedioAberta').textContent = formatarTempo(kpis.tempoMedioAberto);
+            // Converter ms para minutos para formatarTempo
+            const minutosMedia = Math.round(kpis.tempoMedioAberto / (1000 * 60));
+            document.getElementById('tempoMedioAberta').textContent = formatarTempo(minutosMedia);
         }
 
-        // Gráfico 1: % de Atividades Abertas por Colaborador
+        // 📊 Plugin customizado para exibir valores em cima das barras/linhas
+        const pluginValoresGrafico = {
+            id: 'valoresGrafico',
+            afterDatasetsDraw(chart) {
+                const ctx = chart.ctx;
+                ctx.font = 'bold 12px Arial';
+                ctx.fillStyle = '#333';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+
+                chart.data.datasets.forEach((dataset, datasetIndex) => {
+                    const meta = chart.getDatasetMeta(datasetIndex);
+                    
+                    meta.data.forEach((element, index) => {
+                        const valor = dataset.data[index];
+                        if (valor === null || valor === undefined) return;
+
+                        // Barras verticais (indexAxis: 'x' ou undefined)
+                        if (chart.options.indexAxis !== 'y') {
+                            const x = element.x;
+                            const y = element.y;
+                            ctx.fillText(valor, x, y - 5);
+                        } 
+                        // Barras horizontais (indexAxis: 'y')
+                        else {
+                            const x = element.x;
+                            const y = element.y;
+                            ctx.textAlign = 'left';
+                            ctx.fillText(valor, x + 5, y + 4);
+                            ctx.textAlign = 'center';
+                        }
+                    });
+                });
+            }
+        };
+
+        // Gráfico 1: Porcentagem de Atividades por Colaborador (Gráficos de Pizza)
         function renderizarAtividadesAbertas() {
-            console.log('Renderizando gráfico de atividades abertas...');
+            console.log('Renderizando gráficos de pizza de atividades por colaborador...');
             const colaboradores = {};
-            let totalProcessadas = 0;
-            let totalAbertas = 0;
+            let totalAtividades = 0;
             
+            // Contar atividades por colaborador
             atividadesGlobais.forEach(a => {
                 if (!a || !a.colaborador) return;
                 if (!colaboradores[a.colaborador]) {
-                    colaboradores[a.colaborador] = { total: 0, abertas: 0 };
+                    colaboradores[a.colaborador] = 0;
                 }
-                colaboradores[a.colaborador].total++;
-                totalProcessadas++;
-                
-                const status = obterStatusAtividade(a);
-                if (status === 'em_andamento') {
-                    colaboradores[a.colaborador].abertas++;
-                    totalAbertas++;
-                }
+                colaboradores[a.colaborador]++;
+                totalAtividades++;
             });
 
-            console.log(`Processadas ${totalProcessadas} atividades, ${totalAbertas} abertas`);
-            console.log('Dados por colaborador:', colaboradores);
+            console.log('Atividades por colaborador:', colaboradores);
+            console.log('Total de atividades:', totalAtividades);
 
             const nomes = Object.keys(colaboradores).sort();
-            const percentuais = nomes.map(nome => {
-                const dados = colaboradores[nome];
-                return dados.total > 0 ? Math.round((dados.abertas / dados.total) * 100) : 0;
-            });
+            const containerPizzas = document.getElementById('containerGraficosPizza');
+            containerPizzas.innerHTML = ''; // Limpar container
 
-            const ctx = document.getElementById('chartAtividadesAbertas').getContext('2d');
-            if (chartsInstances.chartAtividadesAbertas) chartsInstances.chartAtividadesAbertas.destroy();
-
-            chartsInstances.chartAtividadesAbertas = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: nomes,
-                    datasets: [{
-                        label: '% de Atividades Abertas',
-                        data: percentuais,
-                        backgroundColor: CORES.slice(0, nomes.length),
-                        borderColor: CORES.slice(0, nomes.length),
-                        borderWidth: 1,
-                        borderRadius: 5
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    indexAxis: 'x',
-                    plugins: {
-                        legend: { display: true, position: 'top' }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, max: 100 }
-                    }
+            // Limpar instâncias de gráficos antigos
+            Object.keys(chartsInstances).forEach(key => {
+                if (key.startsWith('chartPizza_')) {
+                    if (chartsInstances[key]) chartsInstances[key].destroy();
+                    delete chartsInstances[key];
                 }
             });
-            console.log('Gráfico de atividades abertas renderizado:', nomes.length, 'colaboradores');
+
+            // Criar um gráfico de pizza para cada colaborador
+            nomes.forEach((nome, idx) => {
+                const quantidadeColaborador = colaboradores[nome];
+                const porcentagem = totalAtividades > 0 ? Math.round((quantidadeColaborador / totalAtividades) * 100) : 0;
+                const restoAtividades = totalAtividades - quantidadeColaborador;
+
+                // Criar container do card
+                const cardDiv = document.createElement('div');
+                cardDiv.style.cssText = 'background: white; border-radius: 10px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);';
+                
+                // Criar titulo
+                const titulo = document.createElement('h4');
+                titulo.textContent = nome;
+                titulo.style.cssText = 'text-align: center; color: #5b8ec6; margin-bottom: 10px; font-size: 0.95em;';
+                cardDiv.appendChild(titulo);
+
+                // Criar canvas
+                const canvas = document.createElement('canvas');
+                const canvasId = `chartPizza_${idx}`;
+                canvas.id = canvasId;
+                canvas.style.cssText = 'max-width: 100%;';
+                cardDiv.appendChild(canvas);
+
+                // Criar label com porcentagem
+                const label = document.createElement('div');
+                label.style.cssText = 'text-align: center; margin-top: 10px; font-weight: bold; color: #333; font-size: 0.9em;';
+                label.textContent = `${quantidadeColaborador} atividades (${porcentagem}%)`;
+                cardDiv.appendChild(label);
+
+                containerPizzas.appendChild(cardDiv);
+
+                // Criar o gráfico de pizza
+                const ctx = canvas.getContext('2d');
+                chartsInstances[canvasId] = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: [nome, 'Outros Colaboradores'],
+                        datasets: [{
+                            data: [quantidadeColaborador, restoAtividades],
+                            backgroundColor: [CORES[idx % CORES.length], '#e0e0e0'],
+                            borderColor: ['#fff', '#fff'],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { 
+                                display: true, 
+                                position: 'bottom',
+                                labels: { font: { size: 11 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const valor = context.parsed;
+                                        const pct = Math.round((valor / total) * 100);
+                                        return `${valor} (${pct}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+
+            console.log('Gráficos de pizza renderizados:', nomes.length, 'colaboradores');
         }
 
         // Renderizar Indicadores de Colaboradores
@@ -897,7 +1002,8 @@
                     scales: {
                         y: { beginAtZero: true }
                     }
-                }
+                },
+                plugins: [pluginValoresGrafico]
             });
             console.log('Gráfico de atividades por dia renderizado:', datas.length, 'dias');
         }
@@ -948,27 +1054,28 @@
                     scales: {
                         y: { beginAtZero: true }
                     }
-                }
+                },
+                plugins: [pluginValoresGrafico]
             });
             console.log('Gráfico de pausas por setor renderizado:', setores.length, 'setores');
         }
 
-        // Gráfico 4: Pausas Registradas por Colaborador (Histórico de Pausas)
+        // Gráfico 4: Atividades Realizadas por Colaborador (Dados do Histórico)
         function renderizarAtividadesRealizadas() {
-            console.log('Renderizando gráfico de atividades realizadas (histórico de pausas)...');
-            console.log('Total de pausas:', historicoPausas.length);
+            console.log('Renderizando gráfico de atividades realizadas por colaborador...');
+            console.log('Total de atividades finalizadas:', atividadesGlobais.length);
             
-            // Contar pausas por colaborador a partir do histórico
+            // Contar atividades finalizadas por colaborador
             const atividadesRealizadas = {};
-            historicoPausas.forEach(pausa => {
-                if (!pausa || !pausa.colaborador) return;
-                if (!atividadesRealizadas[pausa.colaborador]) {
-                    atividadesRealizadas[pausa.colaborador] = 0;
+            atividadesGlobais.forEach(atividade => {
+                if (!atividade || !atividade.colaborador) return;
+                if (!atividadesRealizadas[atividade.colaborador]) {
+                    atividadesRealizadas[atividade.colaborador] = 0;
                 }
-                atividadesRealizadas[pausa.colaborador]++;
+                atividadesRealizadas[atividade.colaborador]++;
             });
 
-            console.log('Pausas por colaborador:', atividadesRealizadas);
+            console.log('Atividades realizadas por colaborador:', atividadesRealizadas);
 
             // Ordenar por quantidade decrescente
             const colaboradores = Object.keys(atividadesRealizadas).sort((a, b) => atividadesRealizadas[b] - atividadesRealizadas[a]);
@@ -982,7 +1089,7 @@
                 data: {
                     labels: colaboradores,
                     datasets: [{
-                        label: 'Pausas Registradas',
+                        label: 'Atividades Realizadas',
                         data: quantidades,
                         backgroundColor: CORES.slice(0, colaboradores.length),
                         borderColor: CORES.slice(0, colaboradores.length),
@@ -991,7 +1098,90 @@
                     }]
                 },
                 options: {
-                    indexAxis: 'x', // Barras em pé (vertical)
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: true, position: 'top' }
+                    },
+                    scales: {
+                        x: { beginAtZero: true }
+                    }
+                },
+                plugins: [pluginValoresGrafico]
+            });
+            console.log('Gráfico de atividades realizadas renderizado:', colaboradores.length, 'colaboradores');
+        }
+
+        // Gráfico 5: Resumo Consolidado - Atividades Geradas, Finalizadas, Em Andamento e Pausas por Setor
+        function renderizarResumoAtividades() {
+            console.log('Renderizando gráfico de resumo consolidado...');
+            
+            // 1. Total de atividades geradas (todas no histórico)
+            const totalAtividadesGeradas = atividadesGlobais.length;
+            
+            // 2. Total de atividades finalizadas (todas em atividadesGlobais são concluídas)
+            const atividadesFinalizadas = totalAtividadesGeradas;
+            
+            // 3. Atividades em andamento (no kanban com status = em_andamento)
+            const emAndamento = Object.values(kanbanStateGlobal).filter(k => k.status === 'em_andamento').length;
+            
+            // 4. Pausas por setor
+            const pausasPorSetor = {};
+            historicoPausas.forEach(pausa => {
+                if (!pausa || !pausa.grupo) return;
+                if (!pausasPorSetor[pausa.grupo]) {
+                    pausasPorSetor[pausa.grupo] = 0;
+                }
+                pausasPorSetor[pausa.grupo]++;
+            });
+
+            // Total de pausas
+            const totalPausas = Object.values(pausasPorSetor).reduce((a, b) => a + b, 0);
+
+            console.log('Resumo consolidado:', {
+                totalAtividadesGeradas,
+                atividadesFinalizadas,
+                emAndamento,
+                totalPausas,
+                pausasPorSetor
+            });
+
+            // ===== RENDERIZAR GRÁFICO DE BARRAS =====
+            const dados = [
+                totalAtividadesGeradas,
+                atividadesFinalizadas,
+                emAndamento,
+                totalPausas
+            ];
+            
+            const labels = [
+                'Atividades Geradas',
+                'Atividades Finalizadas',
+                'Em Andamento',
+                'Pausas Registradas'
+            ];
+
+            const cores = ['#5b8ec6', '#51cf66', '#ffc93c', '#ff6b6b'];
+
+            const ctx = document.getElementById('chartResumoAtividades').getContext('2d');
+            if (chartsInstances.chartResumoAtividades) chartsInstances.chartResumoAtividades.destroy();
+
+            chartsInstances.chartResumoAtividades = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Quantidade',
+                        data: dados,
+                        backgroundColor: cores,
+                        borderColor: cores,
+                        borderWidth: 1,
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    indexAxis: 'x',
                     responsive: true,
                     maintainAspectRatio: true,
                     plugins: {
@@ -1000,9 +1190,40 @@
                     scales: {
                         y: { beginAtZero: true }
                     }
-                }
+                },
+                plugins: [pluginValoresGrafico]
             });
-            console.log('Gráfico de atividades realizadas renderizado:', colaboradores.length, 'colaboradores');
+
+            // ===== RENDERIZAR TABELA DE PAUSAS POR SETOR =====
+            const tabelaPausasElement = document.getElementById('tabelaPausasSetores');
+            let tabelaHTML = '<table style="width: 100%; border-collapse: collapse;">';
+            tabelaHTML += '<tr style="background: #f0f0f0; border-bottom: 2px solid #5b8ec6;">';
+            tabelaHTML += '<th style="padding: 8px; text-align: left; font-weight: bold;">Setor</th>';
+            tabelaHTML += '<th style="padding: 8px; text-align: center; font-weight: bold;">Pausas</th>';
+            tabelaHTML += '<th style="padding: 8px; text-align: center; font-weight: bold;">%</th>';
+            tabelaHTML += '</tr>';
+
+            const setoresOrdenados = Object.keys(pausasPorSetor).sort();
+            if (setoresOrdenados.length === 0) {
+                tabelaHTML += '<tr><td colspan="3" style="padding: 10px; text-align: center; color: #999;">Nenhuma pausa registrada</td></tr>';
+            } else {
+                setoresOrdenados.forEach((setor, idx) => {
+                    const pausasSetor = pausasPorSetor[setor];
+                    const percentualSetor = totalPausas > 0 ? Math.round((pausasSetor / totalPausas) * 100) : 0;
+                    const corFundo = idx % 2 === 0 ? '#fff' : '#f9f9f9';
+                    
+                    tabelaHTML += `<tr style="background: ${corFundo}; border-bottom: 1px solid #e0e0e0;">`;
+                    tabelaHTML += `<td style="padding: 8px; font-weight: 500;">${setor}</td>`;
+                    tabelaHTML += `<td style="padding: 8px; text-align: center;">${pausasSetor}</td>`;
+                    tabelaHTML += `<td style="padding: 8px; text-align: center; color: #5b8ec6; font-weight: bold;">${percentualSetor}%</td>`;
+                    tabelaHTML += '</tr>';
+                });
+            }
+
+            tabelaHTML += '</table>';
+            tabelaPausasElement.innerHTML = tabelaHTML;
+
+            console.log('Resumo consolidado renderizado com sucesso');
         }
 
         // Atualizar dashboard completo
@@ -1018,6 +1239,7 @@
             renderizarAtividadesPorDia();
             renderizarAtividadesPausadas();
             renderizarAtividadesRealizadas();
+            renderizarResumoAtividades();
             
             console.log('--- DASHBOARD ATUALIZADO COM SUCESSO ---');
         }
