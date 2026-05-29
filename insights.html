@@ -467,25 +467,6 @@
             <p>Dashboard com análise completa de métricas e performance</p>
         </div>
 
-        <!-- KPI CARDS PRINCIPAIS -->
-        <div class="kpi-container">
-            <div class="kpi-card">
-                <div class="kpi-icon"></div>
-                <div class="kpi-label">Total de Atividades</div>
-                <div class="kpi-value" id="totalAtividades">-</div>
-            </div>
-            <div class="kpi-card success">
-                <div class="kpi-icon"></div>
-                <div class="kpi-label">Atividades Concluídas</div>
-                <div class="kpi-value" id="atividadesConcluidas">-</div>
-            </div>
-            <div class="kpi-card warning">
-                <div class="kpi-icon"></div>
-                <div class="kpi-label">Tempo Médio (Atividades Abertas)</div>
-                <div class="kpi-value" id="tempoMedioAberta">-</div>
-            </div>
-        </div>
-
         <!-- PERCENTUAL DE ATIVIDADES POR COLABORADOR (Gráficos de Pizza) -->
         <div class="section-title">Porcentagem de Atividades por Colaborador</div>
         <div id="containerGraficosPizza" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px;">
@@ -752,16 +733,6 @@
                 ativAbertas: 0, // Não usado mais
                 tempoMedioAberto: tempoMedioMs
             };
-        }
-
-        // Atualizar KPI Cards
-        function atualizarKPIs() {
-            const kpis = calcularKPIs();
-            document.getElementById('totalAtividades').textContent = kpis.totalAtividades;
-            document.getElementById('atividadesConcluidas').textContent = kpis.ativConcluidas;
-            // Converter ms para minutos para formatarTempo
-            const minutosMedia = Math.round(kpis.tempoMedioAberto / (1000 * 60));
-            document.getElementById('tempoMedioAberta').textContent = formatarTempo(minutosMedia);
         }
 
         // 📊 Plugin customizado para exibir valores em cima das barras/linhas
@@ -1233,7 +1204,6 @@
             console.log('Total de estados (kanbanState):', Object.keys(kanbanStateGlobal).length);
             console.log('Total de pausas registradas:', historicoPausas.length);
             
-            atualizarKPIs();
             renderizarAtividadesAbertas();
             renderizarIndicadoresColaboradores();
             renderizarAtividadesPorDia();
