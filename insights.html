@@ -204,47 +204,15 @@
             max-height: 250px !important;
         }
 
-        .colaboradores-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 12px;
-            margin-bottom: 30px;
-        }
-
-        .colaborador-card {
+        .chart-card-scrollable {
+            overflow-x: auto;
+            overflow-y: hidden;
+            width: 100%;
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            padding: 15px;
-            border-left: 5px solid #5b8ec6;
         }
 
-        .colaborador-nome {
-            font-size: 0.95em;
-            font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 10px;
-        }
-
-        .colaborador-stat {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            font-size: 0.85em;
-            padding: 5px 0;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .colaborador-stat-label {
-            color: #666;
-            font-weight: 500;
-        }
-
-        .colaborador-stat-value {
-            color: #2c3e50;
-            font-weight: 600;
-            font-size: 0.95em;
+        .chart-card-scrollable canvas {
+            min-width: 800px;
         }
 
         .section-title {
@@ -467,32 +435,12 @@
             <p>Dashboard com análise completa de métricas e performance</p>
         </div>
 
-        <!-- PERCENTUAL DE ATIVIDADES POR COLABORADOR (Gráficos de Pizza) -->
-        <div class="section-title">Porcentagem de Atividades por Colaborador</div>
-        <div id="containerGraficosPizza" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px;">
-            <!-- Os gráficos de pizza serão inseridos dinamicamente aqui -->
-        </div>
-
-        <!-- INDICADORES DE CADA COLABORADOR -->
-        <div class="section-title">Indicadores por Colaborador</div>
-        <div class="colaboradores-container" id="colaboradoresContainer"></div>
-
         <!-- GRÁFICO DE LINHA - ATIVIDADES POR DIA -->
         <div class="section-title">Atividades Criadas por Dia</div>
         <div class="chart-card">
-            <canvas id="chartAtividadesPorDia"></canvas>
-        </div>
-
-        <!-- GRÁFICO DE BARRAS - HISTÓRICO DE PAUSAS POR SETOR -->
-        <div class="section-title">Pausas Registradas por Setor</div>
-        <div class="chart-card">
-            <canvas id="chartAtividadesPausadas"></canvas>
-        </div>
-
-        <!-- GRÁFICO DE BARRAS - ATIVIDADES REALIZADAS POR COLABORADOR -->
-        <div class="section-title">Atividades Realizadas por Colaborador</div>
-        <div class="chart-card">
-            <canvas id="chartAtividadesRealizadas"></canvas>
+            <div class="chart-card-scrollable">
+                <canvas id="chartAtividadesPorDia"></canvas>
+            </div>
         </div>
 
         <!-- GRÁFICO CONSOLIDADO - RESUMO DE ATIVIDADES -->
@@ -507,6 +455,18 @@
                 <h3 style="color: #5b8ec6; margin-bottom: 15px; text-align: center;">Pausas por Setor</h3>
                 <div id="tabelaPausasSetores" style="font-size: 0.9em;"></div>
             </div>
+        </div>
+
+        <!-- GRÁFICO DE BARRAS - HISTÓRICO DE PAUSAS POR SETOR -->
+        <div class="section-title">Pausas Registradas por Setor</div>
+        <div class="chart-card">
+            <canvas id="chartAtividadesPausadas"></canvas>
+        </div>
+
+        <!-- PERCENTUAL DE ATIVIDADES POR COLABORADOR (Gráficos de Pizza) -->
+        <div class="section-title">Porcentagem de Atividades por Colaborador</div>
+        <div id="containerGraficosPizza" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px;">
+            <!-- Os gráficos de pizza serão inseridos dinamicamente aqui -->
         </div>
     </div>
 
@@ -873,50 +833,6 @@
             console.log('Gráficos de pizza renderizados:', nomes.length, 'colaboradores');
         }
 
-        // Renderizar Indicadores de Colaboradores
-        function renderizarIndicadoresColaboradores() {
-            const colaboradores = {};
-            atividadesGlobais.forEach(a => {
-                if (!a || !a.colaborador) return;
-                if (!colaboradores[a.colaborador]) {
-                    colaboradores[a.colaborador] = { total: 0, concluidas: 0, tempoTotal: 0, setor: a.setor || 'Sem setor' };
-                }
-                colaboradores[a.colaborador].total++;
-                if (obterStatusAtividade(a) === 'concluido') colaboradores[a.colaborador].concluidas++;
-                colaboradores[a.colaborador].tempoTotal += parseInt(a.duracao) || 0;
-            });
-
-            const container = document.getElementById('colaboradoresContainer');
-            container.innerHTML = Object.entries(colaboradores)
-                .sort((a, b) => b[1].total - a[1].total)
-                .map(([nome, dados]) => {
-                    const taxa = dados.total > 0 ? Math.round((dados.concluidas / dados.total) * 100) : 0;
-                    const tempoMedio = dados.total > 0 ? Math.round(dados.tempoTotal / dados.total) : 0;
-                    return `
-                        <div class="colaborador-card">
-                            <div class="colaborador-nome">${nome}</div>
-                            <div class="colaborador-stat">
-                                <span class="colaborador-stat-label">Atividades:</span>
-                                <span class="colaborador-stat-value">${dados.total}</span>
-                            </div>
-                            <div class="colaborador-stat">
-                                <span class="colaborador-stat-label">Concluídas:</span>
-                                <span class="colaborador-stat-value">${dados.concluidas}</span>
-                            </div>
-                            <div class="colaborador-stat">
-                                <span class="colaborador-stat-label">Tempo Médio:</span>
-                                <span class="colaborador-stat-value">${formatarTempo(tempoMedio)}</span>
-                            </div>
-                            <div class="colaborador-stat">
-                                <span class="colaborador-stat-label">Taxa:</span>
-                                <span class="colaborador-stat-value">${taxa}%</span>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            console.log('Indicadores de colaboradores renderizados');
-        }
-
         // Converter data DD/MM/YYYY para formato de comparação
         function converterDataBrasileira(dataBR) {
             if (!dataBR) return '';
@@ -1029,59 +945,6 @@
                 plugins: [pluginValoresGrafico]
             });
             console.log('Gráfico de pausas por setor renderizado:', setores.length, 'setores');
-        }
-
-        // Gráfico 4: Atividades Realizadas por Colaborador (Dados do Histórico)
-        function renderizarAtividadesRealizadas() {
-            console.log('Renderizando gráfico de atividades realizadas por colaborador...');
-            console.log('Total de atividades finalizadas:', atividadesGlobais.length);
-            
-            // Contar atividades finalizadas por colaborador
-            const atividadesRealizadas = {};
-            atividadesGlobais.forEach(atividade => {
-                if (!atividade || !atividade.colaborador) return;
-                if (!atividadesRealizadas[atividade.colaborador]) {
-                    atividadesRealizadas[atividade.colaborador] = 0;
-                }
-                atividadesRealizadas[atividade.colaborador]++;
-            });
-
-            console.log('Atividades realizadas por colaborador:', atividadesRealizadas);
-
-            // Ordenar por quantidade decrescente
-            const colaboradores = Object.keys(atividadesRealizadas).sort((a, b) => atividadesRealizadas[b] - atividadesRealizadas[a]);
-            const quantidades = colaboradores.map(col => atividadesRealizadas[col]);
-
-            const ctx = document.getElementById('chartAtividadesRealizadas').getContext('2d');
-            if (chartsInstances.chartAtividadesRealizadas) chartsInstances.chartAtividadesRealizadas.destroy();
-
-            chartsInstances.chartAtividadesRealizadas = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: colaboradores,
-                    datasets: [{
-                        label: 'Atividades Realizadas',
-                        data: quantidades,
-                        backgroundColor: CORES.slice(0, colaboradores.length),
-                        borderColor: CORES.slice(0, colaboradores.length),
-                        borderWidth: 1,
-                        borderRadius: 5
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { display: true, position: 'top' }
-                    },
-                    scales: {
-                        x: { beginAtZero: true }
-                    }
-                },
-                plugins: [pluginValoresGrafico]
-            });
-            console.log('Gráfico de atividades realizadas renderizado:', colaboradores.length, 'colaboradores');
         }
 
         // Gráfico 5: Resumo Consolidado - Atividades Geradas, Finalizadas, Em Andamento e Pausas por Setor
@@ -1205,10 +1068,8 @@
             console.log('Total de pausas registradas:', historicoPausas.length);
             
             renderizarAtividadesAbertas();
-            renderizarIndicadoresColaboradores();
             renderizarAtividadesPorDia();
             renderizarAtividadesPausadas();
-            renderizarAtividadesRealizadas();
             renderizarResumoAtividades();
             
             console.log('--- DASHBOARD ATUALIZADO COM SUCESSO ---');
