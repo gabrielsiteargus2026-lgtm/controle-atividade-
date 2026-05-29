@@ -879,23 +879,34 @@
             // Garantir que é um array
             const atividadesArray = converterParaArray(ativs);
             
-            if (!filtroDataInicio && !filtroDataFim) return atividadesArray;
-
-            return atividadesArray.filter(ativ => {
-                const dataAtiv = new Date(ativ.dataInicio.split('/').reverse().join('-'));
-                
-                if (filtroDataInicio) {
-                    const dataInicio = new Date(filtroDataInicio);
-                    if (dataAtiv < dataInicio) return false;
-                }
-                
-                if (filtroDataFim) {
-                    const dataFim = new Date(filtroDataFim);
-                    if (dataAtiv > dataFim) return false;
-                }
-                
-                return true;
+            let atividadesFiltradas = atividadesArray;
+            
+            if (filtroDataInicio || filtroDataFim) {
+                atividadesFiltradas = atividadesArray.filter(ativ => {
+                    const dataAtiv = new Date(ativ.dataInicio.split('/').reverse().join('-'));
+                    
+                    if (filtroDataInicio) {
+                        const dataInicio = new Date(filtroDataInicio);
+                        if (dataAtiv < dataInicio) return false;
+                    }
+                    
+                    if (filtroDataFim) {
+                        const dataFim = new Date(filtroDataFim);
+                        if (dataAtiv > dataFim) return false;
+                    }
+                    
+                    return true;
+                });
+            }
+            
+            // Ordenar por data e hora de início (mais recente primeiro)
+            atividadesFiltradas.sort((a, b) => {
+                const dataA = new Date(`${a.dataInicio.split('/').reverse().join('-')} ${a.horaInicio || '00:00:00'}`);
+                const dataB = new Date(`${b.dataInicio.split('/').reverse().join('-')} ${b.horaInicio || '00:00:00'}`);
+                return dataB - dataA;
             });
+            
+            return atividadesFiltradas;
         }
 
         // ✅ Converter tempo para horas

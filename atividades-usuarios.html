@@ -828,7 +828,7 @@
                     <button class="btn btn-primary" id="btnAplicarFiltros">Aplicar</button>
                     <button class="btn btn-secondary" id="btnLimparFiltros">Limpar</button>
                     <button class="btn export-btn" id="btnExportarCSV">Exportar CSV</button>
-                    <button class="btn btn-primary" id="btnRecarregar" style="background: #27ae60;">🔄 Recarregar</button>
+                    <button class="btn btn-primary" id="btnRecarregar" style="background: #27ae60;">Recarregar</button>
                 </div>
             </div>
 
@@ -856,10 +856,20 @@
                 </table>
             </div>
 
+            <!-- % ATIVIDADES ABERTAS POR COLABORADOR -->
+            <div style="margin-top: 40px; padding-top: 30px; border-top: 2px solid #e0e0e0;">
+                <h2 style="font-size: 1.3em; color: #2c3e50; margin-bottom: 15px;">Atividades Abertas por Colaborador</h2>
+                <div id="percentualAbertasContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-bottom: 30px;">
+                    <div style="text-align: center; color: #999; grid-column: 1/-1; padding: 40px;">
+                        Carregando dados de atividades abertas...
+                    </div>
+                </div>
+            </div>
+
             <!-- 🔧 PAINEL DE DEBUG - MOVIDO PARA FINAL -->
             <div style="background: #f0f0f0; padding: 12px; margin: 20px 0; border-radius: 5px; font-size: 0.85em; border: 1px solid #ddd;">
                 <details style="cursor: pointer;">
-                    <summary style="font-weight: bold; color: #666; padding: 5px; user-select: none;">🔍 Debug - Dados Carregados (Clique para expandir)</summary>
+                    <summary style="font-weight: bold; color: #666; padding: 5px; user-select: none;">Debug - Dados Carregados (Clique para expandir)</summary>
                     <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 3px; max-height: 200px; overflow-y: auto;">
                         <p><strong>Total de registros:</strong> <span id="debugTotal">0</span></p>
                         <p><strong>Usuários únicos:</strong> <span id="debugUsuarios">0</span></p>
@@ -982,7 +992,7 @@
 
                     html += `
                         <tr>
-                            <td class="chave-cell"><small style="color: #9c27b0; font-weight: 600;">🔑 ${chave}</small></td>
+                            <td class="chave-cell"><small style="color: #9c27b0; font-weight: 600;">${chave}</small></td>
                             <td class="timestamp-cell"><small>${dataFormatada}</small><br><small>${horaFormatada}</small></td>
                             <td class="user-cell"><strong>${nomeUsuario}</strong></td>
                             <td><small>${emailUsuario}</small></td>
@@ -1119,6 +1129,161 @@
             document.body.removeChild(link);
         }
 
+        // CALCULAR % DE ATIVIDADES ABERTAS POR COLABORADOR
+        function calcularEExibirAtividadesAbertas() {
+            console.log('Calculando percentual de atividades abertas por colaborador...');
+            
+            try {
+                // Carregar atividades globais
+                let atividades = [];
+                const atividadesLocal = localStorage.getItem('atividades');
+                
+                if (atividadesLocal) {
+                    try {
+                        const parsed = JSON.parse(atividadesLocal);
+                        atividades = Array.isArray(parsed) ? parsed : Object.values(parsed).filter(a => a);
+                    } catch (e) {
+                        console.error('Erro ao parsear atividades do localStorage:', e);
+                    }
+                }
+
+                if (atividades.length === 0) {
+                    console.log('Nenhuma atividade encontrada no localStorage. Tentando Firebase...');
+                    // Se não houver no localStorage, tentar do Firebase
+                    if (window.FIREBASE_OK && window.db) {
+                        const ref = window.db.ref('atividades');
+                        ref.once('value', (snapshot) => {
+                            const dados = snapshot.val();
+                            if (dados) {
+                                atividades = Array.isArray(dados) ? dados : Object.values(dados).filter(a => a);
+                                processarAtividadesAbertas(atividades);
+                            } else {
+                                console.log('Nenhuma atividade no Firebase');
+                                exibirSemDados();
+                            }
+                        }).catch(e => {
+                            console.error('Erro ao carregar do Firebase:', e);
+                            exibirSemDados();
+                        });
+                    } else {
+                        exibirSemDados();
+                    }
+                } else {
+                    processarAtividadesAbertas(atividades);
+                }
+
+                function processarAtividadesAbertas(atividades) {
+                    // Agrupar atividades por colaborador
+                    const colaboradores = {};
+
+                    atividades.forEach(atividade => {
+                        const colaborador = atividade.colaborador || 'Sem nome';
+                        
+                        if (!colaboradores[colaborador]) {
+                            colaboradores[colaborador] = {
+                                nome: colaborador,
+                                total: 0,
+                                abertas: 0,
+                                concluidas: 0,
+                                pausadas: 0
+                            };
+                        }
+
+                        colaboradores[colaborador].total++;
+
+                        const status = atividade.status || '';
+                        if (status === 'em_andamento') {
+                            colaboradores[colaborador].abertas++;
+                        } else if (status === 'concluido') {
+                            colaboradores[colaborador].concluidas++;
+                        } else if (status === 'pausado') {
+                            colaboradores[colaborador].pausadas++;
+                        }
+                    });
+
+                    // Calcular percentual e ordenar
+                    const dados = Object.values(colaboradores)
+                        .map(colab => ({
+                            ...colab,
+                            percentualAberto: colab.total > 0 ? Math.round((colab.abertas / colab.total) * 100) : 0
+                        }))
+                        .sort((a, b) => b.percentualAberto - a.percentualAberto);
+
+                    exibirDadosAbertas(dados);
+                }
+
+                function exibirDadosAbertas(dados) {
+                    const container = document.getElementById('percentualAbertasContainer');
+                    
+                    if (dados.length === 0) {
+                        exibirSemDados();
+                        return;
+                    }
+
+                    let html = '';
+                    dados.forEach(colab => {
+                        const cor = colab.percentualAberto > 50 ? '#ff6b6b' : (colab.percentualAberto > 20 ? '#ffc93c' : '#51cf66');
+                        
+                        html += `
+                            <div style="
+                                background: white;
+                                border-radius: 10px;
+                                padding: 15px;
+                                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                                border-left: 4px solid ${cor};
+                                transition: transform 0.2s, box-shadow 0.2s;
+                            " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 4px 15px rgba(0, 0, 0, 0.15)';" 
+                               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 10px rgba(0, 0, 0, 0.1)';">
+                                <div style="font-weight: 600; color: #2c3e50; margin-bottom: 12px; font-size: 0.95em;">${colab.nome}</div>
+                                
+                                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                                    <div style="font-size: 2.5em; font-weight: bold; color: ${cor}; min-width: 70px;">${colab.percentualAberto}%</div>
+                                    <div style="flex: 1; margin-left: 15px;">
+                                        <div style="font-size: 0.85em; color: #666; margin-bottom: 3px;">Abertas / Total</div>
+                                        <div style="font-size: 0.95em; color: #2c3e50; font-weight: 500;">${colab.abertas} de ${colab.total}</div>
+                                    </div>
+                                </div>
+
+                                <div style="border-top: 1px solid #e0e0e0; padding-top: 10px; margin-top: 10px;">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85em;">
+                                        <div>
+                                            <div style="color: #666; margin-bottom: 2px;">Concluídas</div>
+                                            <div style="font-weight: 600; color: #51cf66;">${colab.concluidas}</div>
+                                        </div>
+                                        <div>
+                                            <div style="color: #666; margin-bottom: 2px;">Pausadas</div>
+                                            <div style="font-weight: 600; color: #ffc93c;">${colab.pausadas}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    container.innerHTML = html;
+                    console.log(`Exibindo ${dados.length} colaboradores com análise de atividades abertas`);
+                }
+
+                function exibirSemDados() {
+                    const container = document.getElementById('percentualAbertasContainer');
+                    container.innerHTML = `
+                        <div style="grid-column: 1/-1; text-align: center; color: #999; padding: 40px;">
+                            Nenhuma atividade encontrada. Verifique se há dados em atividades.
+                        </div>
+                    `;
+                }
+
+            } catch (erro) {
+                console.error('Erro ao calcular atividades abertas:', erro);
+                const container = document.getElementById('percentualAbertasContainer');
+                container.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; color: #e74c3c; padding: 40px;">
+                        Erro ao carregar dados de atividades abertas.
+                    </div>
+                `;
+            }
+        }
+
         // Inicializar Firebase
         if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('COLE_AQUI')) {
             if (!firebase.apps || firebase.apps.length === 0) {
@@ -1141,7 +1306,7 @@
             document.getElementById('btnLimparFiltros').addEventListener('click', limparFiltros);
             document.getElementById('btnExportarCSV').addEventListener('click', exportarCSV);
             document.getElementById('btnRecarregar').addEventListener('click', () => {
-                console.log('🔄 Recarregando dados manualmente...');
+                console.log('Recarregando dados manualmente...');
                 registrosAtividades = [];
                 registrosFiltrados = [];
                 iniciarCarregamentoTempoReal();
@@ -1162,6 +1327,11 @@
                     }
                 }
             });
+
+            // Calcular e exibir atividades abertas por colaborador
+            setTimeout(() => {
+                calcularEExibirAtividadesAbertas();
+            }, 2000);
         });
     </script>
 </body>

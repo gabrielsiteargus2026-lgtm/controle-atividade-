@@ -316,13 +316,13 @@
         <div class="card">
             <h2>Relatório de Atividades</h2>
             <div class="action-buttons">
-                <button class="btn-export" id="btnExportar">📥 Exportar para CSV</button>
+                <button class="btn-export" id="btnExportar">Exportar para CSV</button>
             </div>
             <div class="table-container">
                 <table id="tabelaAtividades">
                     <thead>
                         <tr>
-                            <th>🔑 Chave</th>
+                            <th>Chave</th>
                             <th>Colaborador</th>
                             <th>Ticket</th>
                             <th>Data de Início</th>
@@ -390,15 +390,14 @@
                     });
                     atividades = Object.values(unicos);
                     
-                    // Ordenar por data e hora (mais recente primeiro)
+                    // Ordenar por data e hora de início (mais recente primeiro)
                     atividades.sort((a, b) => {
-                        // Se tem dataFim, usar data de fim; senão, usar data de início
-                        const dataA = a.dataFim ? new Date(`${a.dataFim} ${a.horaFim}`) : new Date(`${a.dataInicio} ${a.horaInicio}`);
-                        const dataB = b.dataFim ? new Date(`${b.dataFim} ${b.horaFim}`) : new Date(`${b.dataInicio} ${b.horaInicio}`);
+                        const dataA = new Date(`${a.dataInicio} ${a.horaInicio}`);
+                        const dataB = new Date(`${b.dataInicio} ${b.horaInicio}`);
                         return dataB - dataA;
                     });
 
-                    console.log('✅ Carregadas', atividades.length, 'atividades do histórico');
+                    console.log('Carregadas', atividades.length, 'atividades do histórico');
                     renderizarTabela();
                 });
             } else {
@@ -406,11 +405,10 @@
                 const dadosLocal = localStorage.getItem('atividades');
                 atividades = dadosLocal ? JSON.parse(dadosLocal) : [];
                 
-                // Ordenar por data e hora (mais recente primeiro)
+                // Ordenar por data e hora de início (mais recente primeiro)
                 atividades.sort((a, b) => {
-                    // Se tem dataFim, usar data de fim; senão, usar data de início
-                    const dataA = a.dataFim ? new Date(`${a.dataFim} ${a.horaFim}`) : new Date(`${a.dataInicio} ${a.horaInicio}`);
-                    const dataB = b.dataFim ? new Date(`${b.dataFim} ${b.horaFim}`) : new Date(`${b.dataInicio} ${b.horaInicio}`);
+                    const dataA = new Date(`${a.dataInicio} ${a.horaInicio}`);
+                    const dataB = new Date(`${b.dataInicio} ${b.horaInicio}`);
                     return dataB - dataA;
                 });
                 
@@ -427,7 +425,7 @@
 
             bodyTabela.innerHTML = atividades.map((atividade, index) => `
                 <tr>
-                    <td><strong style="color: #9c27b0;">🔑 ${atividade.chaveAtividade || 'N/A'}</strong></td>
+                    <td><strong style="color: #9c27b0;">${atividade.chaveAtividade || 'N/A'}</strong></td>
                     <td>${atividade.colaborador}</td>
                     <td>${atividade.ticket}</td>
                     <td>${atividade.dataInicio}</td>

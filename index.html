@@ -2377,6 +2377,15 @@
                 }
             });
 
+            // Ordenar por data e hora de início (mais recente primeiro) para cada grupo
+            Object.keys(atividadesGrupadasPorStatus).forEach(status => {
+                atividadesGrupadasPorStatus[status].sort((a, b) => {
+                    const dataA = new Date(`${a.dataInicio} ${a.horaInicio || '00:00:00'}`);
+                    const dataB = new Date(`${b.dataInicio} ${b.horaInicio || '00:00:00'}`);
+                    return dataB - dataA;
+                });
+            });
+
             // Renderizar Em Andamento
             if (atividadesGrupadasPorStatus.em_andamento.length === 0) {
                 kanbanEmAndamento.innerHTML = '<div class="kanban-empty">Nenhuma atividade em andamento</div>';
