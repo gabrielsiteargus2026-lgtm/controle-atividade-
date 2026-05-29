@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base de Dados - Controle de Atividade</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        /* Menu Lateral */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: #2c3e50;
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .sidebar-logo {
+            width: 100%;
+            height: 80px;
+            object-fit: contain;
+            margin-bottom: 30px;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 10px;
+        }
+
+        .sidebar-menu a {
+            display: block;
+            padding: 12px 15px;
+            color: #ecf0f1;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .sidebar-menu a:hover {
+            background: #5b8ec6;
+            color: white;
+            padding-left: 20px;
+        }
+
+        .sidebar-menu a.active {
+            background: #5b8ec6;
+            color: white;
+            border-left: 4px solid #fff;
+        }
+
+        .container {
+            max-width: calc(100% - 300px);
+            margin: 0 auto;
+            margin-left: 280px;
+        }
+
+        .header {
+            position: relative;
+            margin-bottom: 20px;
+            padding-top: 10px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 3px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #5b8ec6;
+            padding-bottom: 10px;
+        }
+
+        /* Tabela */
+        .table-scroll-container {
+            max-height: calc(100vh - 300px);
+            overflow-y: auto;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        thead {
+            background: #5b8ec6;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9em;
+        }
+
+        tbody tr:hover {
+            background: #f9f9f9;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 0.85em;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: #5b8ec6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #4a75b0;
+        }
+
+        .btn-success {
+            background: #51cf66;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #40c057;
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #fa5252;
+        }
+
+        .btn-warning {
+            background: #ffc93c;
+            color: #333;
+        }
+
+        .btn-warning:hover {
+            background: #ffb819;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #5b8ec6;
+            padding-bottom: 10px;
+        }
+
+        .modal-header h2 {
+            color: #2c3e50;
+            font-size: 1.3em;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close-btn:hover {
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.9em;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #5b8ec6;
+            box-shadow: 0 0 5px rgba(91, 142, 198, 0.3);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            padding-top: 15px;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-align: center;
+            min-width: 80px;
+        }
+
+        .status-em_andamento {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status-pausado {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .status-concluido {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .actions-cell {
+            display: flex;
+            gap: 5px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+
+            .container {
+                max-width: 100%;
+                margin-left: 0;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 0.8em;
+            }
+
+            th, td {
+                padding: 8px;
+            }
+        }
+    </style>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="firebase-auth.js"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <img src="argus-logo 1.png" alt="Argus" class="sidebar-logo">
+        <nav>
+            <ul class="sidebar-menu">
+                <li><a href="index.html">Controle de Atividade</a></li>
+                <li><a href="historico.html">Histórico</a></li>
+                <li><a href="performance.html">Performance</a></li>
+                <li><a href="insights.html">Insights</a></li>
+                <li><a href="admin.html">Administrador</a></li>
+                <li><a href="atividades-usuarios.html">Atividades dos Usuários</a></li>
+                <li><a href="database.html" class="active">Base de Dados</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Container Principal -->
+    <div class="container">
+        <div class="header">
+            <h1>Base de Dados de Atividades</h1>
+            <p>Gerenciar e visualizar todas as atividades do sistema</p>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <button class="btn btn-success" id="btnNovaAtividade">Adicionar Nova Atividade</button>
+            <button class="btn btn-primary" id="btnRecarregar">Recarregar Dados</button>
+            <button class="btn btn-warning" id="btnExportarCSV">Exportar para CSV</button>
+        </div>
+
+        <!-- Tabela de Atividades -->
+        <div class="card">
+            <h2>Todas as Atividades</h2>
+            <div class="table-scroll-container">
+                <table id="atividadesTable">
+                    <thead>
+                        <tr>
+                            <th>Chave</th>
+                            <th>Ticket</th>
+                            <th>Colaborador</th>
+                            <th>Descrição</th>
+                            <th>Setor</th>
+                            <th>Data Início</th>
+                            <th>Hora Início</th>
+                            <th>Data Fim</th>
+                            <th>Hora Fim</th>
+                            <th>Duração (min)</th>
+                            <th>Status</th>
+                            <th>Observação</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="13" class="empty-state">Carregando atividades...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Edição/Criação -->
+    <div class="modal" id="modalAtividade">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Nova Atividade</h2>
+                <button class="close-btn" id="btnCloseModal">&times;</button>
+            </div>
+
+            <form id="formAtividade">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Ticket:</label>
+                        <input type="text" id="ticket" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Colaborador:</label>
+                        <input type="text" id="colaborador" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Setor:</label>
+                        <select id="setor" required>
+                            <option value="">-- Selecione um setor --</option>
+                            <option value="TI">TI</option>
+                            <option value="Administrativo">Administrativo</option>
+                            <option value="Financeiro">Financeiro</option>
+                            <option value="RH">RH</option>
+                            <option value="Comercial">Comercial</option>
+                            <option value="Suporte">Suporte</option>
+                            <option value="Outro">Outro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Status:</label>
+                        <select id="status" required>
+                            <option value="em_andamento">Em Andamento</option>
+                            <option value="pausado">Pausado</option>
+                            <option value="concluido">Concluído</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Descrição:</label>
+                    <textarea id="descricao" required></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Data Início (DD/MM/YYYY):</label>
+                        <input type="text" id="dataInicio" placeholder="29/05/2026" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Hora Início (HH:MM:SS):</label>
+                        <input type="text" id="horaInicio" placeholder="14:30:00" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Data Fim (DD/MM/YYYY):</label>
+                        <input type="text" id="dataFim" placeholder="29/05/2026">
+                    </div>
+                    <div class="form-group">
+                        <label>Hora Fim (HH:MM:SS):</label>
+                        <input type="text" id="horaFim" placeholder="14:30:00">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Duração (minutos):</label>
+                        <input type="number" id="duracao" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Justificativa:</label>
+                        <input type="text" id="justificativa">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Observação:</label>
+                    <textarea id="observacao"></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" id="btnCancelar">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Estado global
+        let atividadesGlobais = [];
+        let atividadeAtualEmEdicao = null;
+        let kanbanStateGlobal = {};
+
+        // Inicializar Firebase
+        function inicializarFirebase() {
+            if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('COLE_AQUI')) {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(FIREBASE_CONFIG);
+                }
+                window.auth = firebase.auth();
+                window.db = firebase.database();
+                window.FIREBASE_OK = true;
+                console.log('Firebase inicializado em database.html');
+            } else {
+                window.FIREBASE_OK = false;
+                console.warn('Firebase não configurado');
+            }
+        }
+
+        // Carregar dados do Firebase/localStorage
+        function carregarAtividades() {
+            console.log('Carregando atividades...');
+            
+            if (window.FIREBASE_OK && window.db) {
+                // Tentar carregar do Firebase
+                const ref = window.db.ref('atividades');
+                ref.once('value', snapshot => {
+                    if (snapshot.exists()) {
+                        const dados = snapshot.val();
+                        atividadesGlobais = Array.isArray(dados) ? dados : Object.values(dados).filter(a => a);
+                        console.log('Atividades carregadas do Firebase:', atividadesGlobais.length);
+                    } else {
+                        carregarDoLocalStorage();
+                    }
+                    
+                    // Também carregar kanbanState
+                    const refKanban = window.db.ref('kanbanState');
+                    refKanban.once('value', snapshot => {
+                        if (snapshot.exists()) {
+                            kanbanStateGlobal = snapshot.val();
+                        }
+                        renderizarTabela();
+                    }).catch(() => {
+                        renderizarTabela();
+                    });
+                }).catch(error => {
+                    console.error('Erro ao carregar do Firebase:', error);
+                    carregarDoLocalStorage();
+                });
+            } else {
+                carregarDoLocalStorage();
+            }
+        }
+
+        function carregarDoLocalStorage() {
+            const dados = localStorage.getItem('atividades');
+            if (dados) {
+                try {
+                    const parsed = JSON.parse(dados);
+                    atividadesGlobais = Array.isArray(parsed) ? parsed : Object.values(parsed).filter(a => a);
+                    console.log('Atividades carregadas do localStorage:', atividadesGlobais.length);
+                } catch (e) {
+                    console.error('Erro ao parsear atividades:', e);
+                    atividadesGlobais = [];
+                }
+            }
+
+            const dadosKanban = localStorage.getItem('kanbanState');
+            if (dadosKanban) {
+                try {
+                    kanbanStateGlobal = JSON.parse(dadosKanban);
+                } catch (e) {
+                    console.error('Erro ao parsear kanbanState:', e);
+                    kanbanStateGlobal = {};
+                }
+            }
+
+            renderizarTabela();
+        }
+
+        // Renderizar tabela
+        function renderizarTabela() {
+            const tbody = document.getElementById('tableBody');
+
+            if (atividadesGlobais.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="13" class="empty-state">Nenhuma atividade encontrada</td></tr>';
+                return;
+            }
+
+            let html = '';
+            atividadesGlobais.forEach((atividade, index) => {
+                if (!atividade) return;
+
+                const status = obterStatus(atividade);
+                const statusBadgeClass = `status-${status}`;
+
+                html += `
+                    <tr>
+                        <td><strong style="color: #9c27b0;">${atividade.chaveAtividade || '-'}</strong></td>
+                        <td>${atividade.ticket || '-'}</td>
+                        <td><strong>${atividade.colaborador || '-'}</strong></td>
+                        <td>${(atividade.descricao || '-').substring(0, 30)}...</td>
+                        <td>${atividade.setor || '-'}</td>
+                        <td>${atividade.dataInicio || '-'}</td>
+                        <td>${atividade.horaInicio || '-'}</td>
+                        <td>${atividade.dataFim || '-'}</td>
+                        <td>${atividade.horaFim || '-'}</td>
+                        <td>${atividade.duracao || '-'}</td>
+                        <td><span class="status-badge ${statusBadgeClass}">${status}</span></td>
+                        <td>${(atividade.observacao || '-').substring(0, 20)}...</td>
+                        <td class="actions-cell">
+                            <button class="btn btn-primary" onclick="editarAtividade(${index})">Editar</button>
+                            <button class="btn btn-danger" onclick="deletarAtividade(${index})">Deletar</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        // Obter status da atividade
+        function obterStatus(atividade) {
+            // Tentar com id primeiro (para atividades novas)
+            let estado = kanbanStateGlobal[atividade.id];
+            
+            // Se não encontrou com id, tentar com chaveAtividade (para compatibilidade)
+            if (!estado && atividade.chaveAtividade) {
+                estado = kanbanStateGlobal[atividade.chaveAtividade];
+            }
+            
+            if (estado && estado.status) {
+                if (estado.status === 'em_andamento') return 'Em Andamento';
+                if (estado.status === 'pausado') return 'Pausado';
+                if (estado.status === 'concluido') return 'Concluído';
+            }
+            return 'Em Andamento'; // Default para atividades sem status definido
+        }
+
+        // Abrir modal de nova atividade
+        document.getElementById('btnNovaAtividade').addEventListener('click', () => {
+            atividadeAtualEmEdicao = null;
+            document.getElementById('modalTitle').textContent = 'Nova Atividade';
+            document.getElementById('formAtividade').reset();
+            
+            // Pré-preencher data/hora atuais
+            const agora = new Date();
+            document.getElementById('dataInicio').value = agora.toLocaleDateString('pt-BR');
+            document.getElementById('horaInicio').value = agora.toLocaleTimeString('pt-BR');
+            
+            document.getElementById('modalAtividade').classList.add('active');
+        });
+
+        // Fechar modal
+        function fecharModal() {
+            document.getElementById('modalAtividade').classList.remove('active');
+        }
+
+        document.getElementById('btnCloseModal').addEventListener('click', fecharModal);
+        document.getElementById('btnCancelar').addEventListener('click', fecharModal);
+
+        // Editar atividade
+        function editarAtividade(index) {
+            atividadeAtualEmEdicao = index;
+            const atividade = atividadesGlobais[index];
+
+            document.getElementById('modalTitle').textContent = 'Editar Atividade';
+            document.getElementById('ticket').value = atividade.ticket || '';
+            document.getElementById('colaborador').value = atividade.colaborador || '';
+            document.getElementById('setor').value = atividade.setor || '';
+            document.getElementById('descricao').value = atividade.descricao || '';
+            document.getElementById('dataInicio').value = atividade.dataInicio || '';
+            document.getElementById('horaInicio').value = atividade.horaInicio || '';
+            document.getElementById('dataFim').value = atividade.dataFim || '';
+            document.getElementById('horaFim').value = atividade.horaFim || '';
+            document.getElementById('duracao').value = atividade.duracao || '';
+            document.getElementById('justificativa').value = atividade.justificativa || '';
+            document.getElementById('observacao').value = atividade.observacao || '';
+            
+            // Setar status baseado em kanbanState
+            const estado = kanbanStateGlobal[atividade.id];
+            if (estado && estado.status) {
+                document.getElementById('status').value = estado.status;
+            }
+
+            document.getElementById('modalAtividade').classList.add('active');
+        }
+
+        // Deletar atividade
+        function deletarAtividade(index) {
+            if (confirm('Tem certeza que deseja deletar esta atividade?')) {
+                const atividade = atividadesGlobais[index];
+                atividadesGlobais.splice(index, 1);
+                if (atividade.id) {
+                    delete kanbanStateGlobal[atividade.id];
+                }
+                salvarDados();
+                renderizarTabela();
+            }
+        }
+
+        // Salvar atividade (novo ou editar)
+        document.getElementById('formAtividade').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const dadosAtividade = {
+                id: Date.now(),
+                chaveAtividade: `ACT-${Date.now()}`,
+                ticket: document.getElementById('ticket').value,
+                colaborador: document.getElementById('colaborador').value,
+                setor: document.getElementById('setor').value,
+                descricao: document.getElementById('descricao').value,
+                dataInicio: document.getElementById('dataInicio').value,
+                horaInicio: document.getElementById('horaInicio').value,
+                dataFim: document.getElementById('dataFim').value,
+                horaFim: document.getElementById('horaFim').value,
+                duracao: parseInt(document.getElementById('duracao').value) || 0,
+                justificativa: document.getElementById('justificativa').value,
+                observacao: document.getElementById('observacao').value
+            };
+
+            const status = document.getElementById('status').value;
+
+            if (atividadeAtualEmEdicao !== null) {
+                // Editar existente
+                const atividade = atividadesGlobais[atividadeAtualEmEdicao];
+                dadosAtividade.id = atividade.id;
+                dadosAtividade.chaveAtividade = atividade.chaveAtividade;
+                atividadesGlobais[atividadeAtualEmEdicao] = dadosAtividade;
+            } else {
+                // Nova atividade
+                atividadesGlobais.push(dadosAtividade);
+            }
+
+            // Atualizar status no kanbanState
+            kanbanStateGlobal[dadosAtividade.id] = { status: status, motivoPausa: '' };
+
+            salvarDados();
+            fecharModal();
+            renderizarTabela();
+            alert('Atividade salva com sucesso!');
+        });
+
+        // Salvar dados no Firebase e localStorage
+        function salvarDados() {
+            localStorage.setItem('atividades', JSON.stringify(atividadesGlobais));
+            localStorage.setItem('kanbanState', JSON.stringify(kanbanStateGlobal));
+
+            if (window.FIREBASE_OK && window.db) {
+                window.db.ref('atividades').set(atividadesGlobais).catch(error => {
+                    console.error('Erro ao salvar em Firebase:', error);
+                });
+                window.db.ref('kanbanState').set(kanbanStateGlobal).catch(error => {
+                    console.error('Erro ao salvar kanbanState em Firebase:', error);
+                });
+            }
+        }
+
+        // Recarregar dados
+        document.getElementById('btnRecarregar').addEventListener('click', () => {
+            console.log('Recarregando dados...');
+            carregarAtividades();
+        });
+
+        // Exportar para CSV
+        document.getElementById('btnExportarCSV').addEventListener('click', () => {
+            if (atividadesGlobais.length === 0) {
+                alert('Nenhuma atividade para exportar!');
+                return;
+            }
+
+            let csv = 'Chave,Ticket,Colaborador,Descrição,Setor,Data Início,Hora Início,Data Fim,Hora Fim,Duração,Status,Observação\n';
+            
+            atividadesGlobais.forEach(atividade => {
+                const status = obterStatus(atividade);
+                csv += `"${atividade.chaveAtividade}","${atividade.ticket}","${atividade.colaborador}","${atividade.descricao}","${atividade.setor}","${atividade.dataInicio}","${atividade.horaInicio}","${atividade.dataFim}","${atividade.horaFim}","${atividade.duracao}","${status}","${atividade.observacao}"\n`;
+            });
+
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `base-dados-atividades_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // Inicializar ao carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM carregado');
+            inicializarFirebase();
+            setTimeout(() => {
+                carregarAtividades();
+            }, 500);
+        });
+
+        // Auto-atualizar a cada 15 segundos
+        setInterval(() => {
+            if (document.hidden === false) {
+                carregarAtividades();
+            }
+        }, 15000);
+    </script>
+</body>
+</html>

@@ -393,6 +393,54 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Botão Discreto de Atualizar */
+        .btn-atualizar {
+            position: absolute;
+            top: 10px;
+            right: 0;
+            background: transparent;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            color: #5b8ec6;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .btn-atualizar:hover {
+            background: rgba(91, 142, 198, 0.1);
+            color: #2c3e50;
+        }
+
+        .btn-atualizar:active {
+            transform: scale(0.95);
+        }
+
+        .btn-atualizar.carregando {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .btn-atualizar.carregando::before {
+            content: '';
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #5b8ec6;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -407,12 +455,14 @@
                 <li><a href="insights.html" class="active">Insights</a></li>
                 <li><a href="admin.html">Administrador</a></li>
                 <li><a href="atividades-usuarios.html">Atividades dos Usuários</a></li>
+                <li><a href="database.html">Base de Dados</a></li>
             </ul>
         </nav>
     </aside>
 
     <div class="container">
         <div class="header">
+            <button class="btn-atualizar" id="btnAtualizarGraficos" title="Atualizar dados dos gráficos">🔄 Atualizar</button>
             <h1>Insights de Atividades</h1>
             <p>Dashboard com análise completa de métricas e performance</p>
         </div>
@@ -452,14 +502,14 @@
             <canvas id="chartAtividadesPorDia"></canvas>
         </div>
 
-        <!-- GRÁFICO DE BARRAS - ATIVIDADES PAUSADAS POR SETOR -->
-        <div class="section-title">Atividades Pausadas por Setor</div>
+        <!-- GRÁFICO DE BARRAS - HISTÓRICO DE PAUSAS POR SETOR -->
+        <div class="section-title">Pausas Registradas por Setor</div>
         <div class="chart-card">
             <canvas id="chartAtividadesPausadas"></canvas>
         </div>
 
-        <!-- GRÁFICO DE BARRAS - ATIVIDADES REALIZADAS POR COLABORADOR -->
-        <div class="section-title">Atividades Realizadas por Colaborador</div>
+        <!-- GRÁFICO DE BARRAS - PAUSAS POR COLABORADOR -->
+        <div class="section-title">Pausas Registradas por Colaborador</div>
         <div class="chart-card">
             <canvas id="chartAtividadesRealizadas"></canvas>
         </div>
@@ -488,6 +538,8 @@
         // Cores para gráficos
         const CORES = ['#5b8ec6', '#51cf66', '#ffc93c', '#ff6b6b', '#a78bfa', '#f472b6', '#06b6d4', '#ec4899', '#10b981', '#f59e0b'];
         let atividadesGlobais = [];
+        let kanbanStateGlobal = {}; // Estado global do kanban
+        let historicoPausas = []; // Histórico de pausas para gráficos
         let chartsInstances = {};
 
         // 🛡️ Fallback para localStorage bloqueado
@@ -532,10 +584,13 @@
 
         // Carregar dados ao iniciar
         function carregarDados() {
+            console.log('--- INICIANDO CARREGAMENTO DE DADOS ---');
+            console.log('Firebase OK:', window.FIREBASE_OK);
+            
             if (window.FIREBASE_OK && window.db) {
-                console.log('Carregando dados do Firebase...');
+                console.log('Tentando carregar do Firebase...');
                 const timeoutId = setTimeout(() => {
-                    console.warn('Firebase não respondeu. Carregando do localStorage...');
+                    console.warn('Firebase não respondeu em 5s. Carregando do localStorage...');
                     carregarDoLocalStorage();
                 }, 5000);
 
@@ -544,28 +599,53 @@
                     if (snapshot.exists()) {
                         const dados = snapshot.val();
                         atividadesGlobais = normalizarDados(dados);
-                        console.log('Atividades carregadas do Firebase:', atividadesGlobais.length);
+                        console.log('✅ Atividades carregadas do Firebase:', atividadesGlobais.length);
+                        
+                        // Log detalhado dos dados
+                        if (atividadesGlobais.length > 0) {
+                            console.log('Primeiras 3 atividades:', atividadesGlobais.slice(0, 3));
+                        }
                         
                         // Carregar também o kanbanState
                         window.db.ref('kanbanState').once('value', stateSnapshot => {
                             if (stateSnapshot.exists()) {
                                 kanbanStateGlobal = stateSnapshot.val();
-                                console.log('KanbanState carregado do Firebase');
+                                console.log('✅ KanbanState carregado do Firebase:', Object.keys(kanbanStateGlobal).length, 'itens');
                             } else {
+                                console.log('Nenhum kanbanState no Firebase');
                                 carregarKanbanStateDoLocalStorage();
                             }
-                            atualizarDashboard();
-                        }).catch(() => {
+                            
+                            // Carregar também o histórico de pausas
+                            window.db.ref('historicoPausas').once('value', pausasSnapshot => {
+                                if (pausasSnapshot.exists()) {
+                                    historicoPausas = normalizarDados(pausasSnapshot.val());
+                                    console.log('✅ Histórico de pausas carregado do Firebase:', historicoPausas.length, 'pausas');
+                                } else {
+                                    console.log('Nenhum histórico de pausas no Firebase');
+                                    carregarHistoricoPausasDoLocalStorage();
+                                }
+                                atualizarDashboard();
+                            }).catch(erro => {
+                                console.error('Erro ao carregar histórico de pausas do Firebase:', erro);
+                                carregarHistoricoPausasDoLocalStorage();
+                                atualizarDashboard();
+                            });
+                        }).catch(erro => {
+                            console.error('Erro ao carregar kanbanState do Firebase:', erro);
                             carregarKanbanStateDoLocalStorage();
+                            
+                            // Carregar histórico de pausas do localStorage
+                            carregarHistoricoPausasDoLocalStorage();
                             atualizarDashboard();
                         });
                     } else {
-                        console.log('Nenhum dado no Firebase. Usando localStorage...');
+                        console.log('Nenhuma atividade no Firebase. Usando localStorage...');
                         carregarDoLocalStorage();
                     }
                 }).catch(error => {
                     clearTimeout(timeoutId);
-                    console.error('Erro ao carregar do Firebase:', error);
+                    console.error('Erro ao carregar atividades do Firebase:', error);
                     carregarDoLocalStorage();
                 });
             } else {
@@ -575,24 +655,45 @@
         }
 
         function carregarDoLocalStorage() {
+            console.log('Carregando dados do localStorage...');
             const dadosSalvos = obterDoStorage('atividades');
             atividadesGlobais = normalizarDados(dadosSalvos);
-            console.log('Atividades carregadas do localStorage:', atividadesGlobais.length);
+            console.log('✅ Atividades carregadas do localStorage:', atividadesGlobais.length);
+            
+            if (atividadesGlobais.length > 0) {
+                console.log('Primeiras 3 atividades:', atividadesGlobais.slice(0, 3));
+            }
+            
             carregarKanbanStateDoLocalStorage();
+            carregarHistoricoPausasDoLocalStorage();
             atualizarDashboard();
         }
 
         function carregarKanbanStateDoLocalStorage() {
             const estadoSalvo = obterDoStorage('kanbanState');
             kanbanStateGlobal = estadoSalvo || {};
-            console.log('KanbanState carregado do localStorage');
+            console.log('✅ KanbanState carregado do localStorage:', Object.keys(kanbanStateGlobal).length, 'itens');
+        }
+
+        function carregarHistoricoPausasDoLocalStorage() {
+            const pausasSalvas = obterDoStorage('historicoPausas');
+            historicoPausas = normalizarDados(pausasSalvas) || [];
+            console.log('✅ Histórico de pausas carregado do localStorage:', historicoPausas.length, 'pausas');
         }
 
         // Obter status de uma atividade
         function obterStatusAtividade(atividade) {
-            const estado = kanbanStateGlobal[atividade.id];
-            if (estado) return estado.status; // 'em_andamento', 'pausado', 'concluido'
-            return 'desconhecido';
+            // Tentar com id primeiro (para atividades novas)
+            if (atividade.id && kanbanStateGlobal[atividade.id]) {
+                return kanbanStateGlobal[atividade.id].status;
+            }
+            // Tentar com chaveAtividade (para compatibilidade)
+            if (atividade.chaveAtividade && kanbanStateGlobal[atividade.chaveAtividade]) {
+                return kanbanStateGlobal[atividade.chaveAtividade].status;
+            }
+            // Se não tem status conhecimento, considerar como em_andamento por padrão
+            // (pode significar que é uma atividade recém-criada)
+            return 'em_andamento';
         }
 
         // Calcular KPIs
@@ -609,6 +710,14 @@
             const tempoAbertos = atividades.filter(a => obterStatusAtividade(a) === 'em_andamento');
             const tempoMedioAberto = tempoAbertos.length > 0 ? 
                 Math.round(tempoAbertos.reduce((sum, a) => sum + (parseInt(a.duracao) || 0), 0) / tempoAbertos.length) : 0;
+
+            console.log('KPIs calculados:', {
+                totalAtividades,
+                ativConcluidas,
+                ativAbertas,
+                tempoMedioAberto,
+                tempoAbertosCount: tempoAbertos.length
+            });
 
             return {
                 totalAtividades,
@@ -628,17 +737,28 @@
 
         // Gráfico 1: % de Atividades Abertas por Colaborador
         function renderizarAtividadesAbertas() {
+            console.log('Renderizando gráfico de atividades abertas...');
             const colaboradores = {};
+            let totalProcessadas = 0;
+            let totalAbertas = 0;
+            
             atividadesGlobais.forEach(a => {
                 if (!a || !a.colaborador) return;
                 if (!colaboradores[a.colaborador]) {
                     colaboradores[a.colaborador] = { total: 0, abertas: 0 };
                 }
                 colaboradores[a.colaborador].total++;
-                if (obterStatusAtividade(a) === 'em_andamento') {
+                totalProcessadas++;
+                
+                const status = obterStatusAtividade(a);
+                if (status === 'em_andamento') {
                     colaboradores[a.colaborador].abertas++;
+                    totalAbertas++;
                 }
             });
+
+            console.log(`Processadas ${totalProcessadas} atividades, ${totalAbertas} abertas`);
+            console.log('Dados por colaborador:', colaboradores);
 
             const nomes = Object.keys(colaboradores).sort();
             const percentuais = nomes.map(nome => {
@@ -782,18 +902,25 @@
             console.log('Gráfico de atividades por dia renderizado:', datas.length, 'dias');
         }
 
-        // Gráfico 3: Atividades Pausadas por Setor (Gráfico em Barras em Pé)
+        // Gráfico 3: Histórico de Pausas por Setor (Barras em Pé - Vertical)
         function renderizarAtividadesPausadas() {
-            const atividadesPorSetor = {};
-            atividadesGlobais.forEach(a => {
-                if (!a) return;
-                const setor = a.setor || 'Sem setor';
-                if (!atividadesPorSetor[setor]) atividadesPorSetor[setor] = 0;
-                atividadesPorSetor[setor]++;
+            console.log('Renderizando gráfico de pausas por setor...');
+            console.log('Total de pausas no histórico:', historicoPausas.length);
+            
+            // Agrupar pausas por setor/grupo
+            const pausasPorSetor = {};
+            historicoPausas.forEach(pausa => {
+                if (!pausa) return;
+                // Usar campo 'grupo' do histórico de pausas
+                const setor = pausa.grupo || 'Sem setor';
+                if (!pausasPorSetor[setor]) pausasPorSetor[setor] = 0;
+                pausasPorSetor[setor]++;
             });
 
-            const setores = Object.keys(atividadesPorSetor).sort();
-            const quantidades = setores.map(setor => atividadesPorSetor[setor]);
+            console.log('Pausas por setor:', pausasPorSetor);
+
+            const setores = Object.keys(pausasPorSetor).sort();
+            const quantidades = setores.map(setor => pausasPorSetor[setor]);
 
             const ctx = document.getElementById('chartAtividadesPausadas').getContext('2d');
             if (chartsInstances.chartAtividadesPausadas) chartsInstances.chartAtividadesPausadas.destroy();
@@ -803,7 +930,7 @@
                 data: {
                     labels: setores,
                     datasets: [{
-                        label: 'Atividades por Setor',
+                        label: 'Pausas por Setor',
                         data: quantidades,
                         backgroundColor: CORES.slice(0, setores.length),
                         borderColor: CORES.slice(0, setores.length),
@@ -812,33 +939,40 @@
                     }]
                 },
                 options: {
-                    indexAxis: 'y',
+                    indexAxis: 'x', // Barras em pé (vertical)
                     responsive: true,
                     maintainAspectRatio: true,
                     plugins: {
                         legend: { display: true, position: 'top' }
                     },
                     scales: {
-                        x: { beginAtZero: true }
+                        y: { beginAtZero: true }
                     }
                 }
             });
-            console.log('Gráfico de atividades por setor renderizado:', setores.length, 'setores');
+            console.log('Gráfico de pausas por setor renderizado:', setores.length, 'setores');
         }
 
-        // Gráfico 4: Atividades Realizadas por Colaborador
+        // Gráfico 4: Pausas Registradas por Colaborador (Histórico de Pausas)
         function renderizarAtividadesRealizadas() {
-            const ativividadesRealizadas = {};
-            atividadesGlobais.forEach(a => {
-                if (!a || !a.colaborador) return;
-                if (obterStatusAtividade(a) === 'concluido') {
-                    if (!ativividadesRealizadas[a.colaborador]) ativividadesRealizadas[a.colaborador] = 0;
-                    ativividadesRealizadas[a.colaborador]++;
+            console.log('Renderizando gráfico de atividades realizadas (histórico de pausas)...');
+            console.log('Total de pausas:', historicoPausas.length);
+            
+            // Contar pausas por colaborador a partir do histórico
+            const atividadesRealizadas = {};
+            historicoPausas.forEach(pausa => {
+                if (!pausa || !pausa.colaborador) return;
+                if (!atividadesRealizadas[pausa.colaborador]) {
+                    atividadesRealizadas[pausa.colaborador] = 0;
                 }
+                atividadesRealizadas[pausa.colaborador]++;
             });
 
-            const colaboradores = Object.keys(ativividadesRealizadas).sort((a, b) => ativividadesRealizadas[b] - ativividadesRealizadas[a]);
-            const quantidades = colaboradores.map(col => ativividadesRealizadas[col]);
+            console.log('Pausas por colaborador:', atividadesRealizadas);
+
+            // Ordenar por quantidade decrescente
+            const colaboradores = Object.keys(atividadesRealizadas).sort((a, b) => atividadesRealizadas[b] - atividadesRealizadas[a]);
+            const quantidades = colaboradores.map(col => atividadesRealizadas[col]);
 
             const ctx = document.getElementById('chartAtividadesRealizadas').getContext('2d');
             if (chartsInstances.chartAtividadesRealizadas) chartsInstances.chartAtividadesRealizadas.destroy();
@@ -848,7 +982,7 @@
                 data: {
                     labels: colaboradores,
                     datasets: [{
-                        label: 'Atividades Concluídas',
+                        label: 'Pausas Registradas',
                         data: quantidades,
                         backgroundColor: CORES.slice(0, colaboradores.length),
                         borderColor: CORES.slice(0, colaboradores.length),
@@ -857,6 +991,7 @@
                     }]
                 },
                 options: {
+                    indexAxis: 'x', // Barras em pé (vertical)
                     responsive: true,
                     maintainAspectRatio: true,
                     plugins: {
@@ -872,12 +1007,19 @@
 
         // Atualizar dashboard completo
         function atualizarDashboard() {
+            console.log('--- ATUALIZANDO DASHBOARD ---');
+            console.log('Total de atividades:', atividadesGlobais.length);
+            console.log('Total de estados (kanbanState):', Object.keys(kanbanStateGlobal).length);
+            console.log('Total de pausas registradas:', historicoPausas.length);
+            
             atualizarKPIs();
             renderizarAtividadesAbertas();
             renderizarIndicadoresColaboradores();
             renderizarAtividadesPorDia();
             renderizarAtividadesPausadas();
             renderizarAtividadesRealizadas();
+            
+            console.log('--- DASHBOARD ATUALIZADO COM SUCESSO ---');
         }
 
         // Inicializar ao carregar
@@ -898,7 +1040,15 @@
                                     if (stateSnapshot.exists()) {
                                         kanbanStateGlobal = stateSnapshot.val();
                                     }
-                                    atualizarDashboard();
+                                    // Também atualizar histórico de pausas
+                                    window.db.ref('historicoPausas').once('value', pausasSnapshot => {
+                                        if (pausasSnapshot.exists()) {
+                                            historicoPausas = normalizarDados(pausasSnapshot.val());
+                                        }
+                                        atualizarDashboard();
+                                    }).catch(() => {
+                                        atualizarDashboard();
+                                    });
                                 }).catch(() => {
                                     atualizarDashboard();
                                 });
@@ -909,6 +1059,7 @@
                         if (JSON.stringify(novosDados) !== JSON.stringify(atividadesGlobais)) {
                             atividadesGlobais = normalizarDados(novosDados);
                             carregarKanbanStateDoLocalStorage();
+                            carregarHistoricoPausasDoLocalStorage();
                             atualizarDashboard();
                         }
                     });
@@ -920,10 +1071,33 @@
                 if (JSON.stringify(novosDados) !== JSON.stringify(atividadesGlobais)) {
                     atividadesGlobais = novosDados;
                     carregarKanbanStateDoLocalStorage();
+                    carregarHistoricoPausasDoLocalStorage();
                     atualizarDashboard();
                 }
             }
         }, 10000);
+
+        // Sincronizar imediatamente quando a aba recebe foco
+        window.addEventListener('focus', () => {
+            console.log('Aba com foco recebido - sincronizando dados...');
+            carregarDados();
+        });
+
+        // Botão discreto para atualizar gráficos
+        document.getElementById('btnAtualizarGraficos').addEventListener('click', () => {
+            const btn = document.getElementById('btnAtualizarGraficos');
+            btn.classList.add('carregando');
+            btn.disabled = true;
+            
+            console.log('Atualizando gráficos manualmente...');
+            carregarDados();
+            
+            // Remover o estado de carregamento após 1 segundo
+            setTimeout(() => {
+                btn.classList.remove('carregando');
+                btn.disabled = false;
+            }, 1000);
+        });
     </script>
 </body>
 </html>

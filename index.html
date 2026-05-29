@@ -1030,6 +1030,7 @@
                 <li><a href="insights.html">Insights</a></li>
                 <li><a href="admin.html">Administrador</a></li>
                 <li><a href="atividades-usuarios.html">Atividades dos Usuários</a></li>
+                <li><a href="database.html">Base de Dados</a></li>
             </ul>
         </nav>
     </aside>
@@ -2169,14 +2170,15 @@
                     historicoPausas.push({
                         id: atividadeId,
                         ticket: atividade.ticket,
-                        colaborador: atividade.nome,
-                        motivo: estadoPausa.motivoPausa,
+                        colaborador: atividade.colaborador || atividade.nome,
+                        motivo: estadoPausa.motivoPausa || '-',
                         grupo: estadoPausa.grupoPausa || 'Não definido',
                         dataInicio: atividade.dataInicio,
                         horaPausa: new Date(estadoPausa.tempoInicioPausa).toLocaleTimeString('pt-BR'),
                         horaRetomada: agora.toLocaleTimeString('pt-BR'),
                         tempoPausaMs: tempoPausaMs,
-                        tempoPausaFormatado: formatarTempo(tempoPausaMs)
+                        tempoPausaFormatado: formatarTempo(tempoPausaMs),
+                        duracao: atividade.duracao
                     });
                 }
             }
