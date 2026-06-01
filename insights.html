@@ -493,6 +493,7 @@
         // Cores para gráficos
         const CORES = ['#5b8ec6', '#51cf66', '#ffc93c', '#ff6b6b', '#a78bfa', '#f472b6', '#06b6d4', '#ec4899', '#10b981', '#f59e0b'];
         let atividadesGlobais = [];
+        let atividadesEmAndamento = []; // Atividades em andamento
         let kanbanStateGlobal = {}; // Estado global do kanban
         let historicoPausas = []; // Histórico de pausas para gráficos
         let chartsInstances = {};
@@ -561,8 +562,25 @@
                             console.log('Primeiras 3 atividades:', atividadesGlobais.slice(0, 3));
                         }
                         
-                        // Carregar também o kanbanState
-                        window.db.ref('kanbanState').once('value', stateSnapshot => {
+                        // Carregar atividades em andamento
+                        window.db.ref('atividadesEmAndamento').once('value', andamentoSnapshot => {
+                            if (andamentoSnapshot.exists()) {
+                                atividadesEmAndamento = normalizarDados(andamentoSnapshot.val());
+                                console.log('✅ Atividades em andamento carregadas:', atividadesEmAndamento.length);
+                            } else {
+                                console.log('Nenhuma atividade em andamento no Firebase');
+                                atividadesEmAndamento = [];
+                            }
+                            carregarKanbanEPausas();
+                        }).catch(erro => {
+                            console.error('Erro ao carregar atividades em andamento:', erro);
+                            atividadesEmAndamento = [];
+                            carregarKanbanEPausas();
+                        });
+                        
+                        function carregarKanbanEPausas() {
+                            // Carregar também o kanbanState
+                            window.db.ref('kanbanState').once('value', stateSnapshot => {
                             if (stateSnapshot.exists()) {
                                 kanbanStateGlobal = stateSnapshot.val();
                                 console.log('✅ KanbanState carregado do Firebase:', Object.keys(kanbanStateGlobal).length, 'itens');
@@ -586,14 +604,15 @@
                                 carregarHistoricoPausasDoLocalStorage();
                                 atualizarDashboard();
                             });
-                        }).catch(erro => {
-                            console.error('Erro ao carregar kanbanState do Firebase:', erro);
-                            carregarKanbanStateDoLocalStorage();
-                            
-                            // Carregar histórico de pausas do localStorage
-                            carregarHistoricoPausasDoLocalStorage();
-                            atualizarDashboard();
-                        });
+                            }).catch(erro => {
+                                console.error('Erro ao carregar kanbanState do Firebase:', erro);
+                                carregarKanbanStateDoLocalStorage();
+                                
+                                // Carregar histórico de pausas do localStorage
+                                carregarHistoricoPausasDoLocalStorage();
+                                atualizarDashboard();
+                            });
+                        }
                     } else {
                         console.log('Nenhuma atividade no Firebase. Usando localStorage...');
                         carregarDoLocalStorage();
@@ -618,6 +637,10 @@
             if (atividadesGlobais.length > 0) {
                 console.log('Primeiras 3 atividades:', atividadesGlobais.slice(0, 3));
             }
+            
+            const dadosEmAndamento = obterDoStorage('atividadesEmAndamento');
+            atividadesEmAndamento = normalizarDados(dadosEmAndamento);
+            console.log('✅ Atividades em andamento carregadas:', atividadesEmAndamento.length);
             
             carregarKanbanStateDoLocalStorage();
             carregarHistoricoPausasDoLocalStorage();
@@ -840,23 +863,58 @@
             return `${ano}-${mes}-${dia}`;
         }
 
-        // Gráfico 2: Atividades Criadas por Dia (Gráfico em Linhas)
+        // Gráfico 2: Atividades Criadas por Dia (Gráfico em Linhas) - Com múltiplos status
         function renderizarAtividadesPorDia() {
-            const atividadesPorDia = {};
+            const atividadesPorDiaStatus = {
+                concluidas: {},
+                emAndamento: {},
+                pausadas: {}
+            };
+
+            // Contar atividades concluídas por data
             atividadesGlobais.forEach(a => {
                 if (!a || !a.dataInicio) return;
-                const data = a.dataInicio; // Já está em DD/MM/YYYY
-                if (!atividadesPorDia[data]) atividadesPorDia[data] = 0;
-                atividadesPorDia[data]++;
+                const data = a.dataInicio;
+                if (!atividadesPorDiaStatus.concluidas[data]) atividadesPorDiaStatus.concluidas[data] = 0;
+                atividadesPorDiaStatus.concluidas[data]++;
             });
 
+            // Contar atividades em andamento por data de início
+            atividadesEmAndamento.forEach(a => {
+                if (!a || !a.dataInicio) return;
+                const data = a.dataInicio;
+                if (!atividadesPorDiaStatus.emAndamento[data]) atividadesPorDiaStatus.emAndamento[data] = 0;
+                atividadesPorDiaStatus.emAndamento[data]++;
+            });
+
+            // Contar atividades pausadas por data de início (usar campo dataInicio do histórico de pausas)
+            historicoPausas.forEach(p => {
+                if (!p || !p.dataInicio) return;
+                const data = p.dataInicio;
+                // Contar apenas as que estão atualmente pausadas (status === 'Pausado')
+                if (p.status === 'Pausado' || p.status === 'pausado') {
+                    if (!atividadesPorDiaStatus.pausadas[data]) atividadesPorDiaStatus.pausadas[data] = 0;
+                    atividadesPorDiaStatus.pausadas[data]++;
+                }
+            });
+
+            // Coletar todas as datas únicas
+            const todasAsDatas = new Set();
+            Object.values(atividadesPorDiaStatus).forEach(dados => {
+                Object.keys(dados).forEach(data => todasAsDatas.add(data));
+            });
+            
             // Ordenar datas
-            const datas = Object.keys(atividadesPorDia).sort((a, b) => {
+            const datas = Array.from(todasAsDatas).sort((a, b) => {
                 const dataA = converterDataBrasileira(a);
                 const dataB = converterDataBrasileira(b);
                 return dataA.localeCompare(dataB);
             });
-            const quantidades = datas.map(data => atividadesPorDia[data]);
+
+            // Mapear dados para cada status
+            const quantidadesConcluidas = datas.map(data => atividadesPorDiaStatus.concluidas[data] || 0);
+            const quantidadesEmAndamento = datas.map(data => atividadesPorDiaStatus.emAndamento[data] || 0);
+            const quantidadesPausadas = datas.map(data => atividadesPorDiaStatus.pausadas[data] || 0);
 
             const ctx = document.getElementById('chartAtividadesPorDia').getContext('2d');
             if (chartsInstances.chartAtividadesPorDia) chartsInstances.chartAtividadesPorDia.destroy();
@@ -865,20 +923,50 @@
                 type: 'line',
                 data: {
                     labels: datas,
-                    datasets: [{
-                        label: 'Atividades Criadas',
-                        data: quantidades,
-                        borderColor: '#5b8ec6',
-                        backgroundColor: 'rgba(91, 142, 198, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointBackgroundColor: '#5b8ec6',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2,
-                        pointRadius: 5,
-                        pointHoverRadius: 7
-                    }]
+                    datasets: [
+                        {
+                            label: 'Atividades Concluídas',
+                            data: quantidadesConcluidas,
+                            borderColor: '#51cf66',
+                            backgroundColor: 'rgba(81, 207, 102, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#51cf66',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5,
+                            pointHoverRadius: 7
+                        },
+                        {
+                            label: 'Atividades em Andamento',
+                            data: quantidadesEmAndamento,
+                            borderColor: '#5b8ec6',
+                            backgroundColor: 'rgba(91, 142, 198, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#5b8ec6',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5,
+                            pointHoverRadius: 7
+                        },
+                        {
+                            label: 'Atividades Pausadas',
+                            data: quantidadesPausadas,
+                            borderColor: '#ffc93c',
+                            backgroundColor: 'rgba(255, 201, 60, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#ffc93c',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5,
+                            pointHoverRadius: 7
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
@@ -892,7 +980,8 @@
                 },
                 plugins: [pluginValoresGrafico]
             });
-            console.log('Gráfico de atividades por dia renderizado:', datas.length, 'dias');
+            console.log('Gráfico de atividades por dia renderizado com múltiplos status:', datas.length, 'dias');
+            console.log('Resumo:', { concluidas: quantidadesConcluidas.reduce((a,b)=>a+b,0), emAndamento: quantidadesEmAndamento.reduce((a,b)=>a+b,0), pausadas: quantidadesPausadas.reduce((a,b)=>a+b,0) });
         }
 
         // Gráfico 3: Histórico de Pausas por Setor (Barras em Pé - Vertical)
