@@ -2144,6 +2144,15 @@
             const agora = new Date();
             const atividadePausa = atividadesEmAndamento.find(a => a && a.id === atividadePausando);
             
+            // ✅ Garantir que o kanbanState existe para esta atividade
+            if (!kanbanState[atividadePausando]) {
+                kanbanState[atividadePausando] = { 
+                    status: 'em_andamento',
+                    motivoPausa: '',
+                    grupoPausa: ''
+                };
+            }
+            
             // Atualizar estado do kanban
             kanbanState[atividadePausando].status = 'pausado';
             kanbanState[atividadePausando].motivoPausa = motivo;
@@ -2199,6 +2208,16 @@
         function retomarAtividade(atividadeId) {
             const agora = new Date();
             const estadoPausa = kanbanState[atividadeId];
+            
+            // ✅ Garantir que kanbanState existe
+            if (!kanbanState[atividadeId]) {
+                console.warn('⚠️ kanbanState não existe para atividadeId:', atividadeId);
+                kanbanState[atividadeId] = { status: 'em_andamento', motivoPausa: '' };
+                salvarDados();
+                atualizarKanban();
+                mostrarAlerta('aviso', 'Atividade já estava retomada');
+                return;
+            }
             
             // ✅ NOVO: Encontrar e ATUALIZAR o registro de pausa existente
             if (estadoPausa && estadoPausa.tempoInicioPausa) {
@@ -2420,6 +2439,19 @@
                 ...a,
                 chaveAtividade: a.chaveAtividade || gerarChaveAtividade()
             }));
+
+            // ✅ NOVO: Garantir que todas as atividades em andamento têm entrada em kanbanState
+            atividadesEmAndamento.forEach(atividade => {
+                if (atividade.id && !kanbanState[atividade.id]) {
+                    kanbanState[atividade.id] = {
+                        status: 'em_andamento',
+                        motivoPausa: '',
+                        grupoPausa: '',
+                        tempoInicioPausa: null
+                    };
+                    console.warn('⚠️ Criando kanbanState para atividade:', atividade.id);
+                }
+            });
 
             const atividadesGrupadasPorStatus = {
                 em_andamento: [],
@@ -2665,6 +2697,18 @@
             kanbanEmAndamento.innerHTML = '';
             kanbanPausado.innerHTML = '';
             kanbanConcluido.innerHTML = '';
+
+            // ✅ Garantir que todas as atividades filtradas têm entrada em kanbanState
+            atividadesFiltradas.forEach(atividade => {
+                if (atividade.id && !kanbanState[atividade.id]) {
+                    kanbanState[atividade.id] = {
+                        status: atividade.status || 'em_andamento',
+                        motivoPausa: '',
+                        grupoPausa: '',
+                        tempoInicioPausa: null
+                    };
+                }
+            });
 
             const atividadesGrupadasPorStatus = {
                 em_andamento: [],
