@@ -1470,6 +1470,23 @@
             }
         }
 
+        // ✅ Remover valores undefined de objeto (Firebase não aceita undefined)
+        function limparUndefinedRecursivo(obj) {
+            if (Array.isArray(obj)) {
+                return obj.map(item => limparUndefinedRecursivo(item)).filter(item => item !== null && item !== undefined);
+            }
+            if (obj !== null && typeof obj === 'object') {
+                const clean = {};
+                for (const [key, value] of Object.entries(obj)) {
+                    if (value !== undefined && value !== null) {
+                        clean[key] = limparUndefinedRecursivo(value);
+                    }
+                }
+                return clean;
+            }
+            return obj;
+        }
+
         // ✅ Salvar dados no Firebase (com fallback para localStorage)
         function salvarDados() {
             const emAndamentoParaSalvar = atividadesEmAndamento.map(a => ({
@@ -1494,13 +1511,14 @@
             if (window.FIREBASE_OK) {
                 // ✅ NÃO usar .set() que sobrescreve tudo
                 // Usar .update() para atualizar apenas estes campos
-                window.db.ref('/').update({
-                    atividades: atividades,
-                    atividadesEmAndamento: emAndamentoParaSalvar,
-                    kanbanState: kanbanState,
-                    historicoPausas: historicoPausas
-                    // ⚠️ NÃO incluir registrosAtividades aqui - deixar que a função registrarRastreioAtividade cuide
-                }).catch(err => console.error('Erro ao salvar no Firebase:', err));
+                const dadosParaSalvar = {
+                    atividades: limparUndefinedRecursivo(atividades),
+                    atividadesEmAndamento: limparUndefinedRecursivo(emAndamentoParaSalvar),
+                    kanbanState: limparUndefinedRecursivo(kanbanState),
+                    historicoPausas: limparUndefinedRecursivo(historicoPausas)
+                };
+                
+                window.db.ref('/').update(dadosParaSalvar).catch(err => console.error('Erro ao salvar no Firebase:', err));
             } else {
                 localStorage.setItem('atividades', JSON.stringify(atividades));
                 localStorage.setItem('atividadesEmAndamento', JSON.stringify(emAndamentoParaSalvar));
@@ -2124,12 +2142,36 @@
             }
 
             const agora = new Date();
+            const atividadePausa = atividadesEmAndamento.find(a => a && a.id === atividadePausando);
             
             // Atualizar estado do kanban
             kanbanState[atividadePausando].status = 'pausado';
             kanbanState[atividadePausando].motivoPausa = motivo;
             kanbanState[atividadePausando].grupoPausa = grupo || 'Não definido';
             kanbanState[atividadePausando].tempoInicioPausa = agora.getTime();
+
+            // ✅ NOVO: Registrar IMEDIATAMENTE no histórico de pausas com status "Pausado"
+            if (atividadePausa) {
+                const novaParusa = {
+                    id: atividadePausando,
+                    ticket: atividadePausa.ticket,
+                    colaborador: atividadePausa.colaborador || atividadePausa.nome,
+                    motivo: motivo,
+                    grupo: grupo || 'Não definido',
+                    status: 'Pausado',
+                    dataInicio: atividadePausa.dataInicio || '-',
+                    horaPausa: agora.toLocaleTimeString('pt-BR'),
+                    horaRetomada: null,
+                    tempoPausaMs: 0,
+                    tempoPausaFormatado: '00:00:00',
+                    duracao: atividadePausa.duracao || '00:00:00',
+                    setor: atividadePausa.setor || '-',
+                    ativa: true,
+                    indiceParaAtualizacao: historicoPausas.length  // Guardar índice para atualizar depois
+                };
+                historicoPausas.push(novaParusa);
+                console.log('✅ Pausa registrada imediatamente com status "Pausado"');
+            }
 
             // Incrementar contador acumulado de pausas
             const grupoNormalizado = grupo || 'Não definido';
@@ -2142,8 +2184,6 @@
             fecharModalPausarAtividade();
 
             // ✅ Registrar pausa de atividade com rastreio completo
-            // Usa a nova função que registra como PAUSA em vez de PAUSOU
-            const atividadePausa = atividadesEmAndamento.find(a => a && a.id === atividadePausando);
             if (atividadePausa) {
                 registrarPausaAtividade(atividadePausa.ticket, atividadePausa.descricao, motivo, {
                     chaveAtividade: atividadePausa.chaveAtividade,
@@ -2160,26 +2200,42 @@
             const agora = new Date();
             const estadoPausa = kanbanState[atividadeId];
             
-            // Calcular tempo de pausa
+            // ✅ NOVO: Encontrar e ATUALIZAR o registro de pausa existente
             if (estadoPausa && estadoPausa.tempoInicioPausa) {
                 const tempoPausaMs = agora.getTime() - estadoPausa.tempoInicioPausa;
-                const atividade = atividadesEmAndamento.find(a => a && a.id === atividadeId);
                 
-                if (atividade) {
-                    // Registrar no histórico de pausas
-                    historicoPausas.push({
-                        id: atividadeId,
-                        ticket: atividade.ticket,
-                        colaborador: atividade.colaborador || atividade.nome,
-                        motivo: estadoPausa.motivoPausa || '-',
-                        grupo: estadoPausa.grupoPausa || 'Não definido',
-                        dataInicio: atividade.dataInicio,
-                        horaPausa: new Date(estadoPausa.tempoInicioPausa).toLocaleTimeString('pt-BR'),
-                        horaRetomada: agora.toLocaleTimeString('pt-BR'),
-                        tempoPausaMs: tempoPausaMs,
-                        tempoPausaFormatado: formatarTempo(tempoPausaMs),
-                        duracao: atividade.duracao
-                    });
+                // Procurar o registro de pausa para esta atividade no histórico
+                const indicePausa = historicoPausas.findIndex(p => p && p.id === atividadeId && p.status === 'Pausado');
+                
+                if (indicePausa !== -1) {
+                    // ✅ ATUALIZAR o registro existente
+                    historicoPausas[indicePausa].status = 'Retomado';
+                    historicoPausas[indicePausa].horaRetomada = agora.toLocaleTimeString('pt-BR');
+                    historicoPausas[indicePausa].tempoPausaMs = tempoPausaMs;
+                    historicoPausas[indicePausa].tempoPausaFormatado = formatarTempo(tempoPausaMs);
+                    historicoPausas[indicePausa].ativa = false;
+                    console.log('✅ Pausa atualizada para status "Retomado"');
+                } else {
+                    // Fallback: Se não encontrar (não deveria acontecer), criar novo registro
+                    console.warn('⚠️ Registro de pausa não encontrado, criando novo...');
+                    const atividade = atividadesEmAndamento.find(a => a && a.id === atividadeId);
+                    if (atividade) {
+                        historicoPausas.push({
+                            id: atividadeId,
+                            ticket: atividade.ticket,
+                            colaborador: atividade.colaborador || atividade.nome,
+                            motivo: estadoPausa.motivoPausa || '-',
+                            grupo: estadoPausa.grupoPausa || 'Não definido',
+                            status: 'Retomado',
+                            dataInicio: atividade.dataInicio || '-',
+                            horaPausa: new Date(estadoPausa.tempoInicioPausa).toLocaleTimeString('pt-BR'),
+                            horaRetomada: agora.toLocaleTimeString('pt-BR'),
+                            tempoPausaMs: tempoPausaMs,
+                            tempoPausaFormatado: formatarTempo(tempoPausaMs),
+                            duracao: atividade.duracao || '00:00:00',
+                            setor: atividade.setor || '-'
+                        });
+                    }
                 }
             }
             

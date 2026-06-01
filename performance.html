@@ -930,28 +930,47 @@
                             console.log('✅ KanbanState carregado:', Object.keys(kanbanState).length);
                         }
 
-                        // Carregar historicoPausas
-                        db.ref('historicoPausas').once('value', (pausasSnapshot) => {
-                            if (pausasSnapshot.exists()) {
-                                historicoPausas = converterParaArray(pausasSnapshot.val());
-                                console.log('✅ Histórico de pausas carregado:', historicoPausas.length);
+                        // Carregar atividadesEmAndamento
+                        db.ref('atividadesEmAndamento').once('value', (emAndSnapshot) => {
+                            if (emAndSnapshot.exists()) {
+                                atividadesEmAndamento = converterParaArray(emAndSnapshot.val());
+                                console.log('✅ Atividades em andamento carregadas:', atividadesEmAndamento.length);
+                            } else {
+                                // Fallback: gerar baseado em kanbanState
+                                atividadesEmAndamento = atividades.filter(a => {
+                                    const estado = kanbanState[a.id];
+                                    return estado && (estado.status === 'em_andamento' || estado.status === 'pausado');
+                                });
                             }
-                            
-                            // Gerar atividadesEmAndamento baseado em kanbanState
-                            atividadesEmAndamento = atividades.filter(a => {
-                                const estado = kanbanState[a.id];
-                                return estado && estado.status === 'em_andamento';
+
+                            // Carregar historicoPausas
+                            db.ref('historicoPausas').once('value', (pausasSnapshot) => {
+                                if (pausasSnapshot.exists()) {
+                                    historicoPausas = converterParaArray(pausasSnapshot.val());
+                                    console.log('✅ Histórico de pausas carregado:', historicoPausas.length);
+                                }
+                                
+                                atualizarDashboard();
+                            }).catch(() => {
+                                console.log('Histórico de pausas não encontrado');
+                                atualizarDashboard();
                             });
-                            console.log('✅ Atividades em andamento:', atividadesEmAndamento.length);
-                            
-                            atualizarDashboard();
                         }).catch(() => {
-                            console.log('Histórico de pausas não encontrado');
+                            console.log('AtividadesEmAndamento não encontrado');
                             atividadesEmAndamento = atividades.filter(a => {
                                 const estado = kanbanState[a.id];
-                                return estado && estado.status === 'em_andamento';
+                                return estado && (estado.status === 'em_andamento' || estado.status === 'pausado');
                             });
-                            atualizarDashboard();
+                            
+                            // Carregar historicoPausas
+                            db.ref('historicoPausas').once('value', (pausasSnapshot) => {
+                                if (pausasSnapshot.exists()) {
+                                    historicoPausas = converterParaArray(pausasSnapshot.val());
+                                }
+                                atualizarDashboard();
+                            }).catch(() => {
+                                atualizarDashboard();
+                            });
                         });
                     }).catch(() => {
                         console.log('KanbanState não encontrado');
@@ -985,6 +1004,19 @@
                 console.log('✅ KanbanState carregado:', Object.keys(kanbanState).length);
             }
 
+            // Carregar atividadesEmAndamento do localStorage
+            const emAndamentoSalvas = localStorage.getItem('atividadesEmAndamento');
+            if (emAndamentoSalvas) {
+                atividadesEmAndamento = converterParaArray(JSON.parse(emAndamentoSalvas));
+                console.log('✅ Atividades em andamento carregadas:', atividadesEmAndamento.length);
+            } else {
+                // Fallback: gerar baseado em kanbanState
+                atividadesEmAndamento = atividades.filter(a => {
+                    const estado = kanbanState[a.id];
+                    return estado && (estado.status === 'em_andamento' || estado.status === 'pausado');
+                });
+            }
+
             // Carregar histórico de pausas
             const pausasSalvas = localStorage.getItem('historicoPausas');
             if (pausasSalvas) {
@@ -992,12 +1024,7 @@
                 console.log('✅ Histórico de pausas carregado:', historicoPausas.length);
             }
 
-            // Gerar atividadesEmAndamento baseado em kanbanState
-            atividadesEmAndamento = atividades.filter(a => {
-                const estado = kanbanState[a.id];
-                return estado && estado.status === 'em_andamento';
-            });
-            console.log('✅ Atividades em andamento:', atividadesEmAndamento.length);
+            console.log('✅ Atividades em andamento totalizando:', atividadesEmAndamento.length);
 
             atualizarDashboard();
         }
@@ -1117,11 +1144,29 @@
             const totalAtividadesFinalizadas = atividadesArray.length;
             document.getElementById('totalAtividadesCard').textContent = totalAtividadesFinalizadas;
 
-            // Pausas por Grupo (Acumulados)
-            document.getElementById('pausasEngenhariaCard').textContent = contadores['Engenharia'];
-            document.getElementById('pausasCustomerCard').textContent = contadores['Customer'];
-            document.getElementById('pausasInteligenciaCard').textContent = contadores['Inteligência'];
-            document.getElementById('pausasPosVendasCard').textContent = contadores['Pós-Vendas'];
+            // Pausas por Grupo - CONTAR PAUSAS ATIVAS EM TEMPO REAL
+            const pausasPorGrupo = {
+                'Engenharia': 0,
+                'Customer': 0,
+                'Inteligência': 0,
+                'Pós-Vendas': 0
+            };
+            
+            // Contar atividades que estão pausadas agora
+            atividadesArray.forEach(atividade => {
+                const estado = kanbanState[atividade.id];
+                if (estado && estado.status === 'pausado') {
+                    const grupo = estado.grupoPausa || atividade.setor || 'Pós-Vendas';
+                    if (pausasPorGrupo.hasOwnProperty(grupo)) {
+                        pausasPorGrupo[grupo]++;
+                    }
+                }
+            });
+            
+            document.getElementById('pausasEngenhariaCard').textContent = pausasPorGrupo['Engenharia'];
+            document.getElementById('pausasCustomerCard').textContent = pausasPorGrupo['Customer'];
+            document.getElementById('pausasInteligenciaCard').textContent = pausasPorGrupo['Inteligência'];
+            document.getElementById('pausasPosVendasCard').textContent = pausasPorGrupo['Pós-Vendas'];
 
             // Atualizar Top 3
             atualizarTop3(atividadesFiltradas);
@@ -1210,46 +1255,48 @@
             console.log('atividades:', atividades.length);
             console.log('kanbanState:', kanbanState);
             
-            // Garantir que são arrays E FILTRAR items inválidos/undefined
+            // Garantir que são arrays
             let historicoPausasArray = converterParaArray(historicoPausas);
-            // Filtrar items que são undefined, null ou não têm dados válidos
-            historicoPausasArray = historicoPausasArray.filter(p => {
-                if (!p || typeof p !== 'object') return false;
-                if (p.tempoPausaMs === null || p.tempoPausaMs === undefined) return false;
-                return true;
-            });
             
             const atividadesArray = converterParaArray(atividades);
             
-            // Coletar pausas: histórico + pausas ATIVAS
+            // Coletar TODAS as pausas do histórico (ativas e retomadas)
             let todasAsPausas = [...historicoPausasArray];
             
-            console.log('Pausas no histórico:', todasAsPausas.length);
+            console.log('Pausas no histórico (total):', todasAsPausas.length);
             
-            // Adicionar pausas ATIVAS (atividades que estão pausadas AGORA)
-            atividadesArray.forEach(atividade => {
-                const estadoPausa = kanbanState[atividade.id];
-                if (estadoPausa && estadoPausa.status === 'pausado' && estadoPausa.tempoInicioPausa) {
-                    const agora = new Date();
-                    const tempoPausaMs = agora.getTime() - estadoPausa.tempoInicioPausa;
-                    todasAsPausas.push({
-                        id: atividade.id,
-                        ticket: atividade.ticket,
-                        colaborador: atividade.colaborador,
-                        motivo: estadoPausa.motivoPausa || '-',
-                        grupo: estadoPausa.grupoPausa || (atividade.setor || 'Não definido'),
-                        dataInicio: atividade.dataInicio,
-                        horaPausa: new Date(estadoPausa.tempoInicioPausa).toLocaleTimeString('pt-BR'),
-                        horaRetomada: '(ativa)',
-                        tempoPausaMs: tempoPausaMs,
-                        tempoPausaFormatado: formatarTempo(tempoPausaMs),
-                        ativa: true
-                    });
+            // ✅ NOVO: Verificar se há pausas ATIVAS (status === 'Pausado') que precisam ter tempo atualizado
+            todasAsPausas = todasAsPausas.map(pausa => {
+                if (pausa && pausa.status === 'Pausado' && pausa.horaPausa) {
+                    // Recalcular tempo de pausa ativa em tempo real
+                    const horaPausaTime = new Date();
+                    try {
+                        const parts = pausa.horaPausa.split(':');
+                        if (parts.length >= 2) {
+                            const agora = new Date();
+                            // Estimar o tempo aproximado de quando começou (usando hora da pausa)
+                            const tempoPausaMs = agora.getTime() - new Date(pausa.horaPausa).getTime();
+                            return {
+                                ...pausa,
+                                tempoPausaMs: Math.max(0, tempoPausaMs),
+                                tempoPausaFormatado: formatarTempo(Math.max(0, tempoPausaMs))
+                            };
+                        }
+                    } catch (e) {
+                        // Se erro ao calcular, manter como está
+                    }
                 }
+                return pausa;
             });
             
-            console.log('Pausas ATIVAS encontradas:', todasAsPausas.length - historicoPausasArray.length);
-            console.log('Total de pausas:', todasAsPausas.length);
+            // Filtrar pausas válidas (com ou sem tempo)
+            todasAsPausas = todasAsPausas.filter(p => {
+                if (!p || typeof p !== 'object') return false;
+                if (!p.status) return false; // Deve ter status
+                return true;
+            });
+            
+            console.log('Total de pausas (do histórico):', todasAsPausas.length);
             console.log('todasAsPausas:', todasAsPausas);
             
             // Filtrar pausas inválidas ANTES de usar
@@ -1308,6 +1355,11 @@
             todasAsPausas.forEach(pausa => {
                 // Usar grupo capturado ou tentar identificar a partir do motivo
                 const grupo = pausa.grupo && pausa.grupo !== 'Não definido' ? pausa.grupo : identificarSetor(pausa.motivo);
+                
+                // Determinar status: se está ativa, mostrar "Pausado"; senão, usar o status registrado ou "Retomado"
+                const statusPausa = pausa.ativa ? 'Pausado' : (pausa.status || 'Retomado');
+                const corStatus = pausa.ativa ? '#ffd700' : '#51cf66';
+                
                 tabelaHtml += `
                     <tr>
                         <td><strong>#${pausa.ticket}</strong></td>
@@ -1316,7 +1368,7 @@
                         <td>${pausa.horaPausa}</td>
                         <td>${pausa.horaRetomada}</td>
                         <td><strong>${pausa.tempoPausaFormatado || 'N/A'}</strong></td>
-                        <td>${pausa.motivo}</td>
+                        <td><span style="background: ${corStatus === '#ffd700' ? '#fffacd' : '#d3f9d8'}; color: ${corStatus === '#ffd700' ? '#856404' : '#2f9e44'}; padding: 4px 8px; border-radius: 3px; font-size: 0.9em; font-weight: 600;">${statusPausa}</span></td>
                         <td>${grupo ? `<span style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 3px; font-size: 0.9em;">${grupo}</span>` : '-'}</td>
                     </tr>
                 `;
@@ -1353,33 +1405,23 @@
         }
 
         // ✅ Exportar Pausas em CSV
+        // ✅ Exportar Pausas em CSV
         function exportarPausasCSV() {
-            // Garantir que são arrays
-            const historicoPausasArray = converterParaArray(historicoPausas);
-            const atividadesEmAndamentoArray = converterParaArray(atividadesEmAndamento);
+            // Garantir que é array
+            let todasAsPausas = converterParaArray(historicoPausas);
             
-            // Coletar pausas: histórico retomado + pausas ativas
-            let todasAsPausas = [...historicoPausasArray];
-            
-            // Adicionar pausas ATIVAS
-            atividadesEmAndamentoArray.forEach(atividade => {
-                const estadoPausa = kanbanState[atividade.id];
-                if (estadoPausa && estadoPausa.status === 'pausado' && estadoPausa.tempoInicioPausa) {
+            // Calcular tempo real para pausas ativas
+            todasAsPausas = todasAsPausas.map(pausa => {
+                if (pausa && pausa.status === 'Pausado' && pausa.horaPausa) {
                     const agora = new Date();
-                    const tempoPausaMs = agora.getTime() - estadoPausa.tempoInicioPausa;
-                    todasAsPausas.push({
-                        id: atividade.id,
-                        ticket: atividade.ticket,
-                        colaborador: atividade.nome,
-                        motivo: estadoPausa.motivoPausa,
-                        grupo: estadoPausa.grupoPausa || 'Não definido',
-                        dataInicio: atividade.dataInicio,
-                        horaPausa: new Date(estadoPausa.tempoInicioPausa).toLocaleTimeString('pt-BR'),
-                        horaRetomada: '(ativa)',
-                        tempoPausaMs: tempoPausaMs,
-                        tempoPausaFormatado: formatarTempo(tempoPausaMs)
-                    });
+                    const tempoPausaMs = agora.getTime() - new Date(pausa.horaPausa).getTime();
+                    return {
+                        ...pausa,
+                        tempoPausaMs: Math.max(0, tempoPausaMs),
+                        tempoPausaFormatado: formatarTempo(Math.max(0, tempoPausaMs))
+                    };
                 }
+                return pausa;
             });
 
             if (todasAsPausas.length === 0) {
@@ -1393,13 +1435,13 @@
                 headers.join(','),
                 ...todasAsPausas.map(pausa => [
                     `#${pausa.ticket}`,
-                    pausa.colaborador,
+                    pausa.colaborador || '-',
                     pausa.dataInicio || '-',
-                    pausa.horaPausa,
-                    pausa.horaRetomada,
+                    pausa.horaPausa || '-',
+                    pausa.horaRetomada || '-',
                     pausa.tempoPausaFormatado || '-',
-                    pausa.motivo,
-                    pausa.grupo
+                    pausa.status || 'Retomado',
+                    pausa.grupo || '-'
                 ].map(v => `"${v}"`).join(','))
             ].join('\n');
 
@@ -1434,10 +1476,48 @@
         // ✅ Iniciar
         carregarDados();
         
-        // Atualizar a cada 5 segundos para pegar pausas ativas atualizadas
+        // Atualizar a cada 5 segundos - recarrega dados do Firebase e atualiza pausas
         setInterval(() => {
-            if (document.getElementById('tabelaPausasBody')) {
-                atualizarPausas();
+            if (window.db) {
+                // Recarregar kanbanState e historicoPausas do Firebase
+                db.ref('kanbanState').once('value', (stateSnapshot) => {
+                    if (stateSnapshot.exists()) {
+                        kanbanState = stateSnapshot.val();
+                    }
+                    
+                    db.ref('historicoPausas').once('value', (pausasSnapshot) => {
+                        if (pausasSnapshot.exists()) {
+                            historicoPausas = converterParaArray(pausasSnapshot.val());
+                        }
+                        
+                        // Recarregar atividades também para ter status atualizado
+                        db.ref('atividades').once('value', (snapshot) => {
+                            if (snapshot.exists()) {
+                                atividades = converterParaArray(snapshot.val());
+                            }
+                            
+                            // Agora sim, atualizar a renderização
+                            if (document.getElementById('tabelaPausasBody')) {
+                                atualizarPausas();
+                            }
+                        });
+                    });
+                });
+            } else {
+                // Fallback para localStorage
+                const pausasSalvas = localStorage.getItem('historicoPausas');
+                if (pausasSalvas) {
+                    historicoPausas = converterParaArray(JSON.parse(pausasSalvas));
+                }
+                
+                const kanbanSalvo = localStorage.getItem('kanbanState');
+                if (kanbanSalvo) {
+                    kanbanState = JSON.parse(kanbanSalvo);
+                }
+                
+                if (document.getElementById('tabelaPausasBody')) {
+                    atualizarPausas();
+                }
             }
         }, 5000);
 
