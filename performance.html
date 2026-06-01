@@ -1113,12 +1113,17 @@
         function atualizarDashboard() {
             const atividadesFiltradas = filtrarAtividadesPorData(atividades);
             
+            console.log('=== ATUALIZANDO DASHBOARD ===');
+            console.log('historicoPausas.length:', historicoPausas ? (Array.isArray(historicoPausas) ? historicoPausas.length : Object.keys(historicoPausas).length) : 0);
+            
             // KPI - Finalizados
             const finalizados = atividadesFiltradas.length;
             document.getElementById('kpiFinalizados').textContent = finalizados;
 
-            // KPI - Pausados
-            const pausados = Object.values(kanbanState).filter(k => k.status === 'pausado').length;
+            // KPI - Pausados (CONTAR TODAS AS PAUSAS DO HISTÓRICO)
+            const historicoPausasArray = converterParaArray(historicoPausas);
+            const pausados = historicoPausasArray.length;
+            console.log('Pausados (do histórico):', pausados);
             document.getElementById('kpiPausados').textContent = pausados;
 
             // KPI - Em Andamento
@@ -1144,7 +1149,7 @@
             const totalAtividadesFinalizadas = atividadesArray.length;
             document.getElementById('totalAtividadesCard').textContent = totalAtividadesFinalizadas;
 
-            // Pausas por Grupo - CONTAR PAUSAS ATIVAS EM TEMPO REAL
+            // Pausas por Grupo - CONTAR PAUSAS DO HISTÓRICO POR GRUPO
             const pausasPorGrupo = {
                 'Engenharia': 0,
                 'Customer': 0,
@@ -1152,11 +1157,10 @@
                 'Pós-Vendas': 0
             };
             
-            // Contar atividades que estão pausadas agora
-            atividadesArray.forEach(atividade => {
-                const estado = kanbanState[atividade.id];
-                if (estado && estado.status === 'pausado') {
-                    const grupo = estado.grupoPausa || atividade.setor || 'Pós-Vendas';
+            // Contar pausas do histórico por grupo
+            historicoPausasArray.forEach(pausa => {
+                if (pausa && pausa.grupo) {
+                    const grupo = pausa.grupo;
                     if (pausasPorGrupo.hasOwnProperty(grupo)) {
                         pausasPorGrupo[grupo]++;
                     }
@@ -1500,6 +1504,8 @@
                             if (document.getElementById('tabelaPausasBody')) {
                                 atualizarPausas();
                             }
+                            // Atualizar os contadores do dashboard
+                            atualizarDashboard();
                         });
                     });
                 });
@@ -1518,6 +1524,8 @@
                 if (document.getElementById('tabelaPausasBody')) {
                     atualizarPausas();
                 }
+                // Atualizar os contadores do dashboard
+                atualizarDashboard();
             }
         }, 5000);
 

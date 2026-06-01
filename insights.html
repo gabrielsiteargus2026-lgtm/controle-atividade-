@@ -432,19 +432,33 @@
         <div class="header">
             <button class="btn-atualizar" id="btnAtualizarGraficos" title="Atualizar dados dos gráficos">🔄 Atualizar</button>
             <h1>Insights de Atividades</h1>
-            <p>Dashboard com análise completa de métricas e performance</p>
         </div>
 
-        <!-- GRÁFICO DE LINHA - ATIVIDADES POR DIA -->
-        <div class="section-title">Atividades Criadas por Dia</div>
-        <div class="chart-card">
-            <div class="chart-card-scrollable">
-                <canvas id="chartAtividadesPorDia"></canvas>
-            </div>
-        </div>
+
 
         <!-- GRÁFICO CONSOLIDADO - RESUMO DE ATIVIDADES -->
         <div class="section-title">Resumo de Atividades - Período Atual</div>
+        
+        <!-- CARDS DE RESUMO RÁPIDO -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 2em; font-weight: bold;" id="totalAtividadesCriadas">0</div>
+                <div style="font-size: 0.9em; opacity: 0.9;">Total Criadas</div>
+            </div>
+            <div style="background: linear-gradient(135deg, #51cf66 0%, #37b24d 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 2em; font-weight: bold;" id="totalConcluidas">0</div>
+                <div style="font-size: 0.9em; opacity: 0.9;">Concluídas</div>
+            </div>
+            <div style="background: linear-gradient(135deg, #5b8ec6 0%, #4a7ba7 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 2em; font-weight: bold;" id="totalEmAndamento">0</div>
+                <div style="font-size: 0.9em; opacity: 0.9;">Em Andamento</div>
+            </div>
+            <div style="background: linear-gradient(135deg, #ffc93c 0%, #ffb300 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 2em; font-weight: bold;" id="totalPausadas">0</div>
+                <div style="font-size: 0.9em; opacity: 0.9;">Pausadas</div>
+            </div>
+        </div>
+        
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
             <!-- Gráfico de Barras Simples -->
             <div class="chart-card">
@@ -457,10 +471,12 @@
             </div>
         </div>
 
-        <!-- GRÁFICO DE BARRAS - HISTÓRICO DE PAUSAS POR SETOR -->
-        <div class="section-title">Pausas Registradas por Setor</div>
+        <!-- GRÁFICO DE LINHAS - ATIVIDADES CRIADAS POR DIA -->
+        <div class="section-title">Atividades Criadas por Dia - Comparativo Diário</div>
         <div class="chart-card">
-            <canvas id="chartAtividadesPausadas"></canvas>
+            <div class="chart-card-scrollable">
+                <canvas id="chartAtividadesCriadasPorDia"></canvas>
+            </div>
         </div>
 
         <!-- PERCENTUAL DE ATIVIDADES POR COLABORADOR (Gráficos de Pizza) -->
@@ -863,193 +879,111 @@
             return `${ano}-${mes}-${dia}`;
         }
 
-        // Gráfico 2: Atividades Criadas por Dia (Gráfico em Linhas) - Com múltiplos status
-        function renderizarAtividadesPorDia() {
-            const atividadesPorDiaStatus = {
-                concluidas: {},
-                emAndamento: {},
-                pausadas: {}
-            };
-
-            // Contar atividades concluídas por data
+        // Gráfico 4: Atividades Criadas por Dia - Comparativo Diário
+        function renderizarAtividadesCriadasPorDia() {
+            console.log('Renderizando gráfico de atividades criadas por dia...');
+            
+            // Contar total de atividades (concluídas + em andamento + pausadas) por data
+            const atividadesPorDia = {};
+            
+            // Contar atividades concluídas
             atividadesGlobais.forEach(a => {
                 if (!a || !a.dataInicio) return;
                 const data = a.dataInicio;
-                if (!atividadesPorDiaStatus.concluidas[data]) atividadesPorDiaStatus.concluidas[data] = 0;
-                atividadesPorDiaStatus.concluidas[data]++;
+                if (!atividadesPorDia[data]) atividadesPorDia[data] = 0;
+                atividadesPorDia[data]++;
             });
-
-            // Contar atividades em andamento por data de início
+            
+            // Contar atividades em andamento
             atividadesEmAndamento.forEach(a => {
                 if (!a || !a.dataInicio) return;
                 const data = a.dataInicio;
-                if (!atividadesPorDiaStatus.emAndamento[data]) atividadesPorDiaStatus.emAndamento[data] = 0;
-                atividadesPorDiaStatus.emAndamento[data]++;
+                if (!atividadesPorDia[data]) atividadesPorDia[data] = 0;
+                atividadesPorDia[data]++;
             });
-
-            // Contar atividades pausadas por data de início (usar campo dataInicio do histórico de pausas)
+            
+            // Contar atividades pausadas (todas as do histórico)
             historicoPausas.forEach(p => {
                 if (!p || !p.dataInicio) return;
                 const data = p.dataInicio;
-                // Contar apenas as que estão atualmente pausadas (status === 'Pausado')
-                if (p.status === 'Pausado' || p.status === 'pausado') {
-                    if (!atividadesPorDiaStatus.pausadas[data]) atividadesPorDiaStatus.pausadas[data] = 0;
-                    atividadesPorDiaStatus.pausadas[data]++;
-                }
-            });
-
-            // Coletar todas as datas únicas
-            const todasAsDatas = new Set();
-            Object.values(atividadesPorDiaStatus).forEach(dados => {
-                Object.keys(dados).forEach(data => todasAsDatas.add(data));
+                if (!atividadesPorDia[data]) atividadesPorDia[data] = 0;
+                atividadesPorDia[data]++;
             });
             
             // Ordenar datas
-            const datas = Array.from(todasAsDatas).sort((a, b) => {
+            const datas = Object.keys(atividadesPorDia).sort((a, b) => {
                 const dataA = converterDataBrasileira(a);
                 const dataB = converterDataBrasileira(b);
                 return dataA.localeCompare(dataB);
             });
-
-            // Mapear dados para cada status
-            const quantidadesConcluidas = datas.map(data => atividadesPorDiaStatus.concluidas[data] || 0);
-            const quantidadesEmAndamento = datas.map(data => atividadesPorDiaStatus.emAndamento[data] || 0);
-            const quantidadesPausadas = datas.map(data => atividadesPorDiaStatus.pausadas[data] || 0);
-
-            const ctx = document.getElementById('chartAtividadesPorDia').getContext('2d');
-            if (chartsInstances.chartAtividadesPorDia) chartsInstances.chartAtividadesPorDia.destroy();
-
-            chartsInstances.chartAtividadesPorDia = new Chart(ctx, {
+            
+            const quantidades = datas.map(data => atividadesPorDia[data]);
+            
+            const ctx = document.getElementById('chartAtividadesCriadasPorDia').getContext('2d');
+            if (chartsInstances.chartAtividadesCriadasPorDia) chartsInstances.chartAtividadesCriadasPorDia.destroy();
+            
+            chartsInstances.chartAtividadesCriadasPorDia = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: datas,
-                    datasets: [
-                        {
-                            label: 'Atividades Concluídas',
-                            data: quantidadesConcluidas,
-                            borderColor: '#51cf66',
-                            backgroundColor: 'rgba(81, 207, 102, 0.1)',
-                            borderWidth: 3,
-                            fill: true,
-                            tension: 0.4,
-                            pointBackgroundColor: '#51cf66',
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 2,
-                            pointRadius: 5,
-                            pointHoverRadius: 7
-                        },
-                        {
-                            label: 'Atividades em Andamento',
-                            data: quantidadesEmAndamento,
-                            borderColor: '#5b8ec6',
-                            backgroundColor: 'rgba(91, 142, 198, 0.1)',
-                            borderWidth: 3,
-                            fill: true,
-                            tension: 0.4,
-                            pointBackgroundColor: '#5b8ec6',
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 2,
-                            pointRadius: 5,
-                            pointHoverRadius: 7
-                        },
-                        {
-                            label: 'Atividades Pausadas',
-                            data: quantidadesPausadas,
-                            borderColor: '#ffc93c',
-                            backgroundColor: 'rgba(255, 201, 60, 0.1)',
-                            borderWidth: 3,
-                            fill: true,
-                            tension: 0.4,
-                            pointBackgroundColor: '#ffc93c',
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 2,
-                            pointRadius: 5,
-                            pointHoverRadius: 7
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { display: true, position: 'top' }
-                    },
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                },
-                plugins: [pluginValoresGrafico]
-            });
-            console.log('Gráfico de atividades por dia renderizado com múltiplos status:', datas.length, 'dias');
-            console.log('Resumo:', { concluidas: quantidadesConcluidas.reduce((a,b)=>a+b,0), emAndamento: quantidadesEmAndamento.reduce((a,b)=>a+b,0), pausadas: quantidadesPausadas.reduce((a,b)=>a+b,0) });
-        }
-
-        // Gráfico 3: Histórico de Pausas por Setor (Barras em Pé - Vertical)
-        function renderizarAtividadesPausadas() {
-            console.log('Renderizando gráfico de pausas por setor...');
-            console.log('Total de pausas no histórico:', historicoPausas.length);
-            
-            // Agrupar pausas por setor/grupo
-            const pausasPorSetor = {};
-            historicoPausas.forEach(pausa => {
-                if (!pausa) return;
-                // Usar campo 'grupo' do histórico de pausas
-                const setor = pausa.grupo || 'Sem setor';
-                if (!pausasPorSetor[setor]) pausasPorSetor[setor] = 0;
-                pausasPorSetor[setor]++;
-            });
-
-            console.log('Pausas por setor:', pausasPorSetor);
-
-            const setores = Object.keys(pausasPorSetor).sort();
-            const quantidades = setores.map(setor => pausasPorSetor[setor]);
-
-            const ctx = document.getElementById('chartAtividadesPausadas').getContext('2d');
-            if (chartsInstances.chartAtividadesPausadas) chartsInstances.chartAtividadesPausadas.destroy();
-
-            chartsInstances.chartAtividadesPausadas = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: setores,
                     datasets: [{
-                        label: 'Pausas por Setor',
+                        label: 'Total de Atividades Criadas',
                         data: quantidades,
-                        backgroundColor: CORES.slice(0, setores.length),
-                        borderColor: CORES.slice(0, setores.length),
-                        borderWidth: 1,
-                        borderRadius: 5
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#667eea',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        pointHoverBackgroundColor: '#764ba2'
                     }]
                 },
                 options: {
-                    indexAxis: 'x', // Barras em pé (vertical)
                     responsive: true,
                     maintainAspectRatio: true,
                     plugins: {
-                        legend: { display: true, position: 'top' }
+                        legend: { display: true, position: 'top' },
+                        filler: {
+                            propagate: true
+                        }
                     },
                     scales: {
-                        y: { beginAtZero: true }
+                        y: { 
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
                     }
                 },
                 plugins: [pluginValoresGrafico]
             });
-            console.log('Gráfico de pausas por setor renderizado:', setores.length, 'setores');
+            
+            console.log('Gráfico de atividades por dia renderizado:', datas.length, 'dias');
+            console.log('Total de atividades:', quantidades.reduce((a,b)=>a+b,0));
         }
 
         // Gráfico 5: Resumo Consolidado - Atividades Geradas, Finalizadas, Em Andamento e Pausas por Setor
         function renderizarResumoAtividades() {
             console.log('Renderizando gráfico de resumo consolidado...');
             
-            // 1. Total de atividades geradas (todas no histórico)
-            const totalAtividadesGeradas = atividadesGlobais.length;
+            // 1. Total de atividades concluídas (em atividadesGlobais)
+            const totalConcluidas = atividadesGlobais.length;
             
-            // 2. Total de atividades finalizadas (todas em atividadesGlobais são concluídas)
-            const atividadesFinalizadas = totalAtividadesGeradas;
+            // 2. Total de atividades em andamento (em atividadesEmAndamento)
+            const totalEmAndamento = atividadesEmAndamento.length;
             
-            // 3. Atividades em andamento (no kanban com status = em_andamento)
-            const emAndamento = Object.values(kanbanStateGlobal).filter(k => k.status === 'em_andamento').length;
+            // 3. Total de atividades pausadas (TODAS as pausas no histórico - independente do status)
+            const totalPausadas = historicoPausas ? (Array.isArray(historicoPausas) ? historicoPausas.length : Object.keys(historicoPausas).length) : 0;
             
-            // 4. Pausas por setor
+            // 4. Total de atividades criadas (soma de todos os status)
+            const totalAtividadesCriadas = totalConcluidas + totalEmAndamento + totalPausadas;
+            
+            // 5. Pausas por setor
             const pausasPorSetor = {};
             historicoPausas.forEach(pausa => {
                 if (!pausa || !pausa.grupo) return;
@@ -1059,30 +993,34 @@
                 pausasPorSetor[pausa.grupo]++;
             });
 
-            // Total de pausas
-            const totalPausas = Object.values(pausasPorSetor).reduce((a, b) => a + b, 0);
-
             console.log('Resumo consolidado:', {
-                totalAtividadesGeradas,
-                atividadesFinalizadas,
-                emAndamento,
-                totalPausas,
+                totalAtividadesCriadas,
+                totalConcluidas,
+                totalEmAndamento,
+                totalPausadas,
+                historicoPausasLength: historicoPausas.length,
                 pausasPorSetor
             });
+            
+            // ===== ATUALIZAR CARDS DE RESUMO =====
+            document.getElementById('totalAtividadesCriadas').textContent = totalAtividadesCriadas;
+            document.getElementById('totalConcluidas').textContent = totalConcluidas;
+            document.getElementById('totalEmAndamento').textContent = totalEmAndamento;
+            document.getElementById('totalPausadas').textContent = totalPausadas;
 
             // ===== RENDERIZAR GRÁFICO DE BARRAS =====
             const dados = [
-                totalAtividadesGeradas,
-                atividadesFinalizadas,
-                emAndamento,
-                totalPausas
+                totalAtividadesCriadas,
+                totalConcluidas,
+                totalEmAndamento,
+                totalPausadas
             ];
             
             const labels = [
-                'Atividades Geradas',
-                'Atividades Finalizadas',
+                'Total Criadas',
+                'Atividades Concluídas',
                 'Em Andamento',
-                'Pausas Registradas'
+                'Pausadas'
             ];
 
             const cores = ['#5b8ec6', '#51cf66', '#ffc93c', '#ff6b6b'];
@@ -1157,8 +1095,7 @@
             console.log('Total de pausas registradas:', historicoPausas.length);
             
             renderizarAtividadesAbertas();
-            renderizarAtividadesPorDia();
-            renderizarAtividadesPausadas();
+            renderizarAtividadesCriadasPorDia();
             renderizarResumoAtividades();
             
             console.log('--- DASHBOARD ATUALIZADO COM SUCESSO ---');
@@ -1177,17 +1114,25 @@
                             const novosDados = normalizarDados(dados);
                             if (JSON.stringify(novosDados) !== JSON.stringify(atividadesGlobais)) {
                                 atividadesGlobais = novosDados;
-                                // Também atualizar kanbanState
-                                window.db.ref('kanbanState').once('value', stateSnapshot => {
-                                    if (stateSnapshot.exists()) {
-                                        kanbanStateGlobal = stateSnapshot.val();
+                                // Também atualizar atividadesEmAndamento
+                                window.db.ref('atividadesEmAndamento').once('value', andamentoSnapshot => {
+                                    if (andamentoSnapshot.exists()) {
+                                        atividadesEmAndamento = normalizarDados(andamentoSnapshot.val());
                                     }
-                                    // Também atualizar histórico de pausas
-                                    window.db.ref('historicoPausas').once('value', pausasSnapshot => {
-                                        if (pausasSnapshot.exists()) {
-                                            historicoPausas = normalizarDados(pausasSnapshot.val());
+                                    // Também atualizar kanbanState
+                                    window.db.ref('kanbanState').once('value', stateSnapshot => {
+                                        if (stateSnapshot.exists()) {
+                                            kanbanStateGlobal = stateSnapshot.val();
                                         }
-                                        atualizarDashboard();
+                                        // Também atualizar histórico de pausas
+                                        window.db.ref('historicoPausas').once('value', pausasSnapshot => {
+                                            if (pausasSnapshot.exists()) {
+                                                historicoPausas = normalizarDados(pausasSnapshot.val());
+                                            }
+                                            atualizarDashboard();
+                                        }).catch(() => {
+                                            atualizarDashboard();
+                                        });
                                     }).catch(() => {
                                         atualizarDashboard();
                                     });
@@ -1200,6 +1145,8 @@
                         const novosDados = obterDoStorage('atividades') || [];
                         if (JSON.stringify(novosDados) !== JSON.stringify(atividadesGlobais)) {
                             atividadesGlobais = normalizarDados(novosDados);
+                            const dadosEmAndamento = obterDoStorage('atividadesEmAndamento') || [];
+                            atividadesEmAndamento = normalizarDados(dadosEmAndamento);
                             carregarKanbanStateDoLocalStorage();
                             carregarHistoricoPausasDoLocalStorage();
                             atualizarDashboard();
@@ -1212,6 +1159,8 @@
                 const novosDados = normalizarDados(obterDoStorage('atividades'));
                 if (JSON.stringify(novosDados) !== JSON.stringify(atividadesGlobais)) {
                     atividadesGlobais = novosDados;
+                    const dadosEmAndamento = obterDoStorage('atividadesEmAndamento') || [];
+                    atividadesEmAndamento = normalizarDados(dadosEmAndamento);
                     carregarKanbanStateDoLocalStorage();
                     carregarHistoricoPausasDoLocalStorage();
                     atualizarDashboard();
