@@ -441,19 +441,19 @@
         
         <!-- CARDS DE RESUMO RÁPIDO -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #5b8ec6 0%, #4a7ba7 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <div style="font-size: 2em; font-weight: bold;" id="totalAtividadesCriadas">0</div>
                 <div style="font-size: 0.9em; opacity: 0.9;">Total Criadas</div>
             </div>
-            <div style="background: linear-gradient(135deg, #51cf66 0%, #37b24d 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #51cf66 0%, #40c057 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <div style="font-size: 2em; font-weight: bold;" id="totalConcluidas">0</div>
                 <div style="font-size: 0.9em; opacity: 0.9;">Concluídas</div>
             </div>
-            <div style="background: linear-gradient(135deg, #5b8ec6 0%, #4a7ba7 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #ffc93c 0%, #ffb300 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <div style="font-size: 2em; font-weight: bold;" id="totalEmAndamento">0</div>
                 <div style="font-size: 0.9em; opacity: 0.9;">Em Andamento</div>
             </div>
-            <div style="background: linear-gradient(135deg, #ffc93c 0%, #ffb300 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <div style="font-size: 2em; font-weight: bold;" id="totalPausadas">0</div>
                 <div style="font-size: 0.9em; opacity: 0.9;">Pausadas</div>
             </div>
@@ -468,6 +468,43 @@
             <div class="chart-card" style="display: flex; flex-direction: column; justify-content: center;">
                 <h3 style="color: #5b8ec6; margin-bottom: 15px; text-align: center;">Pausas por Setor</h3>
                 <div id="tabelaPausasSetores" style="font-size: 0.9em;"></div>
+            </div>
+        </div>
+
+        <!-- ANÁLISE DE PAUSAS COM KPIs E GRÁFICOS -->
+        <div class="section-title">Análise de Pausas - Contabilizador Detalhado</div>
+        
+        <!-- KPIs de Pausas -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+            <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 2em; font-weight: bold;" id="kpiTotalPausas">0</div>
+                <div style="font-size: 0.9em; opacity: 0.9;">Total de Pausas</div>
+            </div>
+            <div style="background: linear-gradient(135deg, #ffa726 0%, #fb8c00 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 2em; font-weight: bold;" id="kpiTempoTotal">0h</div>
+                <div style="font-size: 0.9em; opacity: 0.9;">Tempo Total Pausado</div>
+            </div>
+            <div style="background: linear-gradient(135deg, #ab47bc 0%, #8e24aa 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 2em; font-weight: bold;" id="kpiMaiorPausa">0h</div>
+                <div style="font-size: 0.9em; opacity: 0.9;">Pausa Mais Longa</div>
+            </div>
+            <div style="background: linear-gradient(135deg, #42a5f5 0%, #1e88e5 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 2em; font-weight: bold;" id="kpiMediaPausas">0h</div>
+                <div style="font-size: 0.9em; opacity: 0.9;">Tempo Médio de Pausa</div>
+            </div>
+        </div>
+
+        <!-- Gráficos de Pausas por Setor -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+            <!-- Gráfico de Barras: Pausas por Setor -->
+            <div class="chart-card">
+                <h3 style="color: #5b8ec6; margin-bottom: 15px; text-align: center;">Distribuição de Pausas por Setor</h3>
+                <canvas id="chartPausasPorSetor"></canvas>
+            </div>
+            <!-- Gráfico de Pizza: Proporção de Pausas -->
+            <div class="chart-card">
+                <h3 style="color: #5b8ec6; margin-bottom: 15px; text-align: center;">Proporção de Pausas por Setor</h3>
+                <canvas id="chartPausasProporcao"></canvas>
             </div>
         </div>
 
@@ -543,6 +580,23 @@
             if (horas === 0) return `${mins}m`;
             if (mins === 0) return `${horas}h`;
             return `${horas}h ${mins}m`;
+        }
+
+        // ✅ Formatar horas (recebe valor em horas decimal)
+        function formatarHoras(horas) {
+            if (!horas || horas === 0) return '0h 0m';
+            const h = Math.floor(horas);
+            const m = Math.floor((horas - h) * 60);
+            return `${h}h ${m}m`;
+        }
+
+        // ✅ Converter ms para formato HH:MM:SS
+        function formatarTempoms(ms) {
+            const totalSegundos = Math.floor(ms / 1000);
+            const horas = Math.floor(totalSegundos / 3600);
+            const minutos = Math.floor((totalSegundos % 3600) / 60);
+            const segundos = totalSegundos % 60;
+            return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
         }
 
         // Normalizar dados do Firebase
@@ -1070,7 +1124,7 @@
             } else {
                 setoresOrdenados.forEach((setor, idx) => {
                     const pausasSetor = pausasPorSetor[setor];
-                    const percentualSetor = totalPausas > 0 ? Math.round((pausasSetor / totalPausas) * 100) : 0;
+                    const percentualSetor = totalPausadas > 0 ? Math.round((pausasSetor / totalPausadas) * 100) : 0;
                     const corFundo = idx % 2 === 0 ? '#fff' : '#f9f9f9';
                     
                     tabelaHTML += `<tr style="background: ${corFundo}; border-bottom: 1px solid #e0e0e0;">`;
@@ -1087,6 +1141,166 @@
             console.log('Resumo consolidado renderizado com sucesso');
         }
 
+        // ✅ Renderizar Análise de Pausas com KPIs e Gráficos
+        function renderizarAnalisePausas() {
+            console.log('Renderizando análise de pausas...');
+            
+            // Converter para array se necessário
+            let todasAsPausas = [];
+            if (Array.isArray(historicoPausas)) {
+                todasAsPausas = historicoPausas.filter(p => p && typeof p === 'object');
+            } else if (typeof historicoPausas === 'object') {
+                todasAsPausas = Object.values(historicoPausas).filter(p => p && typeof p === 'object');
+            }
+
+            console.log('Total de pausas:', todasAsPausas.length);
+            console.log('Pausas:', todasAsPausas.slice(0, 3));
+
+            // Calcular tempos para pausas ativas
+            todasAsPausas = todasAsPausas.map(pausa => {
+                if (pausa && pausa.status === 'Pausado' && pausa.horaPausa) {
+                    try {
+                        const agora = new Date();
+                        const horaPausaDate = new Date(pausa.horaPausa);
+                        const tempoPausaMs = agora.getTime() - horaPausaDate.getTime();
+                        return {
+                            ...pausa,
+                            tempoPausaMs: Math.max(0, tempoPausaMs),
+                            tempoPausaFormatado: formatarTempoms(Math.max(0, tempoPausaMs))
+                        };
+                    } catch (e) {
+                        return pausa;
+                    }
+                }
+                return pausa;
+            });
+
+            // KPI: Total de pausas
+            const totalPausas = todasAsPausas.length;
+            document.getElementById('kpiTotalPausas').textContent = totalPausas;
+
+            if (totalPausas === 0) {
+                console.log('Nenhuma pausa para exibir');
+                document.getElementById('kpiTempoTotal').textContent = '0h 0m';
+                document.getElementById('kpiMaiorPausa').textContent = '0h 0m';
+                document.getElementById('kpiMediaPausas').textContent = '0h 0m';
+                
+                // Limpar gráficos
+                if (chartsInstances.chartPausasPorSetor) chartsInstances.chartPausasPorSetor.destroy();
+                if (chartsInstances.chartPausasProporcao) chartsInstances.chartPausasProporcao.destroy();
+                return;
+            }
+
+            // KPI: Tempo total pausado
+            const tempoTotalMs = todasAsPausas.reduce((acc, p) => {
+                if (!p || p.tempoPausaMs === undefined) return acc;
+                return acc + (p.tempoPausaMs || 0);
+            }, 0);
+            const tempoTotalHoras = tempoTotalMs / (1000 * 60 * 60);
+            document.getElementById('kpiTempoTotal').textContent = formatarHoras(tempoTotalHoras);
+
+            // KPI: Pausa mais longa
+            const temposValidos = todasAsPausas.filter(p => p && p.tempoPausaMs !== undefined).map(p => p.tempoPausaMs || 0);
+            const maiorPausaMs = temposValidos.length > 0 ? Math.max(...temposValidos) : 0;
+            const maiorPausaHoras = maiorPausaMs / (1000 * 60 * 60);
+            document.getElementById('kpiMaiorPausa').textContent = formatarHoras(maiorPausaHoras);
+
+            // KPI: Tempo médio de pausa
+            const mediaMs = tempoTotalMs / totalPausas;
+            const mediaHoras = mediaMs / (1000 * 60 * 60);
+            document.getElementById('kpiMediaPausas').textContent = formatarHoras(mediaHoras);
+
+            // Agrupar pausas por setor
+            const pausasPorSetor = {};
+            todasAsPausas.forEach(pausa => {
+                const setor = pausa.grupo || 'Não definido';
+                if (!pausasPorSetor[setor]) {
+                    pausasPorSetor[setor] = {
+                        total: 0,
+                        tempoMs: 0
+                    };
+                }
+                pausasPorSetor[setor].total++;
+                pausasPorSetor[setor].tempoMs += pausa.tempoPausaMs || 0;
+            });
+
+            const setores = Object.keys(pausasPorSetor);
+            const quantidadePausas = setores.map(s => pausasPorSetor[s].total);
+            const cores = ['#ff6b6b', '#ffa726', '#ab47bc', '#42a5f5', '#29b6f6', '#26c6da', '#26a69a', '#66bb6a', '#fdd835', '#ef5350'];
+
+            console.log('Pausas por Setor para gráficos:', { setores, quantidadePausas, pausasPorSetor });
+
+            // Gráfico 1: Barras - Pausas por Setor
+            const ctxBarras = document.getElementById('chartPausasPorSetor').getContext('2d');
+            if (chartsInstances.chartPausasPorSetor) chartsInstances.chartPausasPorSetor.destroy();
+
+            chartsInstances.chartPausasPorSetor = new Chart(ctxBarras, {
+                type: 'bar',
+                data: {
+                    labels: setores,
+                    datasets: [{
+                        label: 'Quantidade de Pausas',
+                        data: quantidadePausas,
+                        backgroundColor: cores.slice(0, setores.length),
+                        borderColor: cores.slice(0, setores.length),
+                        borderWidth: 1,
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: true, position: 'top' }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                },
+                plugins: [pluginValoresGrafico]
+            });
+
+            // Gráfico 2: Pizza - Proporção de Pausas por Setor
+            const ctxPizza = document.getElementById('chartPausasProporcao').getContext('2d');
+            if (chartsInstances.chartPausasProporcao) chartsInstances.chartPausasProporcao.destroy();
+
+            chartsInstances.chartPausasProporcao = new Chart(ctxPizza, {
+                type: 'doughnut',
+                data: {
+                    labels: setores,
+                    datasets: [{
+                        data: quantidadePausas,
+                        backgroundColor: cores.slice(0, setores.length),
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { 
+                            display: true, 
+                            position: 'bottom',
+                            labels: { font: { size: 12 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const valor = context.parsed;
+                                    const pct = total > 0 ? Math.round((valor / total) * 100) : 0;
+                                    return `${valor} pausas (${pct}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            console.log('Análise de pausas renderizada com sucesso');
+        }
+
         // Atualizar dashboard completo
         function atualizarDashboard() {
             console.log('--- ATUALIZANDO DASHBOARD ---');
@@ -1097,6 +1311,7 @@
             renderizarAtividadesAbertas();
             renderizarAtividadesCriadasPorDia();
             renderizarResumoAtividades();
+            renderizarAnalisePausas();
             
             console.log('--- DASHBOARD ATUALIZADO COM SUCESSO ---');
         }
