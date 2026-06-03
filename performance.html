@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard de Performance - Controle</title>
+    <title>Performance - Controle de Atividades</title>
     <style>
         * {
             margin: 0;
@@ -90,11 +90,6 @@
             font-weight: 600;
         }
 
-        .header p {
-            color: #666;
-            font-size: 1.05em;
-        }
-
         .card {
             background: white;
             border-radius: 10px;
@@ -109,52 +104,6 @@
             font-size: 1.5em;
         }
 
-        /* KPI Cards */
-        .kpi-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 12px;
-            margin-bottom: 30px;
-        }
-
-        .kpi-card {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            padding: 12px;
-            text-align: center;
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-
-        .kpi-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
-        }
-
-        .kpi-icon {
-            font-size: 1.5em;
-            margin-bottom: 5px;
-        }
-
-        .kpi-label {
-            color: #666;
-            font-size: 0.75em;
-            margin-bottom: 4px;
-        }
-
-        .kpi-value {
-            font-size: 1.6em;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-
-        .kpi-subtitle {
-            font-size: 0.7em;
-            color: #999;
-            margin-top: 4px;
-        }
-
-        /* Tabelas */
         .table-container {
             overflow-x: auto;
         }
@@ -180,211 +129,49 @@
             background: #f5f5f5;
         }
 
-        .ranking-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 15px;
-            border-bottom: 1px solid #e0e0e0;
-            transition: background 0.3s;
-        }
-
-        .ranking-item:hover {
-            background: #f8f9fa;
-        }
-
-        .ranking-position {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #5b8ec6;
-            width: 50px;
-            text-align: center;
-        }
-
-        .ranking-position.first {
-            color: #ffd700;
-            font-size: 2em;
-        }
-
-        .ranking-position.second {
-            color: #c0c0c0;
-            font-size: 1.8em;
-        }
-
-        .ranking-position.third {
-            color: #cd7f32;
-            font-size: 1.6em;
-        }
-
-        .ranking-info {
-            flex: 1;
-            margin-left: 20px;
-        }
-
-        .ranking-name {
-            font-weight: bold;
-            color: #2c3e50;
-            font-size: 1.1em;
-        }
-
-        .ranking-stats {
-            color: #666;
-            font-size: 0.9em;
-            margin-top: 5px;
-        }
-
-        .ranking-value {
-            text-align: right;
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #51cf66;
-        }
-
         .empty-state {
             text-align: center;
             padding: 40px;
             color: #999;
         }
 
-        .badge {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: 600;
-        }
-
-        .badge-success {
-            background: #d3f9d8;
-            color: #2f9e44;
-        }
-
-        .badge-warning {
-            background: #fff3bf;
-            color: #856404;
-        }
-
-        .badge-danger {
-            background: #ffe0e0;
-            color: #c92a2a;
-        }
-
-        .badge-info {
-            background: #d0ebff;
-            color: #0b5394;
-        }
-
-        .alert {
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-
-        .alert-info {
-            background: #d0ebff;
-            color: #0b5394;
-            border-left: 4px solid #4dabf7;
-        }
-
-        .filter-section {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            padding: 20px;
-            margin-bottom: 20px;
+        .action-buttons {
             display: flex;
-            gap: 15px;
-            align-items: flex-end;
-            flex-wrap: wrap;
-        }
-
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .filter-group label {
-            font-size: 0.85em;
-            margin-bottom: 5px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .filter-group input[type="date"] {
-            padding: 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 5px;
-            font-size: 0.95em;
-        }
-
-        .filter-group input[type="date"]:focus {
-            outline: none;
-            border-color: #5b8ec6;
+            gap: 10px;
+            margin-bottom: 20px;
         }
 
         button {
-            padding: 10px 20px;
+            padding: 14px 20px;
+            font-size: 1em;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             font-weight: 600;
             transition: all 0.3s;
-            font-size: 0.95em;
         }
 
-        .btn-primary {
-            background: #5b8ec6;
+        .btn-export {
+            background: #4dabf7;
             color: white;
+            flex: 1;
         }
 
-        .btn-primary:hover {
-            background: #4a75b0;
+        .btn-export:hover {
+            background: #339af0;
             transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-        }
-
-        .btn-small {
-            padding: 8px 12px;
-            font-size: 0.9em;
+            box-shadow: 0 5px 15px rgba(77, 171, 247, 0.4);
         }
 
         @media (max-width: 768px) {
-            .sidebar {
-                width: 200px;
-            }
-
             .container {
-                margin-left: 200px;
+                margin-left: 0;
             }
 
-            .header h1 {
-                font-size: 1.8em;
-            }
-
-            .kpi-container {
-                grid-template-columns: 1fr;
-            }
-
-            .filter-section {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .filter-group input[type="date"] {
+            .sidebar {
                 width: 100%;
-            }
-
-            button {
-                width: 100%;
+                height: auto;
+                position: relative;
             }
 
             table {
@@ -395,466 +182,7 @@
                 padding: 10px;
             }
         }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .stat-item {
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 5px;
-            border-left: 3px solid #5b8ec6;
-        }
-
-        .stat-label {
-            color: #666;
-            font-size: 0.9em;
-            margin-bottom: 5px;
-        }
-
-        .stat-value {
-            font-size: 1.8em;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #999;
-        }
-
-        .loading::after {
-            content: '';
-            animation: dots 1.5s steps(4, end) infinite;
-        }
-
-        @keyframes dots {
-            0%, 20% {
-                content: '';
-            }
-            40% {
-                content: '.';
-            }
-            60% {
-                content: '..';
-            }
-            80%, 100% {
-                content: '...';
-            }
-        }
-
-        /* Modal Atividades Colaborador */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 2000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            animation: fadeIn 0.3s;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .modal-content {
-            background-color: white;
-            margin: 50px auto;
-            padding: 30px;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 1000px;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            border-bottom: 2px solid #5b8ec6;
-            padding-bottom: 15px;
-        }
-
-        .modal-header h2 {
-            color: #2c3e50;
-            margin: 0;
-            font-size: 1.8em;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 2em;
-            cursor: pointer;
-            color: #999;
-            transition: color 0.3s;
-        }
-
-        .modal-close:hover {
-            color: #333;
-        }
-
-        .atividade-item {
-            background: #f8f9fa;
-            padding: 15px;
-            margin-bottom: 12px;
-            border-left: 4px solid #5b8ec6;
-            border-radius: 5px;
-            transition: all 0.3s;
-        }
-
-        .atividade-item:hover {
-            background: #f0f4f8;
-            transform: translateX(5px);
-        }
-
-        .atividade-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 8px;
-        }
-
-        .atividade-ticket {
-            font-weight: bold;
-            color: #2c3e50;
-            font-size: 1.1em;
-        }
-
-        .atividade-duracao {
-            background: #51cf66;
-            color: white;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: 600;
-        }
-
-        .atividade-data {
-            color: #666;
-            font-size: 0.9em;
-            margin-bottom: 5px;
-        }
-
-        .atividade-descricao {
-            color: #333;
-            font-size: 0.95em;
-            margin-top: 10px;
-            padding: 8px 10px;
-            background: #f5f5f5;
-            border-left: 3px solid #5b8ec6;
-            border-radius: 3px;
-            line-height: 1.4;
-        }
-
-        .atividade-observacao {
-            color: #555;
-            font-size: 0.95em;
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid #e0e0e0;
-        }
-
-        .modal-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
-            padding: 20px;
-            background: #f0f4f8;
-            border-radius: 8px;
-        }
-
-        .modal-stat-item {
-            text-align: center;
-        }
-
-        .modal-stat-label {
-            color: #666;
-            font-size: 0.85em;
-            margin-bottom: 5px;
-        }
-
-        .modal-stat-value {
-            font-size: 1.8em;
-            font-weight: bold;
-            color: #5b8ec6;
-        }
-
-        .colaborador-nome {
-            cursor: pointer;
-            transition: all 0.3s;
-            color: #5b8ec6;
-        }
-
-        .colaborador-nome:hover {
-            color: #4a75b0;
-            text-decoration: underline;
-        }
-
-        /* Botão Discreto de Atualizar */
-        .btn-atualizar {
-            position: absolute;
-            top: 15px;
-            right: 0;
-            background: transparent;
-            border: none;
-            padding: 8px 12px;
-            cursor: pointer;
-            color: #5b8ec6;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            transition: all 0.3s ease;
-            border-radius: 4px;
-            font-weight: 500;
-        }
-
-        .btn-atualizar:hover {
-            background: rgba(91, 142, 198, 0.1);
-            color: #2c3e50;
-        }
-
-        .btn-atualizar:active {
-            transform: scale(0.95);
-        }
-
-        .btn-atualizar.carregando {
-            opacity: 0.6;
-            pointer-events: none;
-        }
-
-        .btn-atualizar.carregando::before {
-            content: '';
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border: 2px solid #5b8ec6;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 0.6s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .header {
-            position: relative;
-        }
     </style>
-</head>
-<body>
-    <div id="usuarioWidget"></div>
-    
-    <!-- Modal de Atividades do Colaborador -->
-    <div id="modalAtividades" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalTitulo">Atividades do Colaborador</h2>
-                <button class="modal-close" onclick="fecharModalAtividades()">×</button>
-            </div>
-            
-            <div class="modal-stats">
-                <div class="modal-stat-item">
-                    <div class="modal-stat-label">Total de Atividades</div>
-                    <div class="modal-stat-value" id="modalTotalAtividades">0</div>
-                </div>
-                <div class="modal-stat-item">
-                    <div class="modal-stat-label">Tempo Total</div>
-                    <div class="modal-stat-value" id="modalTempoTotal">0h</div>
-                </div>
-                <div class="modal-stat-item">
-                    <div class="modal-stat-label">Tempo Médio</div>
-                    <div class="modal-stat-value" id="modalTempoMedio">0h</div>
-                </div>
-            </div>
-            
-            <div id="modalAtividadesList"></div>
-        </div>
-    </div>
-    
-    <!-- Menu Lateral -->
-    <aside class="sidebar">
-        <img src="argus-logo 1.png" alt="Argus" class="sidebar-logo">
-        <nav>
-            <ul class="sidebar-menu">
-                <li><a href="index.html">Controle de Atividade</a></li>
-                <li><a href="historico.html">Histórico</a></li>
-                <li><a href="performance.html" class="active">Performance</a></li>
-                <li><a href="insights.html">Insights</a></li>
-                <li><a href="atividades-usuarios.html">Atividades dos Usuários</a></li>
-                <li><a href="database.html">Base de Dados 🔒</a></li>
-                <li><a href="admin.html">Administrador 🔒</a></li>
-            </ul>
-        </nav>
-    </aside>
-
-    <div class="container">
-        <div class="header">
-            <button class="btn-atualizar" id="btnAtualizarPerformance" title="Atualizar dados">🔄 Atualizar</button>
-            <h1>Controle de Performance</h1>
-        </div>
-
-        <!-- Filtros -->
-        <div class="filter-section">
-            <div class="filter-group">
-                <label for="dataInicio">Data Início:</label>
-                <input type="date" id="dataInicio">
-            </div>
-            <div class="filter-group">
-                <label for="dataFim">Data Fim:</label>
-                <input type="date" id="dataFim">
-            </div>
-            <button class="btn-primary btn-small" id="btnAplicarFiltro">🔍 Filtrar</button>
-            <button class="btn-secondary btn-small" id="btnLimparFiltro">↺ Limpar</button>
-        </div>
-
-        <!-- KPI Cards -->
-        <div class="kpi-container">
-            <div class="kpi-card danger">
-                <div class="kpi-icon"></div>
-                <div class="kpi-label">Tickets em Andamento</div>
-                <div class="kpi-value" id="kpiEmAndamento">0</div>
-                <div class="kpi-subtitle">Atividades ativas</div>
-            </div>
-
-            <div class="kpi-card warning">
-                <div class="kpi-icon"></div>
-                <div class="kpi-label">Tickets Pausados</div>
-                <div class="kpi-value" id="kpiPausados">0</div>
-                <div class="kpi-subtitle" id="kpiPausadosHoje">Pendentes de retomada</div>
-            </div>
-
-            <div class="kpi-card success">
-                <div class="kpi-icon"></div>
-                <div class="kpi-label">Tickets Finalizados</div>
-                <div class="kpi-value" id="kpiFinalizados">0</div>
-                <div class="kpi-subtitle" id="kpiFinalizadosHoje">Hoje</div>
-            </div>
-
-            <div class="kpi-card info">
-                <div class="kpi-icon"></div>
-                <div class="kpi-label">Tempo Médio</div>
-                <div class="kpi-value" id="kpiTempoMedio">0h</div>
-                <div class="kpi-subtitle">Por atividade</div>
-            </div>
-        </div>
-
-        <!-- Cartões de Pausas por Grupo -->
-        <div class="kpi-container">
-            <div class="kpi-card info">
-                <div class="kpi-icon"></div>
-                <div class="kpi-label">Total de Atividades</div>
-                <div class="kpi-value" id="totalAtividadesCard">0</div>
-                <div class="kpi-subtitle">Todas as iniciadas</div>
-            </div>
-
-            <div class="kpi-card warning">
-                <div class="kpi-icon"></div>
-                <div class="kpi-label">Engenharia</div>
-                <div class="kpi-value" id="pausasEngenhariaCard">0</div>
-                <div class="kpi-subtitle">Aguardando resposta</div>
-            </div>
-
-            <div class="kpi-card warning">
-                <div class="kpi-icon"></div>
-                <div class="kpi-label">Customer</div>
-                <div class="kpi-value" id="pausasCustomerCard">0</div>
-                <div class="kpi-subtitle">Aguardando resposta</div>
-            </div>
-
-            <div class="kpi-card warning">
-                <div class="kpi-icon"></div>
-                <div class="kpi-label">Inteligência</div>
-                <div class="kpi-value" id="pausasInteligenciaCard">0</div>
-                <div class="kpi-subtitle">Aguardando resposta</div>
-            </div>
-
-            <div class="kpi-card warning">
-                <div class="kpi-icon"></div>
-                <div class="kpi-label">Pós-Vendas</div>
-                <div class="kpi-value" id="pausasPosVendasCard">0</div>
-                <div class="kpi-subtitle">Aguardando resposta</div>
-            </div>
-        </div>
-
-        <!-- Top Colaboradores -->
-        <div class="card">
-            <h2>Top Colaboradores - Atvidades Finalizadas</h2>
-            <div id="topColaboradores" class="table-container">
-                <div class="empty-state">Carregando dados...</div>
-            </div>
-        </div>
-
-        <!-- Análise de Pausas -->
-        <div class="card">
-            <h2>Análise de Pausas</h2>
-            
-            <!-- KPIs de Pausas -->
-            <div class="stats-grid" style="margin-bottom: 30px;">
-                <div class="stat-item">
-                    <div class="stat-label">Total de Pausas</div>
-                    <div class="stat-value" id="statTotalPausas">0</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Tempo Total Pausado</div>
-                    <div class="stat-value" id="statTempoTotalPausado">0h</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Pausa Mais Longa</div>
-                    <div class="stat-value" id="statMaiorPausa">0h</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Tempo Médio de Pausa</div>
-                    <div class="stat-value" id="statMediaPausas">0h</div>
-                </div>
-            </div>
-
-            <!-- Tabela de Pausas Detalhada -->
-            <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h3 style="margin: 0;">Histórico de Pausas</h3>
-                    <button onclick="exportarPausasCSV()" style="background: #51cf66; color: white; border: none; padding: 10px 16px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.95em;">📥 Exportar CSV</button>
-                </div>
-                <div class="table-container">
-                    <table id="tabelaPausas">
-                        <thead>
-                            <tr>
-                                <th>Ticket</th>
-                                <th>Colaborador</th>
-                                <th>Data</th>
-                                <th>Hora da Pausa</th>
-                                <th>Hora da Retomada</th>
-                                <th>Duração da Pausa</th>
-                                <th>Status</th>
-                                <th>Grupo</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabelaPausasBody">
-                            <tr>
-                                <td colspan="8" class="empty-state">Nenhuma pausa registrada</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -883,752 +211,217 @@
                 registrarAcessoPagina();
                 
                 criarWidgetUsuario('usuarioWidget');
-                carregarGrafico();
+                carregarAtividadesToday();
             };
         }
+    </script>
+</head>
+<body>
+    <div id="usuarioWidget"></div>
+    <!-- Menu Lateral -->
+    <aside class="sidebar">
+        <img src="argus-logo 1.png" alt="Argus" class="sidebar-logo">
+        <nav>
+            <ul class="sidebar-menu">
+                <li><a href="index.html">Controle de Atividade</a></li>
+                <li><a href="historico.html">Histórico</a></li>
+                <li><a href="performance.html" class="active">Performance</a></li>
+                <li><a href="insights.html">Insights</a></li>
+                <li><a href="atividades-usuarios.html">Atividades dos Usuários</a></li>
+                <li><a href="database.html">Base de Dados 🔒</a></li>
+                <li><a href="admin.html">Administrador 🔒</a></li>
+            </ul>
+        </nav>
+    </aside>
 
-        // Variáveis globais
-        let atividades = [];
-        let atividadesEmAndamento = [];
-        let kanbanState = {};
-        let historicoPausas = [];
-        let filtroDataInicio = null;
-        let filtroDataFim = null;
+    <div class="container">
+        <div class="header">
+            <h1>Performance - Atividades de Hoje</h1>
+            <p id="dataAtual" style="color: #666; margin-top: 10px; font-size: 1.1em;"></p>
+        </div>
 
-        // ✅ Converter objeto em array (Firebase retorna objeto às vezes)
-        function converterParaArray(dados) {
-            if (Array.isArray(dados)) return dados;
-            if (!dados || typeof dados !== 'object') return [];
-            return Object.values(dados).filter(item => item !== null && item !== undefined);
+        <!-- Atividades de Hoje -->
+        <div class="card">
+            <h2>Atividades Realizadas Hoje</h2>
+            <div class="action-buttons">
+                <button class="btn-export" id="btnExportar">📥 Exportar para CSV</button>
+            </div>
+            <div class="table-container">
+                <table id="tabelaAtividades">
+                    <thead>
+                        <tr>
+                            <th>Colaborador</th>
+                            <th>Ticket</th>
+                            <th>Hora de Início</th>
+                            <th>Hora de Fim</th>
+                            <th>Duração</th>
+                            <th>Descrição</th>
+                            <th>Observação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bodyTabela">
+                        <tr>
+                            <td colspan="7" class="empty-state">Carregando atividades...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Elementos do DOM
+        const bodyTabela = document.getElementById('bodyTabela');
+        const btnExportar = document.getElementById('btnExportar');
+        const dataAtualElement = document.getElementById('dataAtual');
+
+        let atividadesToday = [];
+
+        // Obter data atual formatada
+        function getDataAtual() {
+            const hoje = new Date();
+            const dia = String(hoje.getDate()).padStart(2, '0');
+            const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+            const ano = hoje.getFullYear();
+            return `${dia}/${mes}/${ano}`;
         }
 
-        // ✅ Carregar dados
-        function carregarDados() {
-            console.log('--- CARREGANDO DADOS DO PERFORMANCE ---');
-            console.log('Firebase OK:', window.FIREBASE_OK);
-            
+        // Mostrar data atual
+        function mostrarDataAtual() {
+            const hoje = new Date();
+            const opcoes = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const dataFormatada = hoje.toLocaleDateString('pt-BR', opcoes);
+            dataAtualElement.textContent = `Relatório de Hoje: ${dataFormatada}`;
+        }
+
+        mostrarDataAtual();
+
+        // Filtrar atividades pelo dia de hoje
+        function filtrarAtividadesPorDataAtual(atividades) {
+            const dataAtual = getDataAtual();
+            return atividades.filter(a => a && a.dataInicio === dataAtual);
+        }
+
+        // Carregar atividades de hoje do Firebase
+        function carregarAtividadesToday() {
             if (window.FIREBASE_OK && window.db) {
-                console.log('Tentando carregar do Firebase...');
-                const timeoutId = setTimeout(() => {
-                    console.warn('Firebase timeout - carregando do localStorage');
-                    carregarDoLocalStorage();
-                }, 5000);
-
-                db.ref('atividades').once('value', (snapshot) => {
-                    clearTimeout(timeoutId);
-                    if (snapshot.exists()) {
-                        atividades = converterParaArray(snapshot.val());
-                        console.log('✅ Atividades carregadas do Firebase:', atividades.length);
-                    } else {
-                        console.log('Nenhuma atividade no Firebase');
+                // Carregar atividades finalizadas
+                window.db.ref('atividades').on('value', (snapshot) => {
+                    const dadosAtividades = snapshot.val();
+                    let atividadesFinalizadas = [];
+                    
+                    if (dadosAtividades) {
+                        atividadesFinalizadas = Object.values(dadosAtividades);
                     }
 
-                    // Carregar kanbanState
-                    db.ref('kanbanState').once('value', (stateSnapshot) => {
-                        if (stateSnapshot.exists()) {
-                            kanbanState = stateSnapshot.val();
-                            console.log('✅ KanbanState carregado:', Object.keys(kanbanState).length);
+                    // Também carregar do localStorage como fallback/complemento
+                    const dadosLocal = localStorage.getItem('atividades');
+                    let atividadesLocal = [];
+                    
+                    if (dadosLocal) {
+                        try {
+                            atividadesLocal = JSON.parse(dadosLocal);
+                        } catch (e) {
+                            console.error('Erro ao parsear atividades do localStorage:', e);
                         }
+                    }
 
-                        // Carregar atividadesEmAndamento
-                        db.ref('atividadesEmAndamento').once('value', (emAndSnapshot) => {
-                            if (emAndSnapshot.exists()) {
-                                atividadesEmAndamento = converterParaArray(emAndSnapshot.val());
-                                console.log('✅ Atividades em andamento carregadas:', atividadesEmAndamento.length);
-                            } else {
-                                // Fallback: gerar baseado em kanbanState
-                                atividadesEmAndamento = atividades.filter(a => {
-                                    const estado = kanbanState[a.id];
-                                    return estado && (estado.status === 'em_andamento' || estado.status === 'pausado');
-                                });
-                            }
-
-                            // Carregar historicoPausas
-                            db.ref('historicoPausas').once('value', (pausasSnapshot) => {
-                                if (pausasSnapshot.exists()) {
-                                    historicoPausas = converterParaArray(pausasSnapshot.val());
-                                    console.log('✅ Histórico de pausas carregado:', historicoPausas.length);
-                                }
-                                
-                                atualizarDashboard();
-                            }).catch(() => {
-                                console.log('Histórico de pausas não encontrado');
-                                atualizarDashboard();
-                            });
-                        }).catch(() => {
-                            console.log('AtividadesEmAndamento não encontrado');
-                            atividadesEmAndamento = atividades.filter(a => {
-                                const estado = kanbanState[a.id];
-                                return estado && (estado.status === 'em_andamento' || estado.status === 'pausado');
-                            });
-                            
-                            // Carregar historicoPausas
-                            db.ref('historicoPausas').once('value', (pausasSnapshot) => {
-                                if (pausasSnapshot.exists()) {
-                                    historicoPausas = converterParaArray(pausasSnapshot.val());
-                                }
-                                atualizarDashboard();
-                            }).catch(() => {
-                                atualizarDashboard();
-                            });
-                        });
-                    }).catch(() => {
-                        console.log('KanbanState não encontrado');
-                        atividadesEmAndamento = atividades;
-                        atualizarDashboard();
+                    // Combinar ambos
+                    let todasAsAtividades = [...atividadesFinalizadas, ...atividadesLocal];
+                    
+                    // Remover duplicatas por ticket
+                    const unicos = {};
+                    todasAsAtividades.forEach(a => {
+                        if (a.ticket && !unicos[a.ticket]) {
+                            unicos[a.ticket] = a;
+                        }
                     });
-                }).catch(error => {
-                    clearTimeout(timeoutId);
-                    console.error('Erro ao carregar do Firebase:', error);
-                    carregarDoLocalStorage();
-                });
-            } else {
-                carregarDoLocalStorage();
-            }
-        }
-
-        function carregarDoLocalStorage() {
-            console.log('Carregando dados do localStorage...');
-            
-            // Carregar atividades
-            const dadosSalvos = localStorage.getItem('atividades');
-            if (dadosSalvos) {
-                atividades = converterParaArray(JSON.parse(dadosSalvos));
-                console.log('✅ Atividades carregadas:', atividades.length);
-            }
-
-            // Carregar kanbanState
-            const kanbanSalvo = localStorage.getItem('kanbanState');
-            if (kanbanSalvo) {
-                kanbanState = JSON.parse(kanbanSalvo);
-                console.log('✅ KanbanState carregado:', Object.keys(kanbanState).length);
-            }
-
-            // Carregar atividadesEmAndamento do localStorage
-            const emAndamentoSalvas = localStorage.getItem('atividadesEmAndamento');
-            if (emAndamentoSalvas) {
-                atividadesEmAndamento = converterParaArray(JSON.parse(emAndamentoSalvas));
-                console.log('✅ Atividades em andamento carregadas:', atividadesEmAndamento.length);
-            } else {
-                // Fallback: gerar baseado em kanbanState
-                atividadesEmAndamento = atividades.filter(a => {
-                    const estado = kanbanState[a.id];
-                    return estado && (estado.status === 'em_andamento' || estado.status === 'pausado');
-                });
-            }
-
-            // Carregar histórico de pausas
-            const pausasSalvas = localStorage.getItem('historicoPausas');
-            if (pausasSalvas) {
-                historicoPausas = converterParaArray(JSON.parse(pausasSalvas));
-                console.log('✅ Histórico de pausas carregado:', historicoPausas.length);
-            }
-
-            console.log('✅ Atividades em andamento totalizando:', atividadesEmAndamento.length);
-
-            atualizarDashboard();
-        }
-
-        // ✅ Filtrar atividades por data
-        function filtrarAtividadesPorData(ativs) {
-            // Garantir que é um array
-            const atividadesArray = converterParaArray(ativs);
-            
-            let atividadesFiltradas = atividadesArray;
-            
-            if (filtroDataInicio || filtroDataFim) {
-                atividadesFiltradas = atividadesArray.filter(ativ => {
-                    const dataAtiv = new Date(ativ.dataInicio.split('/').reverse().join('-'));
+                    todasAsAtividades = Object.values(unicos);
                     
-                    if (filtroDataInicio) {
-                        const dataInicio = new Date(filtroDataInicio);
-                        if (dataAtiv < dataInicio) return false;
-                    }
+                    // Filtrar apenas as de hoje
+                    atividadesToday = filtrarAtividadesPorDataAtual(todasAsAtividades);
                     
-                    if (filtroDataFim) {
-                        const dataFim = new Date(filtroDataFim);
-                        if (dataAtiv > dataFim) return false;
-                    }
+                    // Ordenar por hora de início (mais recente primeiro)
+                    atividadesToday.sort((a, b) => {
+                        const horaA = a.horaInicio || '00:00';
+                        const horaB = b.horaInicio || '00:00';
+                        return horaB.localeCompare(horaA);
+                    });
                     
-                    return true;
+                    renderizarTabela();
                 });
-            }
-            
-            // Ordenar por data e hora de início (mais recente primeiro)
-            atividadesFiltradas.sort((a, b) => {
-                const dataA = new Date(`${a.dataInicio.split('/').reverse().join('-')} ${a.horaInicio || '00:00:00'}`);
-                const dataB = new Date(`${b.dataInicio.split('/').reverse().join('-')} ${b.horaInicio || '00:00:00'}`);
-                return dataB - dataA;
-            });
-            
-            return atividadesFiltradas;
-        }
-
-        // ✅ Converter tempo para horas
-        function converterParaHoras(tempoStr) {
-            try {
-                const partes = tempoStr.split(':');
-                if (partes.length !== 3) return 0;
-                const horas = parseInt(partes[0]) || 0;
-                const minutos = parseInt(partes[1]) || 0;
-                const segundos = parseInt(partes[2]) || 0;
-                return horas + (minutos / 60) + (segundos / 3600);
-            } catch {
-                return 0;
-            }
-        }
-
-        // ✅ Formatar horas
-        function formatarHoras(horas) {
-            const h = Math.floor(horas);
-            const m = Math.floor((horas - h) * 60);
-            return `${h}h ${m}m`;
-        }
-
-        // ✅ Formatar tempo em ms para string HH:MM:SS
-        function formatarTempo(ms) {
-            const totalSegundos = Math.floor(ms / 1000);
-            const horas = Math.floor(totalSegundos / 3600);
-            const minutos = Math.floor((totalSegundos % 3600) / 60);
-            const segundos = totalSegundos % 60;
-            return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
-        }
-
-        // ✅ Obter contadores acumulados de pausas
-        function obterContadores() {
-            const contadores = localStorage.getItem('contadoresPausas');
-            if (!contadores) {
-                return {
-                    'Engenharia': 0,
-                    'Customer': 0,
-                    'Inteligência': 0,
-                    'Pós-Vendas': 0,
-                    'total_atividades': 0
-                };
-            }
-            return JSON.parse(contadores);
-        }
-
-        // ✅ Atualizar Dashboard
-        function atualizarDashboard() {
-            const atividadesFiltradas = filtrarAtividadesPorData(atividades);
-            
-            console.log('=== ATUALIZANDO DASHBOARD ===');
-            console.log('historicoPausas.length:', historicoPausas ? (Array.isArray(historicoPausas) ? historicoPausas.length : Object.keys(historicoPausas).length) : 0);
-            
-            // KPI - Finalizados
-            const finalizados = atividadesFiltradas.length;
-            document.getElementById('kpiFinalizados').textContent = finalizados;
-
-            // KPI - Pausados (CONTAR TODAS AS PAUSAS DO HISTÓRICO)
-            const historicoPausasArray = converterParaArray(historicoPausas);
-            const pausados = historicoPausasArray.length;
-            console.log('Pausados (do histórico):', pausados);
-            document.getElementById('kpiPausados').textContent = pausados;
-
-            // KPI - Em Andamento
-            const emAndamentoArray = converterParaArray(atividadesEmAndamento);
-            const emAndamento = emAndamentoArray.filter(a => {
-                const status = kanbanState[a.id]?.status || 'em_andamento';
-                return status === 'em_andamento';
-            }).length;
-            document.getElementById('kpiEmAndamento').textContent = emAndamento;
-
-            // KPI - Tempo Médio
-            if (atividadesFiltradas.length > 0) {
-                const tempoTotal = atividadesFiltradas.reduce((acc, a) => acc + converterParaHoras(a.duracao), 0);
-                const tempoMedio = tempoTotal / atividadesFiltradas.length;
-                document.getElementById('kpiTempoMedio').textContent = formatarHoras(tempoMedio);
             } else {
-                document.getElementById('kpiTempoMedio').textContent = '0h';
-            }
-
-            // Total de Atividades (Total de atividades finalizadas)
-            const contadores = obterContadores();
-            const atividadesArray = converterParaArray(atividades);
-            const totalAtividadesFinalizadas = atividadesArray.length;
-            document.getElementById('totalAtividadesCard').textContent = totalAtividadesFinalizadas;
-
-            // Pausas por Grupo - CONTAR PAUSAS DO HISTÓRICO POR GRUPO
-            const pausasPorGrupo = {
-                'Engenharia': 0,
-                'Customer': 0,
-                'Inteligência': 0,
-                'Pós-Vendas': 0
-            };
-            
-            // Contar pausas do histórico por grupo
-            historicoPausasArray.forEach(pausa => {
-                if (pausa && pausa.grupo) {
-                    const grupo = pausa.grupo;
-                    if (pausasPorGrupo.hasOwnProperty(grupo)) {
-                        pausasPorGrupo[grupo]++;
-                    }
-                }
-            });
-            
-            document.getElementById('pausasEngenhariaCard').textContent = pausasPorGrupo['Engenharia'];
-            document.getElementById('pausasCustomerCard').textContent = pausasPorGrupo['Customer'];
-            document.getElementById('pausasInteligenciaCard').textContent = pausasPorGrupo['Inteligência'];
-            document.getElementById('pausasPosVendasCard').textContent = pausasPorGrupo['Pós-Vendas'];
-
-            // Atualizar Top 3
-            atualizarTop3(atividadesFiltradas);
-
-            // Atualizar Tabela
-            atualizarTabela(atividadesFiltradas);
-
-            // Atualizar Análise de Pausas
-            atualizarPausas();
-        }
-
-        // ✅ Atualizar Top 3
-        function atualizarTop3(ativs) {
-            // Garantir que é um array
-            const atividadesArray = converterParaArray(ativs);
-            
-            const contagem = {};
-            atividadesArray.forEach(a => {
-                contagem[a.colaborador] = (contagem[a.colaborador] || 0) + 1;
-            });
-
-            const top3 = Object.entries(contagem)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 3);
-
-            let html = '';
-            if (top3.length === 0) {
-                html = '<div class="empty-state">Nenhuma atividade registrada no período</div>';
-            } else {
-                top3.forEach((item, idx) => {
-                    const posicoes = ['🥇', '🥈', '🥉'];
-                    const classes = ['first', 'second', 'third'];
-                    html += `
-                        <div class="ranking-item">
-                            <span class="ranking-position ${classes[idx]}">${posicoes[idx]}</span>
-                            <div class="ranking-info">
-                                <div class="ranking-name colaborador-nome" onclick="abrirModalAtividades('${item[0]}')" data-colaborador="${item[0]}" title="Clique para ver todas as atividades">${item[0]}</div>
-                                <div class="ranking-stats">${item[1]} ${item[1] === 1 ? 'atividade' : 'atividades'} finalizadas</div>
-                            </div>
-                            <div class="ranking-value">#${idx + 1}</div>
-                        </div>
-                    `;
-                });
-            }
-            document.getElementById('topColaboradores').innerHTML = html;
-        }
-
-        // ✅ Atualizar Tabela
-        function atualizarTabela(ativs) {
-            // Garantir que é um array
-            const atividadesArray = converterParaArray(ativs);
-            const tabelaElement = document.getElementById('tabelaAtividadesBody');
-            
-            // Verificar se elemento existe
-            if (!tabelaElement) {
-                console.warn('Elemento tabelaAtividadesBody não encontrado');
-                return;
-            }
-            
-            if (atividadesArray.length === 0) {
-                tabelaElement.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhuma atividade no período</td></tr>';
-                return;
-            }
-
-            let html = '';
-            atividadesArray.slice(0, 50).forEach(a => {
-                const statusBadge = a.justificativa ? '<span class="badge badge-warning">Com Justificativa</span>' : '<span class="badge badge-success">OK</span>';
-                html += `
-                    <tr>
-                        <td><strong>${a.colaborador}</strong></td>
-                        <td>#${a.ticket}</td>
-                        <td>${a.dataInicio}</td>
-                        <td><strong>${a.duracao}</strong></td>
-                        <td>${statusBadge}</td>
-                        <td>${a.observacao ? a.observacao.substring(0, 50) + '...' : '-'}</td>
-                    </tr>
-                `;
-            });
-            tabelaElement.innerHTML = html;
-        }
-
-        // ✅ Atualizar Análise de Pausas
-        function atualizarPausas() {
-            console.log('=== ATUALIZANDO ANÁLISE DE PAUSAS ===');
-            console.log('historicoPausas:', historicoPausas);
-            console.log('atividades:', atividades.length);
-            console.log('kanbanState:', kanbanState);
-            
-            // Garantir que são arrays
-            let historicoPausasArray = converterParaArray(historicoPausas);
-            
-            const atividadesArray = converterParaArray(atividades);
-            
-            // Coletar TODAS as pausas do histórico (ativas e retomadas)
-            let todasAsPausas = [...historicoPausasArray];
-            
-            console.log('Pausas no histórico (total):', todasAsPausas.length);
-            
-            // ✅ NOVO: Verificar se há pausas ATIVAS (status === 'Pausado') que precisam ter tempo atualizado
-            todasAsPausas = todasAsPausas.map(pausa => {
-                if (pausa && pausa.status === 'Pausado' && pausa.horaPausa) {
-                    // Recalcular tempo de pausa ativa em tempo real
-                    const horaPausaTime = new Date();
+                // Fallback: carregar apenas do localStorage
+                const dadosLocal = localStorage.getItem('atividades');
+                if (dadosLocal) {
                     try {
-                        const parts = pausa.horaPausa.split(':');
-                        if (parts.length >= 2) {
-                            const agora = new Date();
-                            // Estimar o tempo aproximado de quando começou (usando hora da pausa)
-                            const tempoPausaMs = agora.getTime() - new Date(pausa.horaPausa).getTime();
-                            return {
-                                ...pausa,
-                                tempoPausaMs: Math.max(0, tempoPausaMs),
-                                tempoPausaFormatado: formatarTempo(Math.max(0, tempoPausaMs))
-                            };
-                        }
+                        let todasAsAtividades = JSON.parse(dadosLocal);
+                        atividadesToday = filtrarAtividadesPorDataAtual(todasAsAtividades);
+                        renderizarTabela();
                     } catch (e) {
-                        // Se erro ao calcular, manter como está
+                        console.error('Erro ao carregar atividades do localStorage:', e);
                     }
                 }
-                return pausa;
-            });
-            
-            // Filtrar pausas válidas (com ou sem tempo)
-            todasAsPausas = todasAsPausas.filter(p => {
-                if (!p || typeof p !== 'object') return false;
-                if (!p.status) return false; // Deve ter status
-                return true;
-            });
-            
-            console.log('Total de pausas (do histórico):', todasAsPausas.length);
-            console.log('todasAsPausas:', todasAsPausas);
-            
-            // Filtrar pausas inválidas ANTES de usar
-            todasAsPausas = todasAsPausas.filter(p => p && typeof p === 'object');
-            
-            // Estática Geral de Pausas
-            const totalPausas = todasAsPausas.length;
-            document.getElementById('statTotalPausas').textContent = totalPausas;
-
-            if (totalPausas === 0) {
-                console.log('Nenhuma pausa encontrada');
-                document.getElementById('statTempoTotalPausado').textContent = '0h';
-                document.getElementById('statMaiorPausa').textContent = '0h';
-                document.getElementById('statMediaPausas').textContent = '0h';
-                document.getElementById('tabelaPausasBody').innerHTML = '<tr><td colspan="8" class="empty-state">Nenhuma pausa registrada</td></tr>';
-                return;
-            }
-
-            // Calcular tempo total pausado
-            const tempoTotalMs = todasAsPausas.reduce((acc, p) => {
-                if (!p || p.tempoPausaMs === undefined) return acc;
-                return acc + (p.tempoPausaMs || 0);
-            }, 0);
-            const tempoTotalHoras = tempoTotalMs / (1000 * 60 * 60);
-            document.getElementById('statTempoTotalPausado').textContent = formatarHoras(tempoTotalHoras);
-
-            // Pausa mais longa
-            const temposValidos = todasAsPausas.filter(p => p && p.tempoPausaMs !== undefined).map(p => p.tempoPausaMs || 0);
-            const maiorPausaMs = temposValidos.length > 0 ? Math.max(...temposValidos) : 0;
-            const maiorPausaHoras = maiorPausaMs / (1000 * 60 * 60);
-            document.getElementById('statMaiorPausa').textContent = formatarHoras(maiorPausaHoras);
-
-            // Tempo médio de pausa
-            const mediaMs = tempoTotalMs / totalPausas;
-            const mediaHoras = mediaMs / (1000 * 60 * 60);
-            document.getElementById('statMediaPausas').textContent = formatarHoras(mediaHoras);
-
-            // Análise por motivo
-            const motivosStats = {};
-            todasAsPausas.forEach(pausa => {
-                const motivo = pausa.motivo || 'Sem motivo especificado';
-                if (!motivosStats[motivo]) {
-                    motivosStats[motivo] = { count: 0, tempoMs: 0, grupos: new Set(), ativas: 0 };
-                }
-                motivosStats[motivo].count++;
-                motivosStats[motivo].tempoMs += pausa.tempoPausaMs || 0;
-                if (pausa.ativa) motivosStats[motivo].ativas++;
-                
-                // Usar grupo capturado ou tentar identificar setor a partir do motivo
-                const grupo = pausa.grupo && pausa.grupo !== 'Não definido' ? pausa.grupo : identificarSetor(motivo);
-                if (grupo) motivosStats[motivo].grupos.add(grupo);
-            });
-
-            // Renderizar tabela de pausas
-            let tabelaHtml = '';
-            todasAsPausas.forEach(pausa => {
-                // Usar grupo capturado ou tentar identificar a partir do motivo
-                const grupo = pausa.grupo && pausa.grupo !== 'Não definido' ? pausa.grupo : identificarSetor(pausa.motivo);
-                
-                // Determinar status: se está ativa, mostrar "Pausado"; senão, usar o status registrado ou "Retomado"
-                const statusPausa = pausa.ativa ? 'Pausado' : (pausa.status || 'Retomado');
-                const corStatus = pausa.ativa ? '#ffd700' : '#51cf66';
-                
-                tabelaHtml += `
-                    <tr>
-                        <td><strong>#${pausa.ticket}</strong></td>
-                        <td>${pausa.colaborador}</td>
-                        <td>${pausa.dataInicio}</td>
-                        <td>${pausa.horaPausa}</td>
-                        <td>${pausa.horaRetomada}</td>
-                        <td><strong>${pausa.tempoPausaFormatado || 'N/A'}</strong></td>
-                        <td><span style="background: ${corStatus === '#ffd700' ? '#fffacd' : '#d3f9d8'}; color: ${corStatus === '#ffd700' ? '#856404' : '#2f9e44'}; padding: 4px 8px; border-radius: 3px; font-size: 0.9em; font-weight: 600;">${statusPausa}</span></td>
-                        <td>${grupo ? `<span style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 3px; font-size: 0.9em;">${grupo}</span>` : '-'}</td>
-                    </tr>
-                `;
-            });
-            
-            const tabelaPausasElement = document.getElementById('tabelaPausasBody');
-            if (tabelaPausasElement) {
-                tabelaPausasElement.innerHTML = tabelaHtml || '<tr><td colspan="8" class="empty-state">Nenhuma pausa registrada</td></tr>';
-            } else {
-                console.warn('Elemento tabelaPausasBody não encontrado');
             }
         }
 
-        // ✅ Identificar setor a partir do motivo de pausa
-        function identificarSetor(motivo) {
-            if (!motivo) return null;
-            const motivoLower = motivo.toLowerCase();
-            
-            const setores = {
-                'Engenharia': ['engenharia', 'dev', 'desenvolvimen', 'código', 'programa'],
-                'QA/Testes': ['qa', 'teste', 'tester', 'qualidade', 'testing'],
-                'Produto': ['produto', 'pm', 'business', 'requisito'],
-                'Design': ['design', 'ui', 'ux', 'designer', 'visual'],
-                'Infra/DevOps': ['infra', 'devops', 'deploy', 'servidor', 'banco dados'],
-                'Análise': ['análise', 'analysis', 'dados', 'relatório']
-            };
-
-            for (const [setor, palavrasChave] of Object.entries(setores)) {
-                if (palavrasChave.some(palavra => motivoLower.includes(palavra))) {
-                    return setor;
-                }
-            }
-            return null;
-        }
-
-        // ✅ Exportar Pausas em CSV
-        // ✅ Exportar Pausas em CSV
-        function exportarPausasCSV() {
-            // Garantir que é array
-            let todasAsPausas = converterParaArray(historicoPausas);
-            
-            // Calcular tempo real para pausas ativas
-            todasAsPausas = todasAsPausas.map(pausa => {
-                if (pausa && pausa.status === 'Pausado' && pausa.horaPausa) {
-                    const agora = new Date();
-                    const tempoPausaMs = agora.getTime() - new Date(pausa.horaPausa).getTime();
-                    return {
-                        ...pausa,
-                        tempoPausaMs: Math.max(0, tempoPausaMs),
-                        tempoPausaFormatado: formatarTempo(Math.max(0, tempoPausaMs))
-                    };
-                }
-                return pausa;
-            });
-
-            if (todasAsPausas.length === 0) {
-                alert('Nenhuma pausa registrada para exportar!');
+        // Renderizar tabela com atividades de hoje
+        function renderizarTabela() {
+            if (atividadesToday.length === 0) {
+                bodyTabela.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhuma atividade registrada para hoje</td></tr>';
                 return;
             }
 
-            // Montar CSV
-            const headers = ['Ticket', 'Colaborador', 'Data de Pausa', 'Hora da Pausa', 'Hora da Retomada', 'Duração', 'Status', 'Grupo'];
-            const csvContent = [
-                headers.join(','),
-                ...todasAsPausas.map(pausa => [
-                    `#${pausa.ticket}`,
-                    pausa.colaborador || '-',
-                    pausa.dataInicio || '-',
-                    pausa.horaPausa || '-',
-                    pausa.horaRetomada || '-',
-                    pausa.tempoPausaFormatado || '-',
-                    pausa.status || 'Retomado',
-                    pausa.grupo || '-'
-                ].map(v => `"${v}"`).join(','))
-            ].join('\n');
+            bodyTabela.innerHTML = atividadesToday.map(atividade => `
+                <tr>
+                    <td>${atividade.colaborador || '-'}</td>
+                    <td>${atividade.ticket || '-'}</td>
+                    <td>${atividade.horaInicio || '-'}</td>
+                    <td>${atividade.horaFim || '-'}</td>
+                    <td>${atividade.duracao || '-'}</td>
+                    <td>${atividade.descricao || '-'}</td>
+                    <td>${atividade.observacao || '-'}</td>
+                </tr>
+            `).join('');
+        }
 
-            // Criar download
-            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        // Exportar para CSV
+        btnExportar.addEventListener('click', () => {
+            if (atividadesToday.length === 0) {
+                alert('Não há atividades para exportar');
+                return;
+            }
+
+            const headers = ['Colaborador', 'Ticket', 'Data', 'Hora de Início', 'Hora de Fim', 'Duração', 'Descrição', 'Observação'];
+            const rows = atividadesToday.map(a => [
+                a.colaborador || '',
+                a.ticket || '',
+                a.dataInicio || '',
+                a.horaInicio || '',
+                a.horaFim || '',
+                a.duracao || '',
+                a.descricao || '',
+                a.observacao || ''
+            ]);
+
+            let csv = headers.join(',') + '\n';
+            rows.forEach(row => {
+                csv += row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',') + '\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
-            const dataAtual = new Date().toISOString().split('T')[0];
             link.setAttribute('href', url);
-            link.setAttribute('download', `historico_pausas_${dataAtual}.csv`);
+            link.setAttribute('download', `performance_${getDataAtual()}.csv`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-        }
-
-        // ✅ Filtros
-        document.getElementById('btnAplicarFiltro').addEventListener('click', function() {
-            filtroDataInicio = document.getElementById('dataInicio').value;
-            filtroDataFim = document.getElementById('dataFim').value;
-            atualizarDashboard();
         });
 
-        document.getElementById('btnLimparFiltro').addEventListener('click', function() {
-            document.getElementById('dataInicio').value = '';
-            document.getElementById('dataFim').value = '';
-            filtroDataInicio = null;
-            filtroDataFim = null;
-            atualizarDashboard();
-        });
-
-        // ✅ Iniciar
-        carregarDados();
-        
-        // Atualizar a cada 5 segundos - recarrega dados do Firebase e atualiza pausas
-        setInterval(() => {
-            if (window.db) {
-                // Recarregar kanbanState e historicoPausas do Firebase
-                db.ref('kanbanState').once('value', (stateSnapshot) => {
-                    if (stateSnapshot.exists()) {
-                        kanbanState = stateSnapshot.val();
-                    }
-                    
-                    db.ref('historicoPausas').once('value', (pausasSnapshot) => {
-                        if (pausasSnapshot.exists()) {
-                            historicoPausas = converterParaArray(pausasSnapshot.val());
-                        }
-                        
-                        // Recarregar atividades também para ter status atualizado
-                        db.ref('atividades').once('value', (snapshot) => {
-                            if (snapshot.exists()) {
-                                atividades = converterParaArray(snapshot.val());
-                            }
-                            
-                            // Agora sim, atualizar a renderização
-                            if (document.getElementById('tabelaPausasBody')) {
-                                atualizarPausas();
-                            }
-                            // Atualizar os contadores do dashboard
-                            atualizarDashboard();
-                        });
-                    });
-                });
-            } else {
-                // Fallback para localStorage
-                const pausasSalvas = localStorage.getItem('historicoPausas');
-                if (pausasSalvas) {
-                    historicoPausas = converterParaArray(JSON.parse(pausasSalvas));
-                }
-                
-                const kanbanSalvo = localStorage.getItem('kanbanState');
-                if (kanbanSalvo) {
-                    kanbanState = JSON.parse(kanbanSalvo);
-                }
-                
-                if (document.getElementById('tabelaPausasBody')) {
-                    atualizarPausas();
-                }
-                // Atualizar os contadores do dashboard
-                atualizarDashboard();
-            }
-        }, 5000);
-
-        // Sincronizar imediatamente quando a aba recebe foco
-        window.addEventListener('focus', () => {
-            console.log('Performance - Aba recebeu foco - sincronizando dados...');
-            carregarDados();
-        });
-
-        // Botão discreto para atualizar dados
-        document.getElementById('btnAtualizarPerformance').addEventListener('click', () => {
-            const btn = document.getElementById('btnAtualizarPerformance');
-            btn.classList.add('carregando');
-            btn.disabled = true;
-            
-            console.log('Atualizando dados de performance manualmente...');
-            carregarDados();
-            
-            // Remover o estado de carregamento após 1 segundo
-            setTimeout(() => {
-                btn.classList.remove('carregando');
-                btn.disabled = false;
-            }, 1000);
-        });
-
-        // ✅ Abrir Modal de Atividades do Colaborador
-        function abrirModalAtividades(nomeColaborador) {
-            mostrarAtividadesColaborador(nomeColaborador);
-            document.getElementById('modalAtividades').style.display = 'block';
-        }
-
-        // ✅ Fechar Modal
-        function fecharModalAtividades() {
-            document.getElementById('modalAtividades').style.display = 'none';
-        }
-
-        // ✅ Mostrar Atividades do Colaborador
-        function mostrarAtividadesColaborador(nomeColaborador) {
-            // Garantir que é um array
-            const atividadesArray = converterParaArray(atividades);
-            
-            // Filtrar atividades do colaborador
-            const atividadesColaborador = atividadesArray.filter(a => a.colaborador === nomeColaborador);
-            
-            // Atualizar título do modal
-            document.getElementById('modalTitulo').innerHTML = `Atividades de <strong>${nomeColaborador}</strong>`;
-            
-            // Calcular estatísticas
-            const totalAtividades = atividadesColaborador.length;
-            const tempoTotal = atividadesColaborador.reduce((acc, a) => acc + converterParaHoras(a.duracao), 0);
-            const tempoMedio = totalAtividades > 0 ? tempoTotal / totalAtividades : 0;
-            
-            // Atualizar cards de estatísticas
-            document.getElementById('modalTotalAtividades').textContent = totalAtividades;
-            document.getElementById('modalTempoTotal').textContent = formatarHoras(tempoTotal);
-            document.getElementById('modalTempoMedio').textContent = formatarHoras(tempoMedio);
-            
-            // Renderizar lista de atividades
-            let html = '';
-            
-            if (atividadesColaborador.length === 0) {
-                html = '<div class="empty-state">Nenhuma atividade registrada para este colaborador no período selecionado</div>';
-            } else {
-                // Ordena atividades por data (mais recentes primeiro)
-                const atividadesOrdenadas = atividadesColaborador.sort((a, b) => {
-                    const dataA = new Date(a.dataInicio.split('/').reverse().join('-'));
-                    const dataB = new Date(b.dataInicio.split('/').reverse().join('-'));
-                    return dataB - dataA;
-                });
-                
-                atividadesOrdenadas.forEach(atividade => {
-                    const statusBadge = atividade.justificativa 
-                        ? '<span class="badge badge-warning">Com Justificativa</span>' 
-                        : '<span class="badge badge-success">OK</span>';
-                    
-                    html += `
-                        <div class="atividade-item">
-                            <div class="atividade-header">
-                                <div>
-                                    ${atividade.chaveAtividade ? `<div class="atividade-chave" style="color: #9c27b0; font-weight: 600; font-size: 0.85em;">🔑 ${atividade.chaveAtividade}</div>` : ''}
-                                    <div class="atividade-ticket">#${atividade.ticket}</div>
-                                    <div class="atividade-data">${atividade.dataInicio}</div>
-                                    ${statusBadge}
-                                </div>
-                                <div class="atividade-duracao">${atividade.duracao}</div>
-                            </div>
-                            ${atividade.descricao ? `<div class="atividade-descricao"><strong>Descrição:</strong> ${atividade.descricao}</div>` : ''}
-                            ${atividade.observacao ? `<div class="atividade-observacao"><strong>Observação:</strong> ${atividade.observacao}</div>` : ''}
-                        </div>
-                    `;
-                });
-            }
-            
-            document.getElementById('modalAtividadesList').innerHTML = html;
-        }
-
-        // ✅ Fechar modal ao clicar fora dele
-        window.onclick = function(event) {
-            const modal = document.getElementById('modalAtividades');
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
-        }
+        // Carregar dados quando página carregar
+        window.addEventListener('load', carregarAtividadesToday);
     </script>
 </body>
 </html>
