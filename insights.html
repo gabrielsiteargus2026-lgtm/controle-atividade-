@@ -439,7 +439,7 @@
         <!-- GRÁFICO CONSOLIDADO - RESUMO DE ATIVIDADES -->
         <div class="section-title">
             Resumo de Atividades - Período Atual
-            <span id="periodoAtual" style="font-size: 0.85em; color: #666; margin-left: 15px; font-weight: 500;"></span>
+            <span id="periodoAtual" style="font-size: 0.85em; color: #666; margin-left: 15px; font-weight: 500; display: none;"></span>
         </div>
         
         <!-- CARDS DE RESUMO RÁPIDO -->
@@ -827,24 +827,58 @@
             }
         };
 
+        // Plugin para exibir valores em gráficos de pizza/doughnut
+        const pluginValoresGraficoPizza = {
+            id: 'valoresGraficoPizza',
+            afterDatasetsDraw(chart) {
+                const ctx = chart.ctx;
+                ctx.font = 'bold 14px Arial';
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                chart.data.datasets.forEach((dataset, datasetIndex) => {
+                    const meta = chart.getDatasetMeta(datasetIndex);
+                    const total = dataset.data.reduce((a, b) => a + b, 0);
+                    
+                    meta.data.forEach((element, index) => {
+                        const valor = dataset.data[index];
+                        if (valor === null || valor === undefined || total === 0) return;
+                        
+                        const pct = Math.round((valor / total) * 100);
+                        
+                        const {x, y} = element.getProps(['x', 'y'], true);
+                        ctx.fillText(valor, x, y - 8);
+                        ctx.fillText(`${pct}%`, x, y + 8);
+                    });
+                });
+            }
+        };
+
         // Gráfico 1: Porcentagem de Atividades por Colaborador (Gráficos de Pizza)
         function renderizarAtividadesAbertas() {
             console.log('Renderizando gráficos de pizza de atividades por colaborador...');
             const colaboradores = {};
-            let totalAtividades = 0;
+            let quantidadeAtividadesColaborador = 0;
             
-            // Contar atividades por colaborador
+            // Contar atividades por colaborador (apenas as concluídas)
             atividadesGlobais.forEach(a => {
                 if (!a || !a.colaborador) return;
                 if (!colaboradores[a.colaborador]) {
                     colaboradores[a.colaborador] = 0;
                 }
                 colaboradores[a.colaborador]++;
-                totalAtividades++;
+                quantidadeAtividadesColaborador++;
             });
 
+            // Calcular total de atividades criadas (mesma fórmula do card "Total Criadas")
+            const totalConcluidas = atividadesGlobais.length;
+            const totalEmAndamento = atividadesEmAndamento.length;
+            const totalPausadas = historicoPausas ? (Array.isArray(historicoPausas) ? historicoPausas.length : Object.keys(historicoPausas).length) : 0;
+            const totalAtividadesCriadas = totalConcluidas + totalEmAndamento + totalPausadas;
+
             console.log('Atividades por colaborador:', colaboradores);
-            console.log('Total de atividades:', totalAtividades);
+            console.log('Total de atividades criadas:', totalAtividadesCriadas);
 
             const nomes = Object.keys(colaboradores).sort();
             const containerPizzas = document.getElementById('containerGraficosPizza');
@@ -861,17 +895,17 @@
             // Criar um gráfico de pizza para cada colaborador
             nomes.forEach((nome, idx) => {
                 const quantidadeColaborador = colaboradores[nome];
-                const porcentagem = totalAtividades > 0 ? Math.round((quantidadeColaborador / totalAtividades) * 100) : 0;
-                const restoAtividades = totalAtividades - quantidadeColaborador;
+                const porcentagem = totalAtividadesCriadas > 0 ? Math.round((quantidadeColaborador / totalAtividadesCriadas) * 100) : 0;
+                const restoAtividades = totalAtividadesCriadas - quantidadeColaborador;
 
                 // Criar container do card
                 const cardDiv = document.createElement('div');
                 cardDiv.style.cssText = 'background: white; border-radius: 10px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);';
                 
-                // Criar titulo
+                // Criar titulo com nome em maiúscula
                 const titulo = document.createElement('h4');
-                titulo.textContent = nome;
-                titulo.style.cssText = 'text-align: center; color: #5b8ec6; margin-bottom: 10px; font-size: 0.95em;';
+                titulo.textContent = nome.toUpperCase();
+                titulo.style.cssText = 'text-align: center; color: #3b82f6; margin-bottom: 10px; font-size: 0.95em; font-weight: bold;';
                 cardDiv.appendChild(titulo);
 
                 // Criar canvas
@@ -881,10 +915,10 @@
                 canvas.style.cssText = 'max-width: 100%;';
                 cardDiv.appendChild(canvas);
 
-                // Criar label com porcentagem
+                // Criar label com informações comparativas
                 const label = document.createElement('div');
                 label.style.cssText = 'text-align: center; margin-top: 10px; font-weight: bold; color: #333; font-size: 0.9em;';
-                label.textContent = `${quantidadeColaborador} atividades (${porcentagem}%)`;
+                label.textContent = `${quantidadeColaborador} atividades de ${totalAtividadesCriadas} criadas (${porcentagem}%)`;
                 cardDiv.appendChild(label);
 
                 containerPizzas.appendChild(cardDiv);
@@ -894,10 +928,10 @@
                 chartsInstances[canvasId] = new Chart(ctx, {
                     type: 'doughnut',
                     data: {
-                        labels: [nome, 'Outros Colaboradores'],
+                        labels: [nome, 'Restante'],
                         datasets: [{
                             data: [quantidadeColaborador, restoAtividades],
-                            backgroundColor: [CORES[idx % CORES.length], '#e0e0e0'],
+                            backgroundColor: [CORES[idx % CORES.length], '#e5e7eb'],
                             borderColor: ['#fff', '#fff'],
                             borderWidth: 2
                         }]
@@ -914,10 +948,9 @@
                             tooltip: {
                                 callbacks: {
                                     label: function(context) {
-                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                         const valor = context.parsed;
-                                        const pct = Math.round((valor / total) * 100);
-                                        return `${valor} (${pct}%)`;
+                                        const pct = totalAtividadesCriadas > 0 ? Math.round((valor / totalAtividadesCriadas) * 100) : 0;
+                                        return `${valor} de ${totalAtividadesCriadas} (${pct}%)`;
                                     }
                                 }
                             }
@@ -1344,7 +1377,8 @@
                             }
                         }
                     }
-                }
+                },
+                plugins: [pluginValoresGraficoPizza]
             });
 
             console.log('Análise de pausas renderizada com sucesso');
