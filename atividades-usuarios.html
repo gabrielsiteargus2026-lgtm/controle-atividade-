@@ -90,47 +90,55 @@
 
         .filters {
             background: white;
-            padding: 20px;
-            border-radius: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 12px;
             margin-bottom: 30px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
+        }
+
+        .filters-title {
+            color: #5b8ec6;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 8px;
             align-items: flex-end;
         }
 
         .filter-group {
             display: flex;
             flex-direction: column;
-            gap: 5px;
         }
 
         .filter-group label {
-            font-weight: 600;
-            color: #333;
-            font-size: 0.9em;
+            font-size: 0.85em;
+            margin-bottom: 3px;
+            font-weight: 500;
         }
 
         .filter-group input,
         .filter-group select {
-            padding: 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 5px;
+            padding: 6px;
             font-size: 0.9em;
-            min-width: 200px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
         }
 
         .filter-group input:focus,
         .filter-group select:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+            border-color: #5b8ec6;
+            box-shadow: 0 0 3px rgba(91, 142, 198, 0.2);
         }
 
         .filter-buttons {
             display: flex;
-            gap: 10px;
+            gap: 6px;
         }
 
         .btn {
@@ -303,8 +311,8 @@
                 margin-left: 0;
             }
 
-            .filters {
-                flex-direction: column;
+            .filters-grid {
+                grid-template-columns: 1fr;
             }
 
             .filter-group input,
@@ -805,36 +813,41 @@
             </div>
 
             <div class="filters">
-                <div class="filter-group">
-                    <label>Email do Usuário:</label>
-                    <input type="text" id="filterEmail" placeholder="Digite email para filtrar...">
+                <h2 class="filters-title">Filtros</h2>
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label for="filterEmail">Email do Usuário</label>
+                        <input type="text" id="filterEmail" placeholder="Digite email...">
+                    </div>
+                    <div class="filter-group">
+                        <label for="filterAcao">Tipo de Ação</label>
+                        <select id="filterAcao">
+                            <option value="">-- Todas as ações --</option>
+                            <option value="INICIO">Iniciou Atividade</option>
+                            <option value="FIM">Finalizou Atividade</option>
+                            <option value="PAUSA">Pausou Atividade</option>
+                            <option value="RETOMOU">Retomou Atividade</option>
+                            <option value="EXCLUSAO">Deletou Atividade</option>
+                            <option value="LOGIN">Login</option>
+                            <option value="LOGOUT">Logout</option>
+                            <!-- Compatibilidade com nomes antigos -->
+                            <option value="INICIOU">Iniciou (antigo)</option>
+                            <option value="FINALIZOU">Finalizou (antigo)</option>
+                            <option value="PAUSOU">Pausou (antigo)</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filterData">Data</label>
+                        <input type="date" id="filterData">
+                    </div>
+                    <div class="filter-buttons">
+                        <button class="btn btn-primary" id="btnAplicarFiltros" style="padding: 6px 12px; font-size: 0.9em; flex: 1;">🔎</button>
+                        <button class="btn btn-secondary" id="btnLimparFiltros" style="padding: 6px 12px; font-size: 0.9em; flex: 1;">↺</button>
+                    </div>
                 </div>
-                <div class="filter-group">
-                    <label>Tipo de Ação:</label>
-                    <select id="filterAcao">
-                        <option value="">-- Todas as ações --</option>
-                        <option value="INICIO">Iniciou Atividade</option>
-                        <option value="FIM">Finalizou Atividade</option>
-                        <option value="PAUSA">Pausou Atividade</option>
-                        <option value="RETOMOU">Retomou Atividade</option>
-                        <option value="EXCLUSAO">Deletou Atividade</option>
-                        <option value="LOGIN">Login</option>
-                        <option value="LOGOUT">Logout</option>
-                        <!-- Compatibilidade com nomes antigos -->
-                        <option value="INICIOU">Iniciou (antigo)</option>
-                        <option value="FINALIZOU">Finalizou (antigo)</option>
-                        <option value="PAUSOU">Pausou (antigo)</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Data:</label>
-                    <input type="date" id="filterData">
-                </div>
-                <div class="filter-buttons">
-                    <button class="btn btn-primary" id="btnAplicarFiltros">Aplicar</button>
-                    <button class="btn btn-secondary" id="btnLimparFiltros">Limpar</button>
-                    <button class="btn export-btn" id="btnExportarCSV">Exportar CSV</button>
-                    <button class="btn btn-primary" id="btnRecarregar" style="background: #27ae60;">Recarregar</button>
+                <div style="margin-top: 8px; margin-bottom: 20px; display: flex; gap: 6px;">
+                    <button class="btn export-btn" id="btnExportarCSV" style="padding: 6px 12px; font-size: 0.9em; flex: 1;">Exportar CSV</button>
+                    <button class="btn btn-primary" id="btnRecarregar" style="padding: 6px 12px; font-size: 0.9em; flex: 1; background: #27ae60;">Recarregar</button>
                 </div>
             </div>
 
