@@ -474,6 +474,14 @@
             </div>
         </div>
 
+        <!-- GRÁFICO DE LINHAS - ATIVIDADES CRIADAS POR DIA -->
+        <div class="section-title">Atividades Criadas por Dia - Comparativo Diário</div>
+        <div class="chart-card">
+            <div class="chart-card-scrollable">
+                <canvas id="chartAtividadesCriadasPorDia"></canvas>
+            </div>
+        </div>
+
         <!-- ANÁLISE DE PAUSAS COM KPIs E GRÁFICOS -->
         <div class="section-title">Análise de Pausas - Contabilizador Detalhado</div>
         
@@ -511,28 +519,6 @@
             </div>
         </div>
 
-        <!-- GRÁFICO DE LINHAS - ATIVIDADES CRIADAS POR DIA -->
-        <div class="section-title">Atividades Criadas por Dia - Comparativo Diário</div>
-        <div class="chart-card">
-            <div class="chart-card-scrollable">
-                <canvas id="chartAtividadesCriadasPorDia"></canvas>
-            </div>
-        </div>
-
-        <!-- PERCENTUAL DE ATIVIDADES POR COLABORADOR (Gráficos de Pizza) -->
-        <div class="section-title">Porcentagem de Atividades por Colaborador</div>
-        <div id="containerGraficosPizza" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px;">
-            <!-- Os gráficos de pizza serão inseridos dinamicamente aqui -->
-        </div>
-
-        <!-- Top Colaboradores - Atividades Finalizadas -->
-        <div class="section-title">Top Colaboradores - Atividades Finalizadas</div>
-        <div class="chart-card">
-            <div id="topColaboradores" class="table-container">
-                <div class="empty-state">Carregando dados...</div>
-            </div>
-        </div>
-
         <!-- Histórico de Pausas -->
         <div class="section-title">Histórico de Pausas</div>
         <div class="chart-card">
@@ -560,6 +546,20 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- PERCENTUAL DE ATIVIDADES POR COLABORADOR (Gráficos de Pizza) -->
+        <div class="section-title">Porcentagem de Atividades por Colaborador</div>
+        <div id="containerGraficosPizza" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px;">
+            <!-- Os gráficos de pizza serão inseridos dinamicamente aqui -->
+        </div>
+
+        <!-- Top Colaboradores - Atividades Finalizadas -->
+        <div class="section-title">Top Colaboradores - Atividades Finalizadas</div>
+        <div class="chart-card">
+            <div id="topColaboradores" class="table-container">
+                <div class="empty-state">Carregando dados...</div>
             </div>
         </div>
     </div>
