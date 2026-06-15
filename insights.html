@@ -916,22 +916,52 @@
         // Gráfico 1: Porcentagem de Atividades por Colaborador (Gráficos de Pizza)
         function renderizarAtividadesAbertas() {
             console.log('Renderizando gráficos de pizza de atividades por colaborador...');
-            const colaboradores = {};
-            let quantidadeAtividadesColaborador = 0;
             
-            // Contar atividades por colaborador (apenas as concluídas)
+            // Criar conjunto de tickets pausados (mesmo que em Resumo)
+            const ticketsPausados = new Set();
+            historicoPausas.forEach(p => {
+                if (p && p.ticket) {
+                    ticketsPausados.add(p.ticket);
+                }
+            });
+            
+            const colaboradores = {};
+            
+            // Contar atividades por colaborador (concluídas)
             atividadesGlobais.forEach(a => {
                 if (!a || !a.colaborador) return;
                 if (!colaboradores[a.colaborador]) {
                     colaboradores[a.colaborador] = 0;
                 }
                 colaboradores[a.colaborador]++;
-                quantidadeAtividadesColaborador++;
+            });
+            
+            // Contar atividades por colaborador (em andamento SEM pausas)
+            atividadesEmAndamento.forEach(a => {
+                if (!a || !a.colaborador) return;
+                // Pular atividades que têm pausas registradas
+                if (a.ticket && ticketsPausados.has(a.ticket)) return;
+                if (!colaboradores[a.colaborador]) {
+                    colaboradores[a.colaborador] = 0;
+                }
+                colaboradores[a.colaborador]++;
+            });
+            
+            // Contar atividades por colaborador (pausadas)
+            historicoPausas.forEach(p => {
+                if (!p || !p.colaborador) return;
+                if (!colaboradores[p.colaborador]) {
+                    colaboradores[p.colaborador] = 0;
+                }
+                colaboradores[p.colaborador]++;
             });
 
             // Calcular total de atividades criadas (mesma fórmula do card "Total Criadas")
             const totalConcluidas = atividadesGlobais.length;
-            const totalEmAndamento = atividadesEmAndamento.length;
+            const atividadesEmAndamentoSemPausa = atividadesEmAndamento.filter(a => 
+                a && a.ticket && !ticketsPausados.has(a.ticket)
+            );
+            const totalEmAndamento = atividadesEmAndamentoSemPausa.length;
             const totalPausadas = historicoPausas ? (Array.isArray(historicoPausas) ? historicoPausas.length : Object.keys(historicoPausas).length) : 0;
             const totalAtividadesCriadas = totalConcluidas + totalEmAndamento + totalPausadas;
 
@@ -1138,7 +1168,15 @@
         function renderizarAtividadesCriadasPorDia() {
             console.log('Renderizando gráfico de atividades criadas por dia...');
             
-            // Contar total de atividades (concluídas + em andamento + pausadas) por data
+            // Criar conjunto de tickets pausados (mesma lógica de Total Criados)
+            const ticketsPausados = new Set();
+            historicoPausas.forEach(p => {
+                if (p && p.ticket) {
+                    ticketsPausados.add(p.ticket);
+                }
+            });
+            
+            // Contar total de atividades (concluídas + em andamento sem pausas + pausadas) por data
             const atividadesPorDia = {};
             
             // Contar atividades concluídas
@@ -1149,9 +1187,11 @@
                 atividadesPorDia[data]++;
             });
             
-            // Contar atividades em andamento
+            // Contar atividades em andamento (EXCLUINDO as que têm pausas)
             atividadesEmAndamento.forEach(a => {
                 if (!a || !a.dataInicio) return;
+                // Pular atividades que têm pausas registradas
+                if (a.ticket && ticketsPausados.has(a.ticket)) return;
                 const data = a.dataInicio;
                 if (!atividadesPorDia[data]) atividadesPorDia[data] = 0;
                 atividadesPorDia[data]++;
@@ -1476,6 +1516,70 @@
             tabelaPausasElement.innerHTML = tabelaHTML;
 
             console.log('Resumo consolidado renderizado com sucesso');
+        }
+
+        // ✅ Atualizar KPIs de Pausas em Tempo Real
+        function atualizarKPIsPausasEmTempoReal() {
+            // Verificar se elementos existem antes de atualizar
+            if (!document.getElementById('kpiTotalPausas')) return;
+            
+            // Converter para array se necessário
+            let todasAsPausas = [];
+            if (Array.isArray(historicoPausas)) {
+                todasAsPausas = historicoPausas.filter(p => p && typeof p === 'object');
+            } else if (typeof historicoPausas === 'object') {
+                todasAsPausas = Object.values(historicoPausas).filter(p => p && typeof p === 'object');
+            }
+
+            if (todasAsPausas.length === 0) {
+                document.getElementById('kpiTotalPausas').textContent = '0';
+                document.getElementById('kpiTempoTotal').textContent = '0h 0m';
+                document.getElementById('kpiMaiorPausa').textContent = '0h 0m';
+                document.getElementById('kpiMediaPausas').textContent = '0h 0m';
+                return;
+            }
+
+            // Calcular tempos para pausas ativas
+            const todasAsPausasComTempo = todasAsPausas.map(pausa => {
+                if (pausa && pausa.status === 'Pausado' && pausa.horaPausa) {
+                    try {
+                        const agora = new Date();
+                        const horaPausaDate = new Date(pausa.horaPausa);
+                        const tempoPausaMs = agora.getTime() - horaPausaDate.getTime();
+                        return {
+                            ...pausa,
+                            tempoPausaMs: Math.max(0, tempoPausaMs)
+                        };
+                    } catch (e) {
+                        console.warn('Erro ao calcular tempo de pausa:', e);
+                        return pausa;
+                    }
+                }
+                return pausa;
+            });
+
+            // KPI: Total de pausas
+            const totalPausas = todasAsPausasComTempo.length;
+            document.getElementById('kpiTotalPausas').textContent = totalPausas;
+
+            // KPI: Tempo total pausado
+            const tempoTotalMs = todasAsPausasComTempo.reduce((acc, p) => {
+                if (!p || p.tempoPausaMs === undefined) return acc;
+                return acc + (p.tempoPausaMs || 0);
+            }, 0);
+            const tempoTotalHoras = tempoTotalMs / (1000 * 60 * 60);
+            document.getElementById('kpiTempoTotal').textContent = formatarHoras(tempoTotalHoras);
+
+            // KPI: Pausa mais longa
+            const temposValidos = todasAsPausasComTempo.filter(p => p && p.tempoPausaMs !== undefined).map(p => p.tempoPausaMs || 0);
+            const maiorPausaMs = temposValidos.length > 0 ? Math.max(...temposValidos) : 0;
+            const maiorPausaHoras = maiorPausaMs / (1000 * 60 * 60);
+            document.getElementById('kpiMaiorPausa').textContent = formatarHoras(maiorPausaHoras);
+
+            // KPI: Tempo médio de pausa
+            const mediaMs = tempoTotalMs / totalPausas;
+            const mediaHoras = mediaMs / (1000 * 60 * 60);
+            document.getElementById('kpiMediaPausas').textContent = formatarHoras(mediaHoras);
         }
 
         // ✅ Renderizar Análise de Pausas com KPIs e Gráficos
@@ -1850,6 +1954,25 @@
                 btn.disabled = false;
             }, 1000);
         });
+
+        // ✅ Atualizar KPIs de Pausas em Tempo Real a cada 1 segundo (após carregamento)
+        let intervaloPausas = null;
+        
+        function iniciarAtualizacaoPausas() {
+            if (intervaloPausas) clearInterval(intervaloPausas);
+            intervaloPausas = setInterval(() => {
+                try {
+                    atualizarKPIsPausasEmTempoReal();
+                } catch (err) {
+                    console.warn('Erro ao atualizar KPIs de pausas:', err);
+                }
+            }, 1000);
+        }
+        
+        // Iniciar após carregar dados
+        setTimeout(() => {
+            iniciarAtualizacaoPausas();
+        }, 2000);
     </script>
 </body>
 </html>
