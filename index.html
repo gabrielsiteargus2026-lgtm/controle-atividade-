@@ -605,6 +605,36 @@
             margin-bottom: 3px;
         }
 
+        /* ✅ NOVO: Estilos para campo de reabrir atividade */
+        .campo-reabrir-wrapper {
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .campo-reabrir-wrapper select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.85em;
+            transition: border-color 0.3s;
+            background: white;
+            cursor: pointer;
+        }
+
+        .campo-reabrir-wrapper select:focus {
+            outline: none;
+            border-color: #5b8ec6;
+        }
+
+        .campo-reabrir-wrapper label {
+            display: block;
+            font-size: 0.75em;
+            font-weight: 500;
+            color: #666;
+            margin-bottom: 3px;
+        }
+
         .action-buttons button {
             flex: 1;
         }
@@ -987,6 +1017,12 @@
                 authCheckInProgress = false;
                 authCheckCompleted = true;
 
+                // 🧪 MODO TESTE: Permitir login sem autenticação Firebase
+                if (MODO_TESTE_ATIVO && !user) {
+                    user = { uid: 'test', email: 'teste@teste.com', displayName: 'Teste' };
+                    console.log('🧪 MODO TESTE ATIVO: Autenticação simulada');
+                }
+
                 if (user) {
                     usuarioAtual = {
                         uid: user.uid,
@@ -1208,11 +1244,25 @@
                             <input type="checkbox" id="ativarTitulo" autocomplete="off">
                             <label for="ativarTitulo">Escrever título</label>
                         </div>
+
+                        <!-- Opção de Reabrir Atividade -->
+                        <div class="titulo-checkbox-group">
+                            <input type="checkbox" id="ativarReabrir" autocomplete="off">
+                            <label for="ativarReabrir">Reabrir Atividade</label>
+                        </div>
                         
                         <!-- Campo de Título - inicialmente escondido -->
                         <div class="campo-titulo-wrapper" id="campoTituloWrapper">
                             <label for="tituloModal">Título do Ticket</label>
                             <input type="text" id="tituloModal" placeholder="Insira o título do ticket..." autocomplete="off">
+                        </div>
+
+                        <!-- Campo para Reabrir Atividade - inicialmente escondido -->
+                        <div class="campo-reabrir-wrapper" id="campoReabrirWrapper" style="display: none;">
+                            <label for="selectReabrir">Selecione uma atividade para reabrir</label>
+                            <select id="selectReabrir" autocomplete="off">
+                                <option value="">-- Carregando atividades... --</option>
+                            </select>
                         </div>
                         
                         <div class="dados-form-group">
@@ -1228,6 +1278,22 @@
             </div>
         </div>
 
+        <!-- Modal para Confirmar Reabertura de Ticket -->
+        <div id="modalReabertura" class="modal" style="display: none;">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">🔄 Ticket Já Existente</div>
+                <div class="modal-body">
+                    <p id="txtInfoReabertura" style="margin-bottom: 20px;"></p>
+                    <p style="font-size: 0.9em; color: #666;">Deseja reabrir este ticket ou criar uma nova atividade com número diferente?</p>
+                </div>
+                <div class="modal-footer" style="justify-content: space-around;">
+                    <button type="button" class="btn-danger" id="btnCancelarReabertura" style="background: #999;">Cancelar</button>
+                    <button type="button" class="btn-warning" id="btnReabrirTicket" style="background: #f59e0b;">Reabrir Ticket</button>
+                    <button type="button" class="btn-primary" id="btnNovaAtividade">Criar Nova</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal para Confirmar Limpar Histórico -->
         <!-- Movido para historico.html -->
 
@@ -1238,6 +1304,41 @@
     </div>
 
     <script>
+        // 🧪 MODO TESTE: Simular autenticação e dados para testar reopening modal
+        const MODO_TESTE_ATIVO = true;
+        
+        if (MODO_TESTE_ATIVO && !localStorage.getItem('usuarioAtual')) {
+            // Simular usuário autenticado
+            window.usuarioAtual = {
+                uid: 'test-user-' + Date.now(),
+                email: 'teste@teste.com',
+                nome: 'Usuário Teste'
+            };
+            
+            // Dados de teste com um ticket concluído
+            const testAtividades = [
+                {
+                    id: 1000,
+                    chaveAtividade: 'ATIV-2026061600001',
+                    nome: 'Gabriel Oliveira',
+                    ticket: 'TICKET-001',
+                    descricao: 'Atividade de teste para validar reopening',
+                    titulo: 'Teste Modal',
+                    dataInicio: '16/06/2026',
+                    horaInicio: '09:30:00',
+                    dataFim: '16/06/2026',
+                    horaFim: '15:00:00',
+                    duracao: '05:30:00',
+                    usuario_id: 'test-user-' + Date.now(),
+                    email_usuario: 'teste@teste.com',
+                    nome_usuario: 'Usuário Teste'
+                }
+            ];
+            
+            localStorage.setItem('usuarioAtual', JSON.stringify(window.usuarioAtual));
+            localStorage.setItem('atividades', JSON.stringify(testAtividades));
+        }
+
         // Estado da aplicação
         let atividadesEmAndamento = [];
         let atividades = [];
@@ -1248,6 +1349,7 @@
         let atividadeEmObservacao = null; // Rastrear atividade em observação para depois atribuir
         let filtroAtivo = false;
         let atividadesFiltradas = [];
+        let ticketEmReabertura = null; // Rastrear ticket que está sendo analisado para reabertura
         let historicoPausas = []; // Rastreamento de todas as pausas
         let colaboradoresSelecionados = []; // Armazenar colaboradores selecionados
 
@@ -1321,6 +1423,9 @@
         const campoTituloWrapper = document.getElementById('campoTituloWrapper');
         const inputTitulo = document.getElementById('tituloModal');
         const ticketWarning = document.getElementById('ticketWarning');
+        const checkboxReabrir = document.getElementById('ativarReabrir');
+        const campoReabrirWrapper = document.getElementById('campoReabrirWrapper');
+        const selectReabrir = document.getElementById('selectReabrir');
         const modalJustificativa = document.getElementById('modalJustificativa');
         const txtJustificativa = document.getElementById('txtJustificativa');
         const btnConfirmarJustificativa = document.getElementById('btnConfirmarJustificativa');
@@ -1550,6 +1655,147 @@
             return emAtividades || emAndamento;
         }
 
+        // ✅ NOVO: Encontrar atividade anterior pelo ticket
+        function encontrarAtividadeAnterior(ticket) {
+            // Procurar em atividades finalizadas
+            let atividade = atividades.find(a => a.ticket === ticket);
+            if (atividade) return atividade;
+            
+            // Procurar em atividades em andamento
+            atividade = atividadesEmAndamento.find(a => a.ticket === ticket);
+            if (atividade) return atividade;
+            
+            return null;
+        }
+
+        // ✅ NOVO: Abrir modal de reabertura
+        function mostrarModalReabertura(ticket) {
+            const atividade = encontrarAtividadeAnterior(ticket);
+            if (!atividade) return;
+            
+            ticketEmReabertura = ticket;
+            const txtInfo = document.getElementById('txtInfoReabertura');
+            txtInfo.innerHTML = `
+                <strong>Ticket #${ticket}</strong><br>
+                <small>Descrição: ${atividade.descricao || 'Sem descrição'}</small><br>
+                <small>Última atualização: ${atividade.dataInicio || 'N/A'}</small>
+            `;
+            
+            document.getElementById('modalReabertura').style.display = 'flex';
+        }
+
+        // ✅ NOVO: Fechar modal de reabertura
+        function fecharModalReabertura() {
+            document.getElementById('modalReabertura').style.display = 'none';
+            ticketEmReabertura = null;
+        }
+
+        // ✅ NOVO: Reabrir ticket
+        function reabrirAtividadeAnterior() {
+            if (!ticketEmReabertura) {
+                mostrarAlerta('erro', 'Ticket não identificado');
+                return;
+            }
+            
+            const atividade = encontrarAtividadeAnterior(ticketEmReabertura);
+            if (!atividade) {
+                mostrarAlerta('erro', 'Atividade não encontrada');
+                return;
+            }
+            
+            const nome = inputNome.value.trim();
+            const descricao = document.getElementById('descricaoModal').value.trim() || atividade.descricao;
+            const titulo = checkboxTitulo.checked ? inputTitulo.value.trim() : (atividade.titulo || '');
+            
+            const agora = new Date();
+            
+            // ✅ Se estiver em atividades finalizadas, mover para em andamento
+            const indexFinalizadas = atividades.findIndex(a => a.ticket === ticketEmReabertura);
+            if (indexFinalizadas !== -1) {
+                const atividadeReaberta = atividades[indexFinalizadas];
+                atividades.splice(indexFinalizadas, 1);
+                
+                // Atualizar com novos dados
+                atividadeReaberta.dataInicio = agora.toLocaleDateString('pt-BR');
+                atividadeReaberta.horaInicio = agora.toLocaleTimeString('pt-BR');
+                atividadeReaberta.tempoInicio = agora.getTime();
+                atividadeReaberta.dataFim = null;
+                atividadeReaberta.horaFim = null;
+                atividadeReaberta.duracao = null;
+                atividadeReaberta.intervaloTimer = null;
+                atividadeReaberta.isReabertura = true;  // ✅ Marcar como reabertura
+                atividadeReaberta.data_reaberta = agora.toISOString(); // Data de reabertura
+                
+                atividadesEmAndamento.push(atividadeReaberta);
+                kanbanState[atividadeReaberta.id] = { status: 'em_andamento', motivoPausa: '' };
+                
+                console.log('✅ Atividade reaberta:', atividadeReaberta);
+            } else {
+                // Se já está em andamento, apenas restaurar se estava pausada
+                if (atividade.id && kanbanState[atividade.id]) {
+                    kanbanState[atividade.id].status = 'em_andamento';
+                    kanbanState[atividade.id].motivoPausa = '';
+                    atividade.isReabertura = true;
+                    atividade.data_reaberta = agora.toISOString();
+                }
+            }
+            
+            console.log('📌 Salvando dados...');
+            try {
+                salvarDados();
+            } catch(err) {
+                console.error('❌ Erro em salvarDados():', err);
+            }
+            
+            try {
+                atualizarKanban();
+            } catch(err) {
+                console.error('❌ Erro em atualizarKanban():', err);
+            }
+            
+            try {
+                iniciarCronometro(atividade.id);
+            } catch(err) {
+                console.error('❌ Erro em iniciarCronometro():', err);
+            }
+            
+            // ✅ Registrar reabertura
+            try {
+                registrarRastreioAtividade('REABRIU', ticketEmReabertura, descricao, {
+                    chaveAtividade: atividade.chaveAtividade,
+                    colaborador: nome,
+                    usuario_logado: usuarioAtual?.email
+                });
+            } catch(err) {
+                console.error('❌ Erro em registrarRastreioAtividade():', err);
+            }
+            
+            mostrarAlerta('sucesso', `Ticket #${ticketEmReabertura} reaberto com sucesso!`);
+            fecharModalReabertura();
+            
+            // Fechar modal e limpar
+            modalIniciarAtividade.style.display = 'none';
+            limparCamposModal();
+        }
+
+        // ✅ NOVO: Função para limpar todos os campos do modal
+        function limparCamposModal() {
+            inputNome.value = '';
+            inputTicket.value = '';
+            document.getElementById('descricaoModal').value = '';
+            checkboxTitulo.checked = false;
+            inputTitulo.value = '';
+            campoTituloWrapper.classList.remove('ativo');
+            checkboxReabrir.checked = false;
+            campoReabrirWrapper.style.display = 'none';
+            selectReabrir.value = '';
+            ticketWarning.style.display = 'none';
+            // Habilitar campos novamente (em caso de reabrir ter os desabilitado)
+            inputNome.disabled = false;
+            inputTicket.disabled = false;
+            document.getElementById('descricaoModal').disabled = false;
+        }
+
         // ✅ NOVO SISTEMA: Chave Alfanumérica Curta (5 caracteres) - PERSISTENTE
         // Carrega registro de chaves já usadas
         function carregarRegistroChaves() {
@@ -1675,9 +1921,182 @@
             }
         }
 
+        // ✅ NOVO: Alternar visibilidade do campo de reabrir atividade
+        function alternarCampoReabrir() {
+            if (checkboxReabrir.checked) {
+                campoReabrirWrapper.style.display = 'block';
+                popularSelectReabrir();
+                selectReabrir.focus();
+                // Desmarcar checkbox de título para evitar conflito
+                checkboxTitulo.checked = false;
+                campoTituloWrapper.classList.remove('ativo');
+                // Desabilitar campos de nome, ticket e descrição
+                inputNome.disabled = true;
+                inputTicket.disabled = true;
+                document.getElementById('descricaoModal').disabled = true;
+            } else {
+                campoReabrirWrapper.style.display = 'none';
+                selectReabrir.value = '';
+                // Habilitar campos novamente
+                inputNome.disabled = false;
+                inputTicket.disabled = false;
+                document.getElementById('descricaoModal').disabled = false;
+            }
+        }
+
+        // ✅ NOVO: Popular select com atividades concluídas
+        function popularSelectReabrir() {
+            selectReabrir.innerHTML = '';
+            
+            // Garantir que atividades é array
+            const atividadesArray = Array.isArray(atividades) ? atividades : [];
+            
+            console.log('📋 Preenchendo select com', atividadesArray.length, 'atividades concluídas');
+            
+            if (atividadesArray.length === 0) {
+                selectReabrir.innerHTML = '<option value="">-- Nenhuma atividade concluída --</option>';
+                console.warn('⚠️ Nenhuma atividade concluída encontrada');
+                return;
+            }
+
+            // Ordenar por data mais recente
+            const atividadesOrdenadas = [...atividadesArray].sort((a, b) => {
+                const dataA = new Date(`${a.dataInicio} ${a.horaInicio || '00:00:00'}`);
+                const dataB = new Date(`${b.dataInicio} ${b.horaInicio || '00:00:00'}`);
+                return dataB - dataA;
+            });
+
+            const optionPadrao = document.createElement('option');
+            optionPadrao.value = '';
+            optionPadrao.textContent = '-- Selecione uma atividade --';
+            selectReabrir.appendChild(optionPadrao);
+
+            atividadesOrdenadas.forEach(atividade => {
+                const option = document.createElement('option');
+                option.value = atividade.id;
+                option.textContent = `🎟️ Ticket #${atividade.ticket} | ${atividade.nome} | ${atividade.descricao || 'Sem descrição'}`;
+                console.log('  Adicionada opção:', atividade.id, '(tipo:', typeof atividade.id, ') -', atividade.ticket);
+                selectReabrir.appendChild(option);
+            });
+        }
+
+        // ✅ NOVO: Reabrir atividade que foi concluída (pelo ID)
+        function reabrirAtividadeDoConcluido(atividadeId) {
+            console.log('🔄 reabrirAtividadeDoConcluido chamado com ID:', atividadeId, 'tipo:', typeof atividadeId);
+            
+            // ✅ Normalizar atividades se não for array
+            if (!Array.isArray(atividades)) {
+                console.warn('⚠️ atividades não é array. Normalizando...');
+                atividades = normalizarAtividades(atividades);
+            }
+
+            console.log('📋 Array atividades:', atividades.length, 'itens');
+            
+            // ✅ Converter ID para número se for string
+            const idNumerico = typeof atividadeId === 'string' ? parseInt(atividadeId, 10) : atividadeId;
+            console.log('🔍 Buscando ID numérico:', idNumerico);
+            
+            const indexAtividade = atividades.findIndex(a => {
+                console.log('  Comparando:', a?.id, '===', idNumerico, '?', a?.id === idNumerico);
+                return a && a.id === idNumerico;
+            });
+            
+            console.log('✓ findIndex resultado:', indexAtividade);
+            
+            if (indexAtividade === -1) {
+                mostrarAlerta('erro', 'Atividade não encontrada no array de concluídas');
+                console.warn('❌ Atividade com ID', idNumerico, 'não encontrada');
+                return;
+            }
+
+            const atividadeReaberta = atividades[indexAtividade];
+            const agora = new Date();
+
+            console.log('✅ Atividade encontrada:', atividadeReaberta.ticket);
+
+            // Remover do array de concluídas
+            atividades.splice(indexAtividade, 1);
+
+            // Atualizar dados de tempo
+            atividadeReaberta.dataInicio = agora.toLocaleDateString('pt-BR');
+            atividadeReaberta.horaInicio = agora.toLocaleTimeString('pt-BR');
+            atividadeReaberta.tempoInicio = agora.getTime();
+            atividadeReaberta.dataFim = null;
+            atividadeReaberta.horaFim = null;
+            atividadeReaberta.duracao = null;
+            atividadeReaberta.intervaloTimer = null;
+            atividadeReaberta.isReabertura = true;
+            atividadeReaberta.data_reaberta = agora.toISOString();
+            atividadeReaberta.chaveAtividade = atividadeReaberta.chaveAtividade || gerarChaveAtividade();
+
+            // Adicionar ao array de em andamento
+            atividadesEmAndamento.push(atividadeReaberta);
+            kanbanState[atividadeReaberta.id] = { 
+                status: 'em_andamento', 
+                motivoPausa: '',
+                grupoPausa: '',
+                tempoInicioPausa: null
+            };
+
+            console.log('✅ Atividade reaberta do concluído:', atividadeReaberta);
+
+            // Salvar dados
+            try {
+                salvarDados();
+            } catch(err) {
+                console.error('❌ Erro em salvarDados():', err);
+            }
+
+            // Atualizar Kanban
+            try {
+                atualizarKanban();
+            } catch(err) {
+                console.error('❌ Erro em atualizarKanban():', err);
+            }
+
+            // Iniciar cronômetro
+            try {
+                iniciarCronometro(atividadeReaberta.id);
+            } catch(err) {
+                console.error('❌ Erro em iniciarCronometro():', err);
+            }
+
+            // Registrar reabertura
+            try {
+                registrarRastreioAtividade('REABRIU_DO_CONCLUIDO', atividadeReaberta.ticket, atividadeReaberta.descricao, {
+                    chaveAtividade: atividadeReaberta.chaveAtividade,
+                    colaborador: atividadeReaberta.nome,
+                    usuario_logado: usuarioAtual?.email
+                });
+            } catch(err) {
+                console.error('❌ Erro em registrarRastreioAtividade():', err);
+            }
+
+            mostrarAlerta('sucesso', `Ticket #${atividadeReaberta.ticket} reaberto com sucesso!`);
+        }
+
         // Iniciar atividade
         function iniciarAtividade() {
             console.log('📌 Função iniciarAtividade() chamada');
+
+            // ✅ NOVO: Verificar se está reabrindo atividade
+            if (checkboxReabrir.checked) {
+                const atividadeId = selectReabrir.value;
+                console.log('🔄 Reabrir atividade - valor do select:', atividadeId, 'tipo:', typeof atividadeId);
+                
+                if (!atividadeId) {
+                    mostrarAlerta('erro', 'Por favor, selecione uma atividade para reabrir');
+                    return;
+                }
+                
+                // Chamar função de reabrir
+                reabrirAtividadeDoConcluido(atividadeId);
+                
+                // Fechar modal e limpar
+                modalIniciarAtividade.style.display = 'none';
+                limparCamposModal();
+                return;
+            }
             
             try {
                 const nome = inputNome.value.trim();
@@ -1699,10 +2118,10 @@
                     return;
                 }
 
-                // ✅ Validar ticket duplicado
+                // ✅ Validar ticket duplicado - NOVO: mostrar opção de reabrir
                 if (validarTicketDuplicado(ticket)) {
-                    mostrarAlerta('erro', '⚠️ Este número de ticket já foi utilizado. Por favor, insira um número diferente.');
-                    console.warn('❌ Erro: Ticket duplicado');
+                    console.warn('⚠️ Ticket duplicado detectado. Mostrando opção de reabertura.');
+                    mostrarModalReabertura(ticket);
                     return;
                 }
 
@@ -1777,13 +2196,7 @@
                 // Fechar modal e limpar campos após iniciar
                 console.log('📌 Fechando modal...');
                 modalIniciarAtividade.style.display = 'none';
-                inputNome.value = '';
-                inputTicket.value = '';
-                document.getElementById('descricaoModal').value = '';
-                checkboxTitulo.checked = false; // ✅ Desmarcar checkbox
-                inputTitulo.value = ''; // ✅ Limpar campo de título
-                campoTituloWrapper.classList.remove('ativo'); // ✅ Esconder campo
-                ticketWarning.style.display = 'none'; // ✅ Esconder aviso
+                limparCamposModal();
                 
                 console.log('✅ Modal fechado e campos limpos');
             } catch(err) {
@@ -2603,9 +3016,7 @@
             }
             if (event.target === modalIniciarAtividade) {
                 modalIniciarAtividade.style.display = 'none';
-                inputNome.value = '';
-                inputTicket.value = '';
-                document.getElementById('descricaoModal').value = '';
+                limparCamposModal();
             }
         });
 
@@ -2817,13 +3228,7 @@
 
         btnCancelarIniciar.addEventListener('click', function() {
             modalIniciarAtividade.style.display = 'none';
-            inputNome.value = '';
-            inputTicket.value = '';
-            document.getElementById('descricaoModal').value = '';
-            checkboxTitulo.checked = false; // ✅ Desmarcar checkbox
-            inputTitulo.value = ''; // ✅ Limpar campo de título
-            campoTituloWrapper.classList.remove('ativo'); // ✅ Esconder campo
-            ticketWarning.style.display = 'none'; // ✅ Esconder aviso
+            limparCamposModal();
         });
 
         btnIniciar.addEventListener('click', function(e) {
@@ -2842,6 +3247,23 @@
                 return false;
             }
         });
+
+        // ✅ Event listeners para modal de reabertura
+        document.getElementById('btnCancelarReabertura').addEventListener('click', function() {
+            fecharModalReabertura();
+        });
+
+        document.getElementById('btnReabrirTicket').addEventListener('click', function() {
+            console.log('🔄 Usuário clicou em Reabrir Ticket');
+            reabrirAtividadeAnterior();
+        });
+
+        document.getElementById('btnNovaAtividade').addEventListener('click', function() {
+            console.log('➕ Usuário clicou em Criar Nova Atividade');
+            fecharModalReabertura();
+            mostrarAlerta('info', 'Por favor, insira um número de ticket diferente');
+        });
+
         btnConfirmarJustificativa.addEventListener('click', confirmarJustificativa);
         btnCancelarPausa.addEventListener('click', fecharModalPausarAtividade);
         btnConfirmarPausa.addEventListener('click', confirmarPausarAtividade);
@@ -2867,6 +3289,7 @@
 
         // ✅ Event Listeners para o formulário de iniciar atividade
         checkboxTitulo.addEventListener('change', alternarCampoTitulo);
+        checkboxReabrir.addEventListener('change', alternarCampoReabrir);
         inputTicket.addEventListener('input', verificarTicketEmTempo);
 
         // ✅ Dados serão carregados após autenticação (veja onUsuarioAutenticado)

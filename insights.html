@@ -1002,15 +1002,15 @@
             });
 
             // Calcular total de atividades criadas (mesma fórmula do card "Total Criadas")
-            const totalConcluidas = atividadesGlobais.length;
+            const totalConcluidas = atividadesGlobais ? atividadesGlobais.filter(a => !a.isReabertura).length : 0;
             const atividadesEmAndamentoSemPausa = atividadesEmAndamento.filter(a => 
-                a && a.ticket && !ticketsPausados.has(a.ticket)
+                a && a.ticket && !ticketsPausados.has(a.ticket) && !a.isReabertura
             );
             const totalEmAndamento = atividadesEmAndamentoSemPausa.length;
             const totalPausadas = historicoPausas ? 
                 (Array.isArray(historicoPausas) ? 
-                    historicoPausas.filter(p => p && p.status === 'Pausado').length : 
-                    Object.values(historicoPausas).filter(p => p && p.status === 'Pausado').length
+                    historicoPausas.filter(p => p && p.status === 'Pausado' && !p.isReabertura).length : 
+                    Object.values(historicoPausas).filter(p => p && p.status === 'Pausado' && !p.isReabertura).length
                 ) : 0;
             const totalAtividadesCriadas = totalConcluidas + totalEmAndamento + totalPausadas;
 
@@ -1448,7 +1448,7 @@
             console.log('Renderizando gráfico de resumo consolidado...');
             
             // 1. Total de atividades concluídas (em atividadesGlobais)
-            const totalConcluidas = atividadesGlobais.length;
+            const totalConcluidas = atividadesGlobais ? atividadesGlobais.filter(a => !a.isReabertura).length : 0;
             
             // 2. Total de atividades em andamento (excluindo apenas as que têm pausas ATIVAS com status === 'Pausado')
             const ticketsPausados = new Set();
@@ -1458,15 +1458,15 @@
                 }
             });
             const atividadesEmAndamentoSemPausa = atividadesEmAndamento.filter(a => 
-                a && a.ticket && !ticketsPausados.has(a.ticket)
+                a && a.ticket && !ticketsPausados.has(a.ticket) && !a.isReabertura
             );
             const totalEmAndamento = atividadesEmAndamentoSemPausa.length;
             
-            // 3. Total de atividades pausadas (APENAS as que têm status === 'Pausado', não as retomadas)
+            // 3. Total de atividades pausadas (APENAS as que têm status === 'Pausado', não as retomadas, e excludindo reaberturas)
             const totalPausadas = historicoPausas ? 
                 (Array.isArray(historicoPausas) ? 
-                    historicoPausas.filter(p => p && p.status === 'Pausado').length : 
-                    Object.values(historicoPausas).filter(p => p && p.status === 'Pausado').length
+                    historicoPausas.filter(p => p && p.status === 'Pausado' && !p.isReabertura).length : 
+                    Object.values(historicoPausas).filter(p => p && p.status === 'Pausado' && !p.isReabertura).length
                 ) : 0;
             
             // 4. Total de atividades criadas (soma de todos os status)
@@ -1771,17 +1771,20 @@
                 plugins: [pluginValoresGrafico]
             });
 
-            // Gráfico 2: Pizza - Proporção de Pausas por Setor
-            const ctxPizza = document.getElementById('chartPausasProporcao').getContext('2d');
+            // Gráfico 2: Pizza com valores externos - Proporção de Pausas por Setor
+            const ctxPie = document.getElementById('chartPausasProporcao').getContext('2d');
             if (chartsInstances.chartPausasProporcao) chartsInstances.chartPausasProporcao.destroy();
 
-            chartsInstances.chartPausasProporcao = new Chart(ctxPizza, {
-                type: 'doughnut',
+            const totalPausasPie = quantidadePausas.reduce((a, b) => a + b, 0);
+            const coresPizza = ['#4b5563', '#6b7280', '#9ca3af', '#3b82f6', '#60a5fa', '#93c5fd', '#1f2937', '#374151', '#111827', '#d1d5db'];
+
+            chartsInstances.chartPausasProporcao = new Chart(ctxPie, {
+                type: 'pie',
                 data: {
                     labels: setores,
                     datasets: [{
                         data: quantidadePausas,
-                        backgroundColor: cores.slice(0, setores.length),
+                        backgroundColor: coresPizza.slice(0, setores.length),
                         borderColor: '#fff',
                         borderWidth: 2
                     }]
@@ -1792,22 +1795,51 @@
                     plugins: {
                         legend: { 
                             display: true, 
-                            position: 'bottom',
-                            labels: { font: { size: 12 } }
+                            position: 'right',
+                            labels: { 
+                                font: { size: 12 },
+                                padding: 20,
+                                usePointStyle: true
+                            }
                         },
                         tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
                             callbacks: {
                                 label: function(context) {
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                     const valor = context.parsed;
-                                    const pct = total > 0 ? Math.round((valor / total) * 100) : 0;
+                                    const pct = totalPausasPie > 0 ? Math.round((valor / totalPausasPie) * 100) : 0;
                                     return `${valor} pausas (${pct}%)`;
                                 }
                             }
                         }
                     }
                 },
-                plugins: [pluginValoresGraficoPizza]
+                plugins: [{
+                    id: 'textCenter',
+                    beforeDatasetsDraw(chart) {
+                        const {ctx} = chart;
+                        ctx.save();
+                        
+                        chart.data.datasets[0].data.forEach((value, index) => {
+                            const meta = chart.getDatasetMeta(0);
+                            const arc = meta.data[index];
+                            const radius = arc.innerRadius + (arc.outerRadius - arc.innerRadius) / 2;
+                            const x = arc.x + Math.cos((arc.startAngle + arc.endAngle) / 2) * (radius + 50);
+                            const y = arc.y + Math.sin((arc.startAngle + arc.endAngle) / 2) * (radius + 50);
+                            
+                            const pct = totalPausasPie > 0 ? Math.round((value / totalPausasPie) * 100) : 0;
+                            
+                            ctx.fillStyle = '#000';
+                            ctx.font = 'bold 13px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(`${value}`, x, y - 10);
+                            ctx.fillText(`${pct}%`, x, y + 10);
+                        });
+                        ctx.restore();
+                    }
+                }]
             });
 
             console.log('Análise de pausas renderizada com sucesso');
