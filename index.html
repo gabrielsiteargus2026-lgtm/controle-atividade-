@@ -2230,6 +2230,7 @@
                     // ✅ ATUALIZAR o registro existente
                     historicoPausas[indicePausa].status = 'Retomado';
                     historicoPausas[indicePausa].horaRetomada = agora.toLocaleTimeString('pt-BR');
+                    historicoPausas[indicePausa].dataRetomada = agora.toLocaleDateString('pt-BR');
                     historicoPausas[indicePausa].tempoPausaMs = tempoPausaMs;
                     historicoPausas[indicePausa].tempoPausaFormatado = formatarTempo(tempoPausaMs);
                     historicoPausas[indicePausa].ativa = false;
@@ -2249,6 +2250,7 @@
                             dataInicio: atividade.dataInicio || '-',
                             horaPausa: new Date(estadoPausa.tempoInicioPausa).toLocaleTimeString('pt-BR'),
                             horaRetomada: agora.toLocaleTimeString('pt-BR'),
+                            dataRetomada: agora.toLocaleDateString('pt-BR'),
                             tempoPausaMs: tempoPausaMs,
                             tempoPausaFormatado: formatarTempo(tempoPausaMs),
                             duracao: atividade.duracao || '00:00:00',

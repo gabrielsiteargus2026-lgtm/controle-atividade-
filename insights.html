@@ -535,6 +535,7 @@
                             <th>Data</th>
                             <th>Hora da Pausa</th>
                             <th>Hora da Retomada</th>
+                            <th>Data Retomada</th>
                             <th>Duração da Pausa</th>
                             <th>Status</th>
                             <th>Grupo</th>
@@ -670,6 +671,9 @@
         }
 
         // Carregar dados ao iniciar
+        // ⭐ Flag para controlar se dados iniciais foram carregados
+        let dadosIniciaisCarregados = false;
+
         function carregarDados() {
             console.log('--- INICIANDO CARREGAMENTO DE DADOS ---');
             console.log('Firebase OK:', window.FIREBASE_OK);
@@ -681,6 +685,7 @@
                     carregarDoLocalStorage();
                 }, 5000);
 
+                // ⭐ Carregar atividades (inicial)
                 window.db.ref('atividades').once('value', snapshot => {
                     clearTimeout(timeoutId);
                     if (snapshot.exists()) {
@@ -688,62 +693,11 @@
                         atividadesGlobais = normalizarDados(dados);
                         console.log('✅ Atividades carregadas do Firebase:', atividadesGlobais.length);
                         
-                        // Log detalhado dos dados
                         if (atividadesGlobais.length > 0) {
                             console.log('Primeiras 3 atividades:', atividadesGlobais.slice(0, 3));
                         }
                         
-                        // Carregar atividades em andamento
-                        window.db.ref('atividadesEmAndamento').once('value', andamentoSnapshot => {
-                            if (andamentoSnapshot.exists()) {
-                                atividadesEmAndamento = normalizarDados(andamentoSnapshot.val());
-                                console.log('✅ Atividades em andamento carregadas:', atividadesEmAndamento.length);
-                            } else {
-                                console.log('Nenhuma atividade em andamento no Firebase');
-                                atividadesEmAndamento = [];
-                            }
-                            carregarKanbanEPausas();
-                        }).catch(erro => {
-                            console.error('Erro ao carregar atividades em andamento:', erro);
-                            atividadesEmAndamento = [];
-                            carregarKanbanEPausas();
-                        });
-                        
-                        function carregarKanbanEPausas() {
-                            // Carregar também o kanbanState
-                            window.db.ref('kanbanState').once('value', stateSnapshot => {
-                            if (stateSnapshot.exists()) {
-                                kanbanStateGlobal = stateSnapshot.val();
-                                console.log('✅ KanbanState carregado do Firebase:', Object.keys(kanbanStateGlobal).length, 'itens');
-                            } else {
-                                console.log('Nenhum kanbanState no Firebase');
-                                carregarKanbanStateDoLocalStorage();
-                            }
-                            
-                            // Carregar também o histórico de pausas
-                            window.db.ref('historicoPausas').once('value', pausasSnapshot => {
-                                if (pausasSnapshot.exists()) {
-                                    historicoPausas = normalizarDados(pausasSnapshot.val());
-                                    console.log('✅ Histórico de pausas carregado do Firebase:', historicoPausas.length, 'pausas');
-                                } else {
-                                    console.log('Nenhum histórico de pausas no Firebase');
-                                    carregarHistoricoPausasDoLocalStorage();
-                                }
-                                atualizarDashboard();
-                            }).catch(erro => {
-                                console.error('Erro ao carregar histórico de pausas do Firebase:', erro);
-                                carregarHistoricoPausasDoLocalStorage();
-                                atualizarDashboard();
-                            });
-                            }).catch(erro => {
-                                console.error('Erro ao carregar kanbanState do Firebase:', erro);
-                                carregarKanbanStateDoLocalStorage();
-                                
-                                // Carregar histórico de pausas do localStorage
-                                carregarHistoricoPausasDoLocalStorage();
-                                atualizarDashboard();
-                            });
-                        }
+                        registrarListenersTempoReal();
                     } else {
                         console.log('Nenhuma atividade no Firebase. Usando localStorage...');
                         carregarDoLocalStorage();
@@ -756,6 +710,90 @@
             } else {
                 console.log('Firebase não disponível. Carregando do localStorage...');
                 carregarDoLocalStorage();
+            }
+        }
+
+        // ⭐ NOVOS LISTENERS EM TEMPO REAL
+        function registrarListenersTempoReal() {
+            console.log('📡 Registrando listeners em tempo real...');
+            
+            // Listener 1: Atividades em andamento
+            window.db.ref('atividadesEmAndamento').on('value', andamentoSnapshot => {
+                const emAndamentoAnteriores = JSON.stringify(atividadesEmAndamento);
+                
+                if (andamentoSnapshot.exists()) {
+                    atividadesEmAndamento = normalizarDados(andamentoSnapshot.val());
+                    console.log('🔄 Atividades em andamento:', atividadesEmAndamento.length);
+                } else {
+                    atividadesEmAndamento = [];
+                }
+                
+                // Atualizar dashboard se mudou
+                if (emAndamentoAnteriores !== JSON.stringify(atividadesEmAndamento)) {
+                    console.log('⚡ Mudança detectada em atividades em andamento - atualizando...');
+                    atualizarDashboard();
+                } else if (!dadosIniciaisCarregados) {
+                    verificarCarregamentoCompleto();
+                }
+            }, erro => {
+                console.error('Erro ao escutar atividades em andamento:', erro);
+                verificarCarregamentoCompleto();
+            });
+            
+            // Listener 2: KanbanState (detecta retomadas)
+            window.db.ref('kanbanState').on('value', stateSnapshot => {
+                const kanbanStateAnterior = JSON.stringify(kanbanStateGlobal);
+                
+                if (stateSnapshot.exists()) {
+                    kanbanStateGlobal = stateSnapshot.val();
+                    console.log('🔄 KanbanState:', Object.keys(kanbanStateGlobal).length, 'itens');
+                } else {
+                    kanbanStateGlobal = {};
+                }
+                
+                // Atualizar dashboard se mudou
+                if (kanbanStateAnterior !== JSON.stringify(kanbanStateGlobal)) {
+                    console.log('⚡ Mudança detectada em kanbanState - atualizando...');
+                    atualizarDashboard();
+                } else if (!dadosIniciaisCarregados) {
+                    verificarCarregamentoCompleto();
+                }
+            }, erro => {
+                console.error('Erro ao escutar kanbanState:', erro);
+                verificarCarregamentoCompleto();
+            });
+            
+            // Listener 3: Histórico de Pausas (PRINCIPAL - dados reais de pausas)
+            window.db.ref('historicoPausas').on('value', pausasSnapshot => {
+                const pausasAnteriores = historicoPausas.length;
+                
+                if (pausasSnapshot.exists()) {
+                    historicoPausas = normalizarDados(pausasSnapshot.val());
+                    console.log('🔄 Histórico de pausas atualizado:', historicoPausas.length, 'pausas');
+                } else {
+                    console.log('Nenhum histórico de pausas no Firebase');
+                    historicoPausas = [];
+                }
+                
+                // ⚡ SEMPRE atualizar dashboard quando histórico de pausas muda
+                if (pausasAnteriores !== historicoPausas.length) {
+                    console.log('⚡⚡⚡ MUDANÇA DETECTADA NO HISTÓRICO DE PAUSAS! Anterior:', pausasAnteriores, '→ Novo:', historicoPausas.length);
+                    atualizarDashboard();
+                } else if (!dadosIniciaisCarregados) {
+                    verificarCarregamentoCompleto();
+                }
+            }, erro => {
+                console.error('Erro ao escutar histórico de pausas:', erro);
+                verificarCarregamentoCompleto();
+            });
+        }
+
+        // ⭐ Verificar se todos os dados foram carregados inicialmente
+        function verificarCarregamentoCompleto() {
+            if (!dadosIniciaisCarregados && atividadesGlobais.length >= 0) {
+                console.log('✅ Dados iniciais carregados com sucesso!');
+                dadosIniciaisCarregados = true;
+                atualizarDashboard();
             }
         }
 
@@ -775,6 +813,13 @@
             
             carregarKanbanStateDoLocalStorage();
             carregarHistoricoPausasDoLocalStorage();
+            
+            // ⭐ Mesmo carregando do localStorage, registrar listeners do Firebase se disponível
+            if (window.FIREBASE_OK && window.db) {
+                console.log('📡 Registrando listeners em tempo real (fallback localStorage)...');
+                registrarListenersTempoReal();
+            }
+            
             atualizarDashboard();
         }
 
@@ -1072,6 +1117,10 @@
                 const statusPausa = pausa.status || 'Retomado';
                 const corStatus = pausa.status === 'Pausado' ? '#ffd700' : '#51cf66';
                 
+                // ⭐ USAR tempoPausaFormatado (duração real da pausa) ao invés de duracao (duração da atividade)
+                const duracaoPausa = pausa.tempoPausaFormatado || pausa.duracao || 'N/A';
+                const dataRetomada = pausa.dataRetomada || (pausa.status === 'Retomado' ? pausa.dataInicio : '-');
+                
                 tabelaHtml += `
                     <tr>
                         <td><strong>#${pausa.ticket}</strong></td>
@@ -1079,7 +1128,8 @@
                         <td>${pausa.dataInicio || '-'}</td>
                         <td>${pausa.horaPausa || '-'}</td>
                         <td>${pausa.horaRetomada || '-'}</td>
-                        <td><strong>${pausa.duracao || 'N/A'}</strong></td>
+                        <td>${dataRetomada}</td>
+                        <td><strong>${duracaoPausa}</strong></td>
                         <td><span style="background: ${corStatus === '#ffd700' ? '#fffacd' : '#d3f9d8'}; color: ${corStatus === '#ffd700' ? '#856404' : '#2f9e44'}; padding: 4px 8px; border-radius: 3px; font-size: 0.9em; font-weight: 600;">${statusPausa}</span></td>
                         <td>${grupo ? `<span style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 3px; font-size: 0.9em;">${grupo}</span>` : '-'}</td>
                     </tr>
@@ -1424,14 +1474,13 @@
                 pausasPorSetor[pausa.grupo]++;
             });
 
-            console.log('Resumo consolidado:', {
-                totalAtividadesCriadas,
-                totalConcluidas,
-                totalEmAndamento,
-                totalPausadas,
-                historicoPausasLength: historicoPausas.length,
-                pausasPorSetor
-            });
+            console.log('📊 RESUMO CONSOLIDADO ATUALIZADO:');
+            console.log('  ✅ Total Criados:', totalAtividadesCriadas);
+            console.log('  ▶️  Em Andamento:', totalEmAndamento);
+            console.log('  ⏸️  Pausadas:', totalPausadas, '← VALOR DO CARD');
+            console.log('  ✓ Concluídas:', totalConcluidas);
+            console.log('  historicoPausas array:', historicoPausas);
+            console.log('  pausasPorSetor:', pausasPorSetor);
             
             // ===== ATUALIZAR CARDS DE RESUMO =====
             document.getElementById('totalAtividadesCriadas').textContent = totalAtividadesCriadas;
@@ -1597,22 +1646,26 @@
             console.log('Total de pausas:', todasAsPausas.length);
             console.log('Pausas:', todasAsPausas.slice(0, 3));
 
-            // Calcular tempos para pausas ativas
+            // ⭐ Calcular tempos para pausas ativas (que ainda estão pausadas)
             todasAsPausas = todasAsPausas.map(pausa => {
-                if (pausa && pausa.status === 'Pausado' && pausa.horaPausa) {
+                if (pausa && pausa.status === 'Pausado' && !pausa.horaRetomada) {
+                    // Pausas ainda ativas: calcular tempo desde o início da pausa
                     try {
                         const agora = new Date();
-                        const horaPausaDate = new Date(pausa.horaPausa);
-                        const tempoPausaMs = agora.getTime() - horaPausaDate.getTime();
-                        return {
-                            ...pausa,
-                            tempoPausaMs: Math.max(0, tempoPausaMs),
-                            tempoPausaFormatado: formatarTempoms(Math.max(0, tempoPausaMs))
-                        };
+                        // Se temos a hora em ms salva, usar
+                        if (pausa.tempoInicioPauseMs) {
+                            const tempoPausaMs = agora.getTime() - pausa.tempoInicioPauseMs;
+                            return {
+                                ...pausa,
+                                tempoPausaMs: Math.max(0, tempoPausaMs),
+                                tempoPausaFormatado: formatarTempoms(Math.max(0, tempoPausaMs))
+                            };
+                        }
                     } catch (e) {
-                        return pausa;
+                        console.warn('Erro ao calcular pausa ativa:', e);
                     }
                 }
+                // ⭐ Para pausas já retomadas, usar o tempoPausaMs que já foi calculado
                 return pausa;
             });
 
@@ -1632,23 +1685,31 @@
                 return;
             }
 
-            // KPI: Tempo total pausado
+            // KPI: Tempo total pausado (usar tempoPausaMs ou tempoPausaFormatado convertido para ms)
             const tempoTotalMs = todasAsPausas.reduce((acc, p) => {
-                if (!p || p.tempoPausaMs === undefined) return acc;
-                return acc + (p.tempoPausaMs || 0);
+                if (!p) return acc;
+                // ⭐ Usar tempoPausaMs que já foi calculado
+                if (p.tempoPausaMs !== undefined && p.tempoPausaMs !== null) {
+                    return acc + p.tempoPausaMs;
+                }
+                // Fallback: tentar converter de tempoPausaFormatado
+                return acc;
             }, 0);
             const tempoTotalHoras = tempoTotalMs / (1000 * 60 * 60);
+            console.log('⏱️ Tempo total de pausas:', tempoTotalHoras, 'horas (', tempoTotalMs, 'ms)');
             document.getElementById('kpiTempoTotal').textContent = formatarHoras(tempoTotalHoras);
 
             // KPI: Pausa mais longa
-            const temposValidos = todasAsPausas.filter(p => p && p.tempoPausaMs !== undefined).map(p => p.tempoPausaMs || 0);
+            const temposValidos = todasAsPausas.filter(p => p && p.tempoPausaMs !== undefined && p.tempoPausaMs !== null).map(p => p.tempoPausaMs || 0);
             const maiorPausaMs = temposValidos.length > 0 ? Math.max(...temposValidos) : 0;
             const maiorPausaHoras = maiorPausaMs / (1000 * 60 * 60);
+            console.log('⏱️ Maior pausa:', maiorPausaHoras, 'horas');
             document.getElementById('kpiMaiorPausa').textContent = formatarHoras(maiorPausaHoras);
 
             // KPI: Tempo médio de pausa
             const mediaMs = tempoTotalMs / totalPausas;
             const mediaHoras = mediaMs / (1000 * 60 * 60);
+            console.log('⏱️ Tempo médio de pausas:', mediaHoras, 'horas');
             document.getElementById('kpiMediaPausas').textContent = formatarHoras(mediaHoras);
 
             // Agrupar pausas por setor
@@ -1818,6 +1879,7 @@
                                 <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; font-size: 0.9em;">Ticket</th>
                                 <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; font-size: 0.9em;">Data</th>
                                 <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; font-size: 0.9em;">Duração</th>
+                                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; font-size: 0.9em;">Descrição</th>
                                 <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; font-size: 0.9em;">Observação</th>
                             </tr>
                         </thead>
@@ -1833,6 +1895,7 @@
                             </td>
                             <td style="padding: 12px; color: #6b7280; font-size: 0.9em;">${atividade.dataInicio || '-'}</td>
                             <td style="padding: 12px; color: #1f2937; font-weight: 600; font-size: 0.9em;">${atividade.duracao || '-'}</td>
+                            <td style="padding: 12px; color: #6b7280; font-size: 0.85em; max-width: 300px; word-wrap: break-word; white-space: normal;" title="${atividade.descricao || ''}">${atividade.descricao || '-'}</td>
                             <td style="padding: 12px; color: #6b7280; font-size: 0.85em; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${atividade.observacao || ''}">${atividade.observacao || '-'}</td>
                         </tr>
                     `;
@@ -1869,7 +1932,9 @@
         // Inicializar ao carregar
         window.addEventListener('load', carregarDados);
 
-        // Auto-atualizar a cada 10 segundos
+        // ⭐ Auto-atualizar a cada 10 segundos - COMENTADO pois agora usamos listeners em tempo real do Firebase
+        // Os dados de pausas e kanbanState são atualizados automaticamente via .on('value') listeners
+        /*
         setInterval(() => {
             if (window.FIREBASE_OK && window.db) {
                 try {
@@ -1932,6 +1997,7 @@
                 }
             }
         }, 10000);
+        */
 
         // Sincronizar imediatamente quando a aba recebe foco
         window.addEventListener('focus', () => {
