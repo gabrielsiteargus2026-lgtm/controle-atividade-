@@ -992,9 +992,9 @@
                 colaboradores[a.colaborador]++;
             });
             
-            // Contar atividades por colaborador (pausadas)
+            // Contar atividades por colaborador (pausadas - apenas status 'Pausado')
             historicoPausas.forEach(p => {
-                if (!p || !p.colaborador) return;
+                if (!p || !p.colaborador || p.status !== 'Pausado') return;
                 if (!colaboradores[p.colaborador]) {
                     colaboradores[p.colaborador] = 0;
                 }
@@ -1007,7 +1007,11 @@
                 a && a.ticket && !ticketsPausados.has(a.ticket)
             );
             const totalEmAndamento = atividadesEmAndamentoSemPausa.length;
-            const totalPausadas = historicoPausas ? (Array.isArray(historicoPausas) ? historicoPausas.length : Object.keys(historicoPausas).length) : 0;
+            const totalPausadas = historicoPausas ? 
+                (Array.isArray(historicoPausas) ? 
+                    historicoPausas.filter(p => p && p.status === 'Pausado').length : 
+                    Object.values(historicoPausas).filter(p => p && p.status === 'Pausado').length
+                ) : 0;
             const totalAtividadesCriadas = totalConcluidas + totalEmAndamento + totalPausadas;
 
             console.log('Atividades por colaborador:', colaboradores);
@@ -1247,9 +1251,9 @@
                 atividadesPorDia[data]++;
             });
             
-            // Contar atividades pausadas (todas as do histórico)
+            // Contar atividades pausadas (apenas as com status === 'Pausado')
             historicoPausas.forEach(p => {
-                if (!p || !p.dataInicio) return;
+                if (!p || !p.dataInicio || p.status !== 'Pausado') return;
                 const data = p.dataInicio;
                 if (!atividadesPorDia[data]) atividadesPorDia[data] = 0;
                 atividadesPorDia[data]++;
@@ -1333,9 +1337,9 @@
                 atividadesPorDia[data]++;
             });
             
-            // Contar atividades pausadas
+            // Contar atividades pausadas (apenas as com status === 'Pausado')
             historicoPausas.forEach(p => {
-                if (!p || !p.dataInicio) return;
+                if (!p || !p.dataInicio || p.status !== 'Pausado') return;
                 const data = p.dataInicio;
                 if (!atividadesPorDia[data]) atividadesPorDia[data] = 0;
                 atividadesPorDia[data]++;
@@ -1446,10 +1450,10 @@
             // 1. Total de atividades concluídas (em atividadesGlobais)
             const totalConcluidas = atividadesGlobais.length;
             
-            // 2. Total de atividades em andamento (excluindo as que têm pausas)
+            // 2. Total de atividades em andamento (excluindo apenas as que têm pausas ATIVAS com status === 'Pausado')
             const ticketsPausados = new Set();
             historicoPausas.forEach(p => {
-                if (p && p.ticket) {
+                if (p && p.ticket && p.status === 'Pausado') {
                     ticketsPausados.add(p.ticket);
                 }
             });
@@ -1458,8 +1462,12 @@
             );
             const totalEmAndamento = atividadesEmAndamentoSemPausa.length;
             
-            // 3. Total de atividades pausadas (TODAS as pausas no histórico - independente do status)
-            const totalPausadas = historicoPausas ? (Array.isArray(historicoPausas) ? historicoPausas.length : Object.keys(historicoPausas).length) : 0;
+            // 3. Total de atividades pausadas (APENAS as que têm status === 'Pausado', não as retomadas)
+            const totalPausadas = historicoPausas ? 
+                (Array.isArray(historicoPausas) ? 
+                    historicoPausas.filter(p => p && p.status === 'Pausado').length : 
+                    Object.values(historicoPausas).filter(p => p && p.status === 'Pausado').length
+                ) : 0;
             
             // 4. Total de atividades criadas (soma de todos os status)
             const totalAtividadesCriadas = totalConcluidas + totalEmAndamento + totalPausadas;
@@ -1539,24 +1547,25 @@
             const tabelaPausasElement = document.getElementById('tabelaPausasSetores');
             let tabelaHTML = '<table style="width: 100%; border-collapse: collapse;">';
             tabelaHTML += '<tr style="background: #f0f0f0; border-bottom: 2px solid #3b82f6;">';
-            tabelaHTML += '<th style="padding: 8px; text-align: left; font-weight: bold;">Setor</th>';
-            tabelaHTML += '<th style="padding: 8px; text-align: center; font-weight: bold;">Pausas</th>';
-            tabelaHTML += '<th style="padding: 8px; text-align: center; font-weight: bold;">%</th>';
+            tabelaHTML += '<th style="padding: 12px; text-align: left; font-weight: bold; color: #1f2937;">Setor</th>';
+            tabelaHTML += '<th style="padding: 12px; text-align: center; font-weight: bold; color: #1f2937;">Pausas</th>';
+            tabelaHTML += '<th style="padding: 12px; text-align: center; font-weight: bold; color: #1f2937;">%</th>';
             tabelaHTML += '</tr>';
 
             const setoresOrdenados = Object.keys(pausasPorSetor).sort();
+            
             if (setoresOrdenados.length === 0) {
-                tabelaHTML += '<tr><td colspan="3" style="padding: 10px; text-align: center; color: #999;">Nenhuma pausa registrada</td></tr>';
+                tabelaHTML += '<tr><td colspan="3" style="padding: 12px; text-align: center; color: #999;">Nenhuma pausa registrada</td></tr>';
             } else {
                 setoresOrdenados.forEach((setor, idx) => {
                     const pausasSetor = pausasPorSetor[setor];
                     const percentualSetor = totalPausadas > 0 ? Math.round((pausasSetor / totalPausadas) * 100) : 0;
-                    const corFundo = idx % 2 === 0 ? '#fff' : '#f9f9f9';
+                    const corFundo = idx % 2 === 0 ? '#ffffff' : '#f9fafb';
                     
-                    tabelaHTML += `<tr style="background: ${corFundo}; border-bottom: 1px solid #e0e0e0;">`;
-                    tabelaHTML += `<td style="padding: 8px; font-weight: 500;">${setor}</td>`;
-                    tabelaHTML += `<td style="padding: 8px; text-align: center;">${pausasSetor}</td>`;
-                    tabelaHTML += `<td style="padding: 8px; text-align: center; color: #3b82f6; font-weight: bold;">${percentualSetor}%</td>`;
+                    tabelaHTML += `<tr style="background: ${corFundo}; border-bottom: 1px solid #e5e7eb;">`;
+                    tabelaHTML += `<td style="padding: 12px; text-align: left; color: #1f2937;">${setor}</td>`;
+                    tabelaHTML += `<td style="padding: 12px; text-align: center; color: #4b5563; font-weight: 500;">${pausasSetor}</td>`;
+                    tabelaHTML += `<td style="padding: 12px; text-align: center; color: #3b82f6; font-weight: 600;">${percentualSetor}%</td>`;
                     tabelaHTML += '</tr>';
                 });
             }
