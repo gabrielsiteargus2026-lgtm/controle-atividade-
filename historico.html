@@ -374,45 +374,67 @@
                     if (dadosLocal) {
                         try {
                             atividadesLocal = JSON.parse(dadosLocal);
+                            // Garantir que é um array
+                            if (!Array.isArray(atividadesLocal)) {
+                                atividadesLocal = [atividadesLocal];
+                            }
                         } catch (e) {
                             console.error('Erro ao parsear atividades do localStorage:', e);
+                            atividadesLocal = [];
                         }
                     }
 
                     // Combinar ambos e remover duplicatas
                     atividades = [...atividadesFinalizadas, ...atividadesLocal];
                     
-                    // Remover duplicatas por ticket
+                    // Remover duplicatas por ID ou Ticket
                     const unicos = {};
                     atividades.forEach(a => {
-                        if (a.ticket && !unicos[a.ticket]) {
-                            unicos[a.ticket] = a;
+                        const chave = a.id || a.ticket;
+                        if (chave && !unicos[chave]) {
+                            unicos[chave] = a;
                         }
                     });
                     atividades = Object.values(unicos);
                     
                     // Ordenar por data e hora de início (mais recente primeiro)
                     atividades.sort((a, b) => {
-                        const dataA = new Date(`${a.dataInicio} ${a.horaInicio}`);
-                        const dataB = new Date(`${b.dataInicio} ${b.horaInicio}`);
+                        const dataA = new Date(`${a.dataInicio || '01/01/2000'} ${a.horaInicio || '00:00:00'}`);
+                        const dataB = new Date(`${b.dataInicio || '01/01/2000'} ${b.horaInicio || '00:00:00'}`);
                         return dataB - dataA;
                     });
 
-                    console.log('Carregadas', atividades.length, 'atividades do histórico');
+                    console.log('✅ Carregadas', atividades.length, 'atividades do histórico');
                     renderizarTabela();
                 });
             } else {
                 // Fallback apenas para localStorage
                 const dadosLocal = localStorage.getItem('atividades');
-                atividades = dadosLocal ? JSON.parse(dadosLocal) : [];
+                let atividadesLocal = [];
+                
+                if (dadosLocal) {
+                    try {
+                        atividadesLocal = JSON.parse(dadosLocal);
+                        // Garantir que é um array
+                        if (!Array.isArray(atividadesLocal)) {
+                            atividadesLocal = [atividadesLocal];
+                        }
+                    } catch (e) {
+                        console.error('Erro ao parsear atividades do localStorage:', e);
+                        atividadesLocal = [];
+                    }
+                }
+                
+                atividades = atividadesLocal;
                 
                 // Ordenar por data e hora de início (mais recente primeiro)
                 atividades.sort((a, b) => {
-                    const dataA = new Date(`${a.dataInicio} ${a.horaInicio}`);
-                    const dataB = new Date(`${b.dataInicio} ${b.horaInicio}`);
+                    const dataA = new Date(`${a.dataInicio || '01/01/2000'} ${a.horaInicio || '00:00:00'}`);
+                    const dataB = new Date(`${b.dataInicio || '01/01/2000'} ${b.horaInicio || '00:00:00'}`);
                     return dataB - dataA;
                 });
                 
+                console.log('✅ Carregadas', atividades.length, 'atividades do localStorage');
                 renderizarTabela();
             }
         }
@@ -427,13 +449,13 @@
             bodyTabela.innerHTML = atividades.map((atividade, index) => `
                 <tr>
                     <td><strong style="color: #9c27b0;">${atividade.chaveAtividade || 'N/A'}</strong></td>
-                    <td>${atividade.colaborador}</td>
-                    <td>${atividade.ticket}</td>
-                    <td>${atividade.dataInicio}</td>
-                    <td>${atividade.horaInicio}</td>
+                    <td>${atividade.nome || atividade.colaborador || '-'}</td>
+                    <td>${atividade.ticket || '-'}</td>
+                    <td>${atividade.dataInicio || '-'}</td>
+                    <td>${atividade.horaInicio || '-'}</td>
                     <td>${atividade.dataFim || '-'}</td>
-                    <td>${atividade.horaFim}</td>
-                    <td>${atividade.duracao}</td>
+                    <td>${atividade.horaFim || '-'}</td>
+                    <td>${atividade.duracao || '-'}</td>
                     <td>${atividade.descricao || '-'}</td>
                     <td>${atividade.observacao || '-'}</td>
                     <td>${atividade.justificativa || '-'}</td>
@@ -451,16 +473,30 @@
             const headers = ['Chave', 'Colaborador', 'Ticket', 'Data de Início', 'Hora de Início', 'Data de Fim', 'Hora de Fim', 'Duração', 'Descrição', 'Observação', 'Justificativa'];
             const csv = [
                 headers.join(','),
-                ...atividades.map(a => [a.chaveAtividade || 'N/A', a.colaborador, a.ticket, a.dataInicio, a.horaInicio, a.dataFim || '', a.horaFim, a.duracao, a.descricao || '', a.observacao || '', a.justificativa || ''].join(','))
+                ...atividades.map(a => [
+                    a.chaveAtividade || 'N/A', 
+                    a.nome || a.colaborador || '', 
+                    a.ticket || '', 
+                    a.dataInicio || '', 
+                    a.horaInicio || '', 
+                    a.dataFim || '', 
+                    a.horaFim || '', 
+                    a.duracao || '', 
+                    a.descricao || '', 
+                    a.observacao || '', 
+                    a.justificativa || ''
+                ].join(','))
             ].join('\n');
 
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `historico_atividades_${new Date().toISOString().slice(0, 10)}.csv`;
-            a.click();
-            window.URL.revokeObjectURL(url);
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `historico_atividades_${new Date().toISOString().slice(0, 10)}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         });
 
 

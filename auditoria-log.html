@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auditoria - Log de Operações</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 1.8em;
+            margin-bottom: 10px;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+            font-size: 0.9em;
+        }
+
+        .btn-primary {
+            background: #5b8ec6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #3d6aa8;
+        }
+
+        .btn-success {
+            background: #51cf66;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #37b24d;
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #f03e3e;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 0.85em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.9em;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #5b8ec6;
+            box-shadow: 0 0 0 2px rgba(91, 142, 198, 0.2);
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #2c3e50;
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tbody tr:hover {
+            background: #f5f5f5;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .status-concluido {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-pendente {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-erro {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 0.8em;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-small.edit {
+            background: #5b8ec6;
+            color: white;
+        }
+
+        .btn-small.edit:hover {
+            background: #3d6aa8;
+        }
+
+        .btn-small.delete {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-small.delete:hover {
+            background: #f03e3e;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state p {
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-card h3 {
+            color: #999;
+            font-size: 0.9em;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📋 Auditoria - Log de Operações</h1>
+            <p style="color: #666; font-size: 0.95em; margin-top: 5px;">Local para registrar e acompanhar operações do sistema</p>
+
+            <!-- Controles -->
+            <div class="header-controls">
+                <button class="btn btn-primary" onclick="abrirModalAdicionar()">➕ Adicionar Registro</button>
+                <button class="btn btn-success" onclick="exportarXLS()">📊 Exportar XLS</button>
+                <button class="btn btn-danger" onclick="limparTodos()">🗑️ Limpar Tudo</button>
+            </div>
+        </div>
+
+        <!-- Estatísticas -->
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total de Registros</h3>
+                <div class="value" id="totalRegistros">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Concluídos</h3>
+                <div class="value" id="totalConcluidos">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Pendentes</h3>
+                <div class="value" id="totalPendentes">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Erros</h3>
+                <div class="value" id="totalErros">0</div>
+            </div>
+        </div>
+
+        <!-- Tabela -->
+        <div class="table-container">
+            <div id="alertaContainer"></div>
+            <table id="tabelaRegistros">
+                <thead>
+                    <tr>
+                        <th style="width: 12%">Ticket</th>
+                        <th style="width: 20%">Operação</th>
+                        <th style="width: 50%">Resposta</th>
+                        <th style="width: 10%">Status</th>
+                        <th style="width: 8%">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaBody">
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 40px; color: #999;">
+                            Nenhum registro. Clique em "Adicionar Registro" para começar.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal para Adicionar/Editar -->
+    <div id="modalRegistro" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" id="modalTitulo">Adicionar Registro</div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="inputTicket">Ticket</label>
+                    <input type="text" id="inputTicket" placeholder="ex: #12345">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="inputOperacao">Operação</label>
+                    <select id="inputOperacao">
+                        <option value="">-- Selecione --</option>
+                        <option value="CRIAR">CRIAR</option>
+                        <option value="ATUALIZAR">ATUALIZAR</option>
+                        <option value="DELETAR">DELETAR</option>
+                        <option value="REABRIR">REABRIR</option>
+                        <option value="PAUSAR">PAUSAR</option>
+                        <option value="RETOMAR">RETOMAR</option>
+                        <option value="CONCLUIR">CONCLUIR</option>
+                        <option value="EXPORTAR">EXPORTAR</option>
+                        <option value="IMPORTAR">IMPORTAR</option>
+                        <option value="SINCRONIZAR">SINCRONIZAR</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="inputResposta">Resposta/Descrição</label>
+                    <textarea id="inputResposta" placeholder="Digite a resposta ou descrição..." style="min-height: 80px; resize: vertical;"></textarea>
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="inputStatus">Status</label>
+                    <select id="inputStatus">
+                        <option value="">-- Selecione --</option>
+                        <option value="concluido">✓ Concluído</option>
+                        <option value="pendente">⏳ Pendente</option>
+                        <option value="erro">❌ Erro</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="fecharModal()">Cancelar</button>
+                <button class="btn btn-success" onclick="salvarRegistro()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+    <script>
+        let registros = [];
+        let registroEmEdicao = null;
+
+        // Carregar dados ao iniciar
+        function carregarDados() {
+            const dados = localStorage.getItem('auditoriaLogs');
+            if (dados) {
+                registros = JSON.parse(dados);
+            }
+            renderizarTabela();
+            atualizarEstatisticas();
+        }
+
+        // Salvar dados
+        function salvarDados() {
+            localStorage.setItem('auditoriaLogs', JSON.stringify(registros));
+            console.log('✅ Dados salvos:', registros.length, 'registros');
+        }
+
+        // Abrir modal para adicionar
+        function abrirModalAdicionar() {
+            registroEmEdicao = null;
+            document.getElementById('modalTitulo').textContent = 'Adicionar Registro';
+            document.getElementById('inputTicket').value = '';
+            document.getElementById('inputOperacao').value = '';
+            document.getElementById('inputResposta').value = '';
+            document.getElementById('inputStatus').value = '';
+            document.getElementById('modalRegistro').classList.add('active');
+            document.getElementById('inputTicket').focus();
+        }
+
+        // Abrir modal para editar
+        function abrirModalEditar(index) {
+            registroEmEdicao = index;
+            const registro = registros[index];
+            document.getElementById('modalTitulo').textContent = 'Editar Registro';
+            document.getElementById('inputTicket').value = registro.ticket;
+            document.getElementById('inputOperacao').value = registro.operacao;
+            document.getElementById('inputResposta').value = registro.resposta;
+            document.getElementById('inputStatus').value = registro.status;
+            document.getElementById('modalRegistro').classList.add('active');
+        }
+
+        // Fechar modal
+        function fecharModal() {
+            document.getElementById('modalRegistro').classList.remove('active');
+            registroEmEdicao = null;
+        }
+
+        // Salvar registro
+        function salvarRegistro() {
+            const ticket = document.getElementById('inputTicket').value.trim();
+            const operacao = document.getElementById('inputOperacao').value.trim();
+            const resposta = document.getElementById('inputResposta').value.trim();
+            const status = document.getElementById('inputStatus').value.trim();
+
+            if (!ticket || !operacao || !resposta || !status) {
+                mostrarAlerta('erro', 'Todos os campos são obrigatórios!');
+                return;
+            }
+
+            const novoRegistro = {
+                id: registroEmEdicao !== null ? registros[registroEmEdicao].id : Date.now(),
+                ticket,
+                operacao,
+                resposta,
+                status,
+                data: new Date().toLocaleString('pt-BR'),
+                editado: registroEmEdicao !== null
+            };
+
+            if (registroEmEdicao !== null) {
+                registros[registroEmEdicao] = novoRegistro;
+            } else {
+                registros.unshift(novoRegistro);
+            }
+
+            salvarDados();
+            renderizarTabela();
+            atualizarEstatisticas();
+            fecharModal();
+            mostrarAlerta('sucesso', registroEmEdicao !== null ? 'Registro atualizado!' : 'Registro adicionado!');
+        }
+
+        // Deletar registro
+        function deletarRegistro(index) {
+            if (confirm('Tem certeza que deseja deletar este registro?')) {
+                registros.splice(index, 1);
+                salvarDados();
+                renderizarTabela();
+                atualizarEstatisticas();
+                mostrarAlerta('sucesso', 'Registro deletado!');
+            }
+        }
+
+        // Renderizar tabela
+        function renderizarTabela() {
+            const tbody = document.getElementById('tabelaBody');
+
+            if (registros.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 40px; color: #999;">
+                            Nenhum registro. Clique em "Adicionar Registro" para começar.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = registros.map((reg, index) => `
+                <tr>
+                    <td><strong>${reg.ticket}</strong></td>
+                    <td>${reg.operacao}</td>
+                    <td style="font-size: 0.9em; color: #666;">${reg.resposta.substring(0, 80)}${reg.resposta.length > 80 ? '...' : ''}</td>
+                    <td>
+                        <span class="status-badge status-${reg.status}">
+                            ${reg.status === 'concluido' ? '✓ Concluído' : reg.status === 'pendente' ? '⏳ Pendente' : '❌ Erro'}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-small edit" onclick="abrirModalEditar(${index})">✎ Editar</button>
+                            <button class="btn-small delete" onclick="deletarRegistro(${index})">🗑 Del</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Atualizar estatísticas
+        function atualizarEstatisticas() {
+            const total = registros.length;
+            const concluidos = registros.filter(r => r.status === 'concluido').length;
+            const pendentes = registros.filter(r => r.status === 'pendente').length;
+            const erros = registros.filter(r => r.status === 'erro').length;
+
+            document.getElementById('totalRegistros').textContent = total;
+            document.getElementById('totalConcluidos').textContent = concluidos;
+            document.getElementById('totalPendentes').textContent = pendentes;
+            document.getElementById('totalErros').textContent = erros;
+        }
+
+        // Exportar para XLS
+        function exportarXLS() {
+            if (registros.length === 0) {
+                mostrarAlerta('erro', 'Nenhum registro para exportar!');
+                return;
+            }
+
+            const dados = registros.map(r => ({
+                'Ticket': r.ticket,
+                'Operação': r.operacao,
+                'Resposta': r.resposta,
+                'Status': r.status === 'concluido' ? 'Concluído' : r.status === 'pendente' ? 'Pendente' : 'Erro',
+                'Data': r.data
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(dados);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Auditoria');
+
+            // Ajustar largura das colunas
+            ws['!cols'] = [
+                { wch: 12 },
+                { wch: 15 },
+                { wch: 40 },
+                { wch: 12 },
+                { wch: 20 }
+            ];
+
+            const dataAtual = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+            XLSX.writeFile(wb, `auditoria-log-${dataAtual}.xlsx`);
+            
+            mostrarAlerta('sucesso', `Exportado ${registros.length} registros!`);
+        }
+
+        // Limpar todos os registros
+        function limparTodos() {
+            if (confirm('Tem certeza que deseja limpar TODOS os registros? Esta ação é irreversível!')) {
+                registros = [];
+                salvarDados();
+                renderizarTabela();
+                atualizarEstatisticas();
+                mostrarAlerta('sucesso', 'Todos os registros foram deletados!');
+            }
+        }
+
+        // Mostrar alerta
+        function mostrarAlerta(tipo, mensagem) {
+            const container = document.getElementById('alertaContainer');
+            const classe = tipo === 'sucesso' ? 'alert-success' : 'alert-error';
+            
+            container.innerHTML = `<div class="alert ${classe}">${mensagem}</div>`;
+            
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 3000);
+        }
+
+        // Fechar modal ao clicar fora
+        document.getElementById('modalRegistro').addEventListener('click', function(e) {
+            if (e.target === this) {
+                fecharModal();
+            }
+        });
+
+        // Inicializar
+        carregarDados();
+    </script>
+</body>
+</html>
