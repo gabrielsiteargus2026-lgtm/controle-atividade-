@@ -467,11 +467,6 @@
             <div class="chart-card">
                 <canvas id="chartResumoAtividades"></canvas>
             </div>
-            <!-- Tabela de Pausas por Setor -->
-            <div class="chart-card" style="display: flex; flex-direction: column; justify-content: center;">
-                <h3 style="color: #3b82f6; margin-bottom: 15px; text-align: center;">Pausas por Setor</h3>
-                <div id="tabelaPausasSetores" style="font-size: 0.9em;"></div>
-            </div>
         </div>
 
         <!-- GRÁFICO DE LINHAS - ATIVIDADES CRIADAS POR DIA -->
@@ -512,10 +507,10 @@
                 <h3 style="color: #3b82f6; margin-bottom: 15px; text-align: center;">Distribuição de Pausas por Setor</h3>
                 <canvas id="chartPausasPorSetor"></canvas>
             </div>
-            <!-- Gráfico de Pizza: Proporção de Pausas -->
-            <div class="chart-card">
-                <h3 style="color: #3b82f6; margin-bottom: 15px; text-align: center;">Proporção de Pausas por Setor</h3>
-                <canvas id="chartPausasProporcao"></canvas>
+            <!-- Tabela de Pausas por Setor -->
+            <div class="chart-card" style="display: flex; flex-direction: column; justify-content: center;">
+                <h3 style="color: #3b82f6; margin-bottom: 15px; text-align: center;">Pausas por Setor</h3>
+                <div id="tabelaPausasSetores" style="font-size: 0.9em;"></div>
             </div>
         </div>
 
@@ -1690,7 +1685,6 @@
                 
                 // Limpar gráficos
                 if (chartsInstances.chartPausasPorSetor) chartsInstances.chartPausasPorSetor.destroy();
-                if (chartsInstances.chartPausasProporcao) chartsInstances.chartPausasProporcao.destroy();
                 return;
             }
 
@@ -1769,87 +1763,6 @@
                     }
                 },
                 plugins: [pluginValoresGrafico]
-            });
-
-            // Gráfico 2: Pizza com valores externos - Proporção de Pausas por Setor
-            const ctxPie = document.getElementById('chartPausasProporcao').getContext('2d');
-            if (chartsInstances.chartPausasProporcao) chartsInstances.chartPausasProporcao.destroy();
-
-            const totalPausasPie = quantidadePausas.reduce((a, b) => a + b, 0);
-            const coresPizza = ['#4b5563', '#6b7280', '#9ca3af', '#3b82f6', '#60a5fa', '#93c5fd', '#1f2937', '#374151', '#111827', '#d1d5db'];
-
-            chartsInstances.chartPausasProporcao = new Chart(ctxPie, {
-                type: 'pie',
-                data: {
-                    labels: setores,
-                    datasets: [{
-                        data: quantidadePausas,
-                        backgroundColor: coresPizza.slice(0, setores.length),
-                        borderColor: '#fff',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { 
-                            display: true, 
-                            position: 'right',
-                            labels: { 
-                                font: { size: 12 },
-                                padding: 20,
-                                usePointStyle: true
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            padding: 12,
-                            callbacks: {
-                                label: function(context) {
-                                    const valor = context.parsed;
-                                    const pct = totalPausasPie > 0 ? Math.round((valor / totalPausasPie) * 100) : 0;
-                                    return `${valor} pausas (${pct}%)`;
-                                }
-                            }
-                        }
-                    }
-                },
-                plugins: [{
-                    id: 'textCenter',
-                    beforeDatasetsDraw(chart) {
-                        const {ctx} = chart;
-                        ctx.save();
-                        
-                        chart.data.datasets[0].data.forEach((value, index) => {
-                            const meta = chart.getDatasetMeta(0);
-                            const arc = meta.data[index];
-                            const radius = arc.innerRadius + (arc.outerRadius - arc.innerRadius) / 2;
-                            const x = arc.x + Math.cos((arc.startAngle + arc.endAngle) / 2) * (radius + 120);
-                            const y = arc.y + Math.sin((arc.startAngle + arc.endAngle) / 2) * (radius + 120);
-                            
-                            const pct = totalPausasPie > 0 ? Math.round((value / totalPausasPie) * 100) : 0;
-                            
-                            // Fundo branco com borda para melhor legibilidade
-                            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-                            ctx.strokeStyle = '#3b82f6';
-                            ctx.lineWidth = 2;
-                            ctx.beginPath();
-                            ctx.arc(x, y, 28, 0, Math.PI * 2);
-                            ctx.fill();
-                            ctx.stroke();
-                            
-                            // Texto em negrito e maior
-                            ctx.fillStyle = '#000';
-                            ctx.font = 'bold 16px Arial';
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'middle';
-                            ctx.fillText(`${value}`, x, y - 8);
-                            ctx.fillText(`${pct}%`, x, y + 12);
-                        });
-                        ctx.restore();
-                    }
-                }]
             });
 
             console.log('Análise de pausas renderizada com sucesso');
