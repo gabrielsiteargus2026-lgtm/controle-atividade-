@@ -399,9 +399,15 @@
                     
                     // Ordenar por data e hora de início (mais recente primeiro)
                     atividades.sort((a, b) => {
-                        const dataA = new Date(`${a.dataInicio || '01/01/2000'} ${a.horaInicio || '00:00:00'}`);
-                        const dataB = new Date(`${b.dataInicio || '01/01/2000'} ${b.horaInicio || '00:00:00'}`);
-                        return dataB - dataA;
+                        const converterData = (dataStr, horaStr) => {
+                            if (!dataStr || !horaStr) return new Date('01/01/2000 00:00:00');
+                            // Converter DD/MM/YYYY para YYYY-MM-DD
+                            const [dia, mes, ano] = dataStr.split('/');
+                            return new Date(`${ano}-${mes}-${dia}T${horaStr}`);
+                        };
+                        const dataA = converterData(a.dataInicio, a.horaInicio);
+                        const dataB = converterData(b.dataInicio, b.horaInicio);
+                        return dataB - dataA; // Mais recente primeiro
                     });
 
                     console.log('✅ Carregadas', atividades.length, 'atividades do histórico');
@@ -429,9 +435,15 @@
                 
                 // Ordenar por data e hora de início (mais recente primeiro)
                 atividades.sort((a, b) => {
-                    const dataA = new Date(`${a.dataInicio || '01/01/2000'} ${a.horaInicio || '00:00:00'}`);
-                    const dataB = new Date(`${b.dataInicio || '01/01/2000'} ${b.horaInicio || '00:00:00'}`);
-                    return dataB - dataA;
+                    const converterData = (dataStr, horaStr) => {
+                        if (!dataStr || !horaStr) return new Date('01/01/2000 00:00:00');
+                        // Converter DD/MM/YYYY para YYYY-MM-DD
+                        const [dia, mes, ano] = dataStr.split('/');
+                        return new Date(`${ano}-${mes}-${dia}T${horaStr}`);
+                    };
+                    const dataA = converterData(a.dataInicio, a.horaInicio);
+                    const dataB = converterData(b.dataInicio, b.horaInicio);
+                    return dataB - dataA; // Mais recente primeiro
                 });
                 
                 console.log('✅ Carregadas', atividades.length, 'atividades do localStorage');

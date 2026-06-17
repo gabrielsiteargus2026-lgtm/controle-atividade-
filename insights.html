@@ -524,7 +524,7 @@
         <div class="chart-card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                 <h3 style="margin: 0; color: #3b82f6;">Histórico Completo de Pausas</h3>
-                <button onclick="exportarPausasCSV()" style="background: #51cf66; color: white; border: none; padding: 10px 16px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.95em;">📥 Exportar CSV</button>
+                <button onclick="exportarPausasCSV()" style="background: #51cf66; color: white; border: none; padding: 10px 16px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.95em;">Exportar CSV</button>
             </div>
             <div class="table-container">
                 <table id="tabelaPausas">
@@ -1825,17 +1825,27 @@
                             const meta = chart.getDatasetMeta(0);
                             const arc = meta.data[index];
                             const radius = arc.innerRadius + (arc.outerRadius - arc.innerRadius) / 2;
-                            const x = arc.x + Math.cos((arc.startAngle + arc.endAngle) / 2) * (radius + 50);
-                            const y = arc.y + Math.sin((arc.startAngle + arc.endAngle) / 2) * (radius + 50);
+                            const x = arc.x + Math.cos((arc.startAngle + arc.endAngle) / 2) * (radius + 120);
+                            const y = arc.y + Math.sin((arc.startAngle + arc.endAngle) / 2) * (radius + 120);
                             
                             const pct = totalPausasPie > 0 ? Math.round((value / totalPausasPie) * 100) : 0;
                             
+                            // Fundo branco com borda para melhor legibilidade
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                            ctx.strokeStyle = '#3b82f6';
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            ctx.arc(x, y, 28, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.stroke();
+                            
+                            // Texto em negrito e maior
                             ctx.fillStyle = '#000';
-                            ctx.font = 'bold 13px Arial';
+                            ctx.font = 'bold 16px Arial';
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
-                            ctx.fillText(`${value}`, x, y - 10);
-                            ctx.fillText(`${pct}%`, x, y + 10);
+                            ctx.fillText(`${value}`, x, y - 8);
+                            ctx.fillText(`${pct}%`, x, y + 12);
                         });
                         ctx.restore();
                     }
