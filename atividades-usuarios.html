@@ -862,12 +862,9 @@
                     <thead>
                         <tr>
                             <th>Chave</th>
-                            <th>Data/Hora</th>
-                            <th>Usuário</th>
-                            <th>Email</th>
-                            <th>Ação</th>
                             <th>Ticket</th>
-                            <th>Detalhes</th>
+                            <th>Usuário</th>
+                            <th>Data/Hora</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
@@ -891,26 +888,31 @@
     </div>
 
     <script>
-        // Exibir atividades em tabela (única visualização)
+        // Exibir apenas atividades criadas (INICIO/INICIOU)
         function exibirAtividades() {
             const tbody = document.getElementById('tableBody');
 
-            if (!registrosFiltrados || registrosFiltrados.length === 0) {
+            // Filtrar apenas atividades criadas (INICIO/INICIOU)
+            const atividadesCriadas = registrosFiltrados.filter(r => 
+                r.tipo === 'INICIO' || r.tipo === 'INICIOU'
+            );
+
+            if (!atividadesCriadas || atividadesCriadas.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="6" style="text-align: center; padding: 40px; color: #999;">
-                            Nenhuma atividade encontrada - Tente ajustar os filtros
+                        <td colspan="4" style="text-align: center; padding: 40px; color: #999;">
+                            Nenhuma atividade criada encontrada
                         </td>
                     </tr>
                 `;
-                console.log('📭 Nenhum registro para exibir');
+                console.log('📭 Nenhuma atividade criada para exibir');
                 return;
             }
 
-            console.log(`📋 Exibindo ${registrosFiltrados.length} registros na tabela`);
+            console.log(`📋 Exibindo ${atividadesCriadas.length} atividades criadas na tabela`);
 
             let html = '';
-            registrosFiltrados.forEach((registro, index) => {
+            atividadesCriadas.forEach((registro, index) => {
                 try {
                     const data = new Date(registro.timestamp);
                     const dataFormatada = data.toLocaleDateString('pt-BR', {
@@ -924,99 +926,23 @@
                         second: '2-digit'
                     });
 
-                    let acaoTexto = '';
-                    let acaoBadgeClass = '';
-                    let detalhes = '';
-
-                    // ✅ Mapear tipos de ações com seus detalhes
-                    const tipo = registro.tipo || 'DESCONHECIDO';
-                    switch (tipo) {
-                        case 'INICIO':
-                            acaoTexto = '▶️ Iniciou';
-                            acaoBadgeClass = 'iniciou';
-                            detalhes = `${registro.descricao || 'Sem descrição'}`;
-                            break;
-                        case 'FIM':
-                            acaoTexto = '✅ Finalizou';
-                            acaoBadgeClass = 'finalizou';
-                            detalhes = `Duração: ${registro.duracao || '-'} | ${registro.descricao || ''}`;
-                            break;
-                        case 'PAUSA':
-                            acaoTexto = '⏸️ Pausou';
-                            acaoBadgeClass = 'pausou';
-                            detalhes = `Motivo: ${registro.motivo_pausa || '-'} | Grupo: ${registro.grupo || '-'}`;
-                            break;
-                        case 'RETOMOU':
-                            acaoTexto = '▶️ Retomou';
-                            acaoBadgeClass = 'retomou';
-                            detalhes = `Pausa: ${registro.tempoPausa || '-'}`;
-                            break;
-                        case 'EXCLUSAO':
-                            acaoTexto = '❌ Deletou';
-                            acaoBadgeClass = 'exclusao';
-                            detalhes = `Motivo: ${registro.motivo_exclusao || '-'}`;
-                            break;
-                        case 'LOGIN':
-                            acaoTexto = '🔓 Login';
-                            acaoBadgeClass = 'login';
-                            detalhes = 'Conectado ao sistema';
-                            break;
-                        case 'LOGOUT':
-                            acaoTexto = '🚪 Logout';
-                            acaoBadgeClass = 'logout';
-                            detalhes = 'Desconectado do sistema';
-                            break;
-                        case 'ACESSO_PAGINA':
-                            acaoTexto = '📄 Acessou';
-                            acaoBadgeClass = 'acesso';
-                            detalhes = `Página: ${registro.pagina || 'Desconhecida'}`;
-                            break;
-                        // Manter compatibilidade com nomes antigos
-                        case 'INICIOU':
-                            acaoTexto = '▶️ Iniciou';
-                            acaoBadgeClass = 'iniciou';
-                            detalhes = `${registro.descricao || 'Sem descrição'}`;
-                            break;
-                        case 'FINALIZOU':
-                            acaoTexto = '✅ Finalizou';
-                            acaoBadgeClass = 'finalizou';
-                            detalhes = `Duração: ${registro.duracao || '-'} | ${registro.descricao || ''}`;
-                            break;
-                        case 'PAUSOU':
-                            acaoTexto = '⏸️ Pausou';
-                            acaoBadgeClass = 'pausou';
-                            detalhes = `Motivo: ${registro.motivo || '-'} | Grupo: ${registro.grupo || '-'}`;
-                            break;
-                        default:
-                            acaoTexto = tipo;
-                            acaoBadgeClass = 'desconhecida';
-                            detalhes = registro.descricao || '-';
-                    }
-
-                    // ✅ Extrair ticket - pode estar em diferentes formatos
                     const ticket = registro.ticket || registro.id || '-';
                     const nomeUsuario = registro.nome_usuario || registro.usuario_id || 'Usuário';
-                    const emailUsuario = registro.email_usuario || 'email@desconhecido.com';
                     const chave = registro.chaveAtividade || '-';
 
                     html += `
                         <tr>
                             <td class="chave-cell"><small style="color: #9c27b0; font-weight: 600;">${chave}</small></td>
-                            <td class="timestamp-cell"><small>${dataFormatada}</small><br><small>${horaFormatada}</small></td>
-                            <td class="user-cell"><strong>${nomeUsuario}</strong></td>
-                            <td><small>${emailUsuario}</small></td>
-                            <td>
-                                <span class="action-badge ${acaoBadgeClass}">${acaoTexto}</span>
-                            </td>
                             <td class="ticket-cell"><strong>#${ticket}</strong></td>
-                            <td class="details-cell"><small>${detalhes}</small></td>
+                            <td class="user-cell"><strong>${nomeUsuario}</strong></td>
+                            <td class="timestamp-cell"><small>${dataFormatada} ${horaFormatada}</small></td>
                         </tr>
                     `;
                 } catch (erro) {
                     console.error(`❌ Erro ao processar registro ${index}:`, registro, erro);
                     html += `
                         <tr>
-                            <td colspan="7" style="color: #e74c3c;">
+                            <td colspan="4" style="color: #e74c3c;">
                                 ❌ Erro ao processar registro
                             </td>
                         </tr>
