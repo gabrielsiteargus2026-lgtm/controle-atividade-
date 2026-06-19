@@ -1626,21 +1626,12 @@
             if (atividadesCriadas.length === 0) {
                 listaHTML = '<div style="text-align: center; color: #999; padding: 20px;">Nenhuma atividade criada hoje</div>';
             } else {
-                listaHTML = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+                listaHTML = '<div style="display: flex; flex-direction: column; gap: 12px;">';
                 atividadesCriadas.slice(0, 10).forEach(atividade => {
-                    // Determinar status da atividade
-                    const statusAtividade = obterStatusAtividade(atividade);
-                    const emAndamento = statusAtividade === 'em_andamento' || (!atividade.dataFim && !atividade.horaFim);
-                    
-                    // Cor da borda conforme status
-                    const corBorder = emAndamento ? '#10b981' : '#3b82f6'; // Verde se em andamento, azul se finalizado
-                    const statusBadge = emAndamento ? '🔄 Em Andamento' : '✅ Finalizado';
-                    const statusColor = emAndamento ? '#10b981' : '#3b82f6';
-                    
                     const ticket = atividade.ticket || atividade.id || '-';
                     const chave = atividade.chaveAtividade || atividade.chave || '-';
                     const usuario = atividade.colaborador || atividade.usuario || atividade.nome_usuario || 'Usuário';
-                    const emailUsuario = atividade.email_usuario || 'email desconhecido';
+                    const emailUsuario = atividade.email_usuario || atividade.email || '-';
                     const descricao = atividade.descricao || atividade.titulo || 'Sem descrição';
                     
                     const dataCriacao = new Date(atividade.data_criacao || atividade.dataCriacao || atividade.dataInicio || atividade.data || 0);
@@ -1656,43 +1647,12 @@
                     });
                     
                     listaHTML += `
-                    <div style="border-left: 4px solid ${corBorder}; background: #f9fafb; padding: 14px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" 
-                         onmouseover="this.style.background='#f3f4f6'; this.style.transform='translateX(4px)';" 
-                         onmouseout="this.style.background='#f9fafb'; this.style.transform='translateX(0)';">
-                        <!-- Primeira linha: Identificadores e Status -->
-                        <div style="display: flex; justify-content: space-between; align-items: start; gap: 10px; margin-bottom: 8px;">
-                            <div style="flex: 1; min-width: 0;">
-                                <div style="font-weight: 600; color: #1f2937; font-size: 0.95em; word-break: break-word; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                                    <span style="background: #e0e7ff; color: #3730a3; padding: 3px 8px; border-radius: 3px; display: inline-block; font-size: 0.85em;">${chave}</span>
-                                    <span style="background: #f0fdf4; color: #15803d; padding: 3px 8px; border-radius: 3px; display: inline-block; font-size: 0.85em;">#${ticket}</span>
-                                    <span style="background: ${statusColor}20; color: ${statusColor}; padding: 3px 8px; border-radius: 3px; display: inline-block; font-size: 0.75em; font-weight: 600;">${statusBadge}</span>
-                                </div>
-                            </div>
-                            <!-- Data e Hora aumentadas -->
-                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; min-width: fit-content;">
-                                <div style="font-size: 0.95em; color: #1f2937; font-weight: 600;">
-                                    ${horaFormatada}
-                                </div>
-                                <div style="font-size: 0.85em; color: #6b7280; font-weight: 500;">
-                                    ${dataFormatada}
-                                </div>
-                            </div>
+                    <div style="border-left: 1px solid #e5e7eb; padding: 10px; border-radius: 4px; background: #fafafa;">
+                        <div style="font-size: 0.9em; color: #1f2937; margin-bottom: 6px; line-height: 1.5;">
+                            <strong style="background: #e6ccff; color: #6b2c6b; padding: 2px 6px; border-radius: 3px;">${chave}</strong> - <strong style="background: #c8e6c9; color: #2e7d32; padding: 2px 6px; border-radius: 3px;">#${ticket}</strong> - ${descricao.substring(0, 100)}${descricao.length > 100 ? '...' : ''} - ${horaFormatada} ${dataFormatada}
                         </div>
-                        
-                        <!-- Segunda linha: Descrição -->
-                        <div style="background: #f3f4f6; padding: 8px 10px; border-radius: 4px; margin-bottom: 8px; border-left: 2px solid ${statusColor};">
-                            <div style="font-size: 0.85em; color: #374151; line-height: 1.4;">
-                                ${descricao.substring(0, 150)}${descricao.length > 150 ? '...' : ''}
-                            </div>
-                        </div>
-                        
-                        <!-- Terceira linha: Usuário que criou + Email -->
-                        <div style="display: flex; align-items: center; gap: 8px; font-size: 0.8em;">
-                            <span style="width: 18px; height: 18px; background: #3b82f6; color: white; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.75em; font-weight: bold;">👤</span>
-                            <div style="flex: 1; min-width: 0;">
-                                <div style="color: #1f2937; font-weight: 600;">${usuario}</div>
-                                <div style="color: #6b7280; font-size: 0.75em; word-break: break-word;">${emailUsuario}</div>
-                            </div>
+                        <div style="font-size: 0.85em; color: #666; margin-left: 8px;">
+                            ${usuario} (${emailUsuario})
                         </div>
                     </div>
                     `;

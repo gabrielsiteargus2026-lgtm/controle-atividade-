@@ -85,8 +85,6 @@
             font-size: 2.2em;
             font-weight: 600;
         }
-            font-size: 2em;
-        }
 
         .filters {
             background: white;
@@ -830,6 +828,7 @@
                             <option value="EXCLUSAO">Deletou Atividade</option>
                             <option value="LOGIN">Login</option>
                             <option value="LOGOUT">Logout</option>
+                            <option value="ACESSOU_PAGINA">Acessou Página</option>
                             <!-- Compatibilidade com nomes antigos -->
                             <option value="INICIOU">Iniciou (antigo)</option>
                             <option value="FINALIZOU">Finalizou (antigo)</option>
@@ -861,9 +860,10 @@
                 <table id="activitiesTable" class="table-view">
                     <thead>
                         <tr>
-                            <th>Chave</th>
-                            <th>Ticket</th>
                             <th>Usuário</th>
+                            <th>Ação</th>
+                            <th>Descrição/Detalhes</th>
+                            <th>Ticket</th>
                             <th>Data/Hora</th>
                         </tr>
                     </thead>
@@ -872,7 +872,15 @@
                 </table>
             </div>
 
-            <!-- 🔧 PAINEL DE DEBUG - MOVIDO PARA FINAL -->
+            <!-- � SEÇÃO DE ATIVIDADES ABERTAS POR COLABORADOR -->
+            <div style="margin-top: 40px; margin-bottom: 30px;">
+                <h2 style="color: #2c3e50; font-size: 1.5em; font-weight: 600; margin-bottom: 20px;">Atividades Abertas por Colaborador</h2>
+                <div id="percentualAbertasContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+                    <!-- Os dados serão preenchidos pela função calcularEExibirAtividadesAbertas() -->
+                </div>
+            </div>
+
+            <!-- �🔧 PAINEL DE DEBUG - MOVIDO PARA FINAL -->
             <div style="background: #f0f0f0; padding: 12px; margin: 20px 0; border-radius: 5px; font-size: 0.85em; border: 1px solid #ddd;">
                 <details style="cursor: pointer;">
                     <summary style="font-weight: bold; color: #666; padding: 5px; user-select: none;">Debug - Dados Carregados (Clique para expandir)</summary>
@@ -888,31 +896,46 @@
     </div>
 
     <script>
-        // Exibir apenas atividades criadas (INICIO/INICIOU)
+        // Obter rótulo para cada tipo de ação
+        function obterEstiloAcao(tipo) {
+            const estilos = {
+                'INICIO': { label: 'Iniciou' },
+                'INICIOU': { label: 'Iniciou' },
+                'FIM': { label: 'Finalizou' },
+                'FINALIZOU': { label: 'Finalizou' },
+                'PAUSA': { label: 'Pausou' },
+                'PAUSOU': { label: 'Pausou' },
+                'RETOMOU': { label: 'Retomou' },
+                'EXCLUSAO': { label: 'Deletou' },
+                'LOGIN': { label: 'Login' },
+                'LOGOUT': { label: 'Logout' },
+                'ACESSOU_PAGINA': { label: 'Acessou Página' },
+                'ACESSO_PAGINA': { label: 'Acessou Página' }
+            };
+            return estilos[tipo] || { label: tipo };
+        }
+
+        // Exibir atividades na tabela com informações detalhadas
         function exibirAtividades() {
             const tbody = document.getElementById('tableBody');
+            const atividadesToExibir = registrosFiltrados;
 
-            // Filtrar apenas atividades criadas (INICIO/INICIOU)
-            const atividadesCriadas = registrosFiltrados.filter(r => 
-                r.tipo === 'INICIO' || r.tipo === 'INICIOU'
-            );
-
-            if (!atividadesCriadas || atividadesCriadas.length === 0) {
+            if (!atividadesToExibir || atividadesToExibir.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="4" style="text-align: center; padding: 40px; color: #999;">
-                            Nenhuma atividade criada encontrada
+                        <td colspan="5" style="text-align: center; padding: 40px; color: #999;">
+                            Nenhuma atividade encontrada
                         </td>
                     </tr>
                 `;
-                console.log('📭 Nenhuma atividade criada para exibir');
+                console.log('📭 Nenhuma atividade para exibir');
                 return;
             }
 
-            console.log(`📋 Exibindo ${atividadesCriadas.length} atividades criadas na tabela`);
+            console.log(`📋 Exibindo ${atividadesToExibir.length} atividades na tabela`);
 
             let html = '';
-            atividadesCriadas.forEach((registro, index) => {
+            atividadesToExibir.forEach((registro, index) => {
                 try {
                     const data = new Date(registro.timestamp);
                     const dataFormatada = data.toLocaleDateString('pt-BR', {
@@ -926,24 +949,53 @@
                         second: '2-digit'
                     });
 
-                    const ticket = registro.ticket || registro.id || '-';
-                    const nomeUsuario = registro.nome_usuario || registro.usuario_id || 'Usuário';
-                    const chave = registro.chaveAtividade || '-';
+                    const nomeUsuario = registro.nome_usuario || registro.email_usuario || 'Usuário Desconhecido';
+                    const emailUsuario = registro.email_usuario || '';
+                    const tipo = registro.tipo || 'DESCONHECIDA';
+                    const estilo = obterEstiloAcao(tipo);
+                    const descricao = registro.descricao || 'Sem descrição';
+                    const ticket = registro.ticket || '-';
+                    const pagina = registro.pagina || '';
+                    const duracao = registro.duracao || '';
+                    const motivo = registro.motivo_pausa || registro.motivo || '';
+
+                    // Construir descrição completa
+                    let descricaoCompleta = descricao;
+                    if (pagina) descricaoCompleta += ` | Página: ${pagina}`;
+                    if (duracao) descricaoCompleta += ` | Duração: ${duracao}`;
+                    if (motivo) descricaoCompleta += ` | Motivo: ${motivo}`;
 
                     html += `
                         <tr>
-                            <td class="chave-cell"><small style="color: #9c27b0; font-weight: 600;">${chave}</small></td>
-                            <td class="ticket-cell"><strong>#${ticket}</strong></td>
-                            <td class="user-cell"><strong>${nomeUsuario}</strong></td>
-                            <td class="timestamp-cell"><small>${dataFormatada} ${horaFormatada}</small></td>
+                            <td class="user-cell">
+                                <strong>${nomeUsuario}</strong>
+                                <br>
+                                <small style="color: #999; font-size: 0.85em;">${emailUsuario}</small>
+                            </td>
+                            <td style="text-align: center;">
+                                <span style="padding: 4px 8px; font-size: 0.9em;">
+                                    ${estilo.label}
+                                </span>
+                            </td>
+                            <td class="details-cell">
+                                <div>${descricaoCompleta}</div>
+                            </td>
+                            <td class="ticket-cell" style="text-align: center;">
+                                <strong style="color: #667eea;">#${ticket}</strong>
+                            </td>
+                            <td class="timestamp-cell" style="text-align: right;">
+                                <small>${dataFormatada}</small>
+                                <br>
+                                <small style="font-weight: 600; color: #333;">${horaFormatada}</small>
+                            </td>
                         </tr>
                     `;
                 } catch (erro) {
                     console.error(`❌ Erro ao processar registro ${index}:`, registro, erro);
                     html += `
-                        <tr>
-                            <td colspan="4" style="color: #e74c3c;">
-                                ❌ Erro ao processar registro
+                        <tr style="background: #ffebee;">
+                            <td colspan="5" style="color: #e74c3c; text-align: center; padding: 20px;">
+                                ❌ Erro ao processar registro #${index}
                             </td>
                         </tr>
                     `;
@@ -963,12 +1015,35 @@
             registrosFiltrados = registrosAtividades.filter(registro => {
                 let passa = true;
 
-                if (email && !registro.email_usuario.toLowerCase().includes(email)) {
-                    passa = false;
+                // ✅ CORRIGIDO: Tratar campo email_usuario com segurança
+                if (email) {
+                    const emailRegistro = (registro.email_usuario || '').toLowerCase();
+                    if (!emailRegistro.includes(email)) {
+                        passa = false;
+                    }
                 }
 
-                if (acao && registro.tipo !== acao) {
-                    passa = false;
+                // ✅ CORRIGIDO: Suportar compatibilidade de tipos (PAUSA/PAUSOU, INICIO/INICIOU, etc)
+                if (acao) {
+                    // Normalizar tipo para comparação flexível
+                    const tipoRegistro = (registro.tipo || '').toUpperCase();
+                    const acaoNormalizada = acao.toUpperCase();
+                    
+                    // Validar correspondência (suportando variações como PAUSA/PAUSOU)
+                    const matches = 
+                        tipoRegistro === acaoNormalizada ||
+                        (acaoNormalizada === 'INICIO' && tipoRegistro === 'INICIOU') ||
+                        (acaoNormalizada === 'INICIOU' && tipoRegistro === 'INICIO') ||
+                        (acaoNormalizada === 'FIM' && tipoRegistro === 'FINALIZOU') ||
+                        (acaoNormalizada === 'FINALIZOU' && tipoRegistro === 'FIM') ||
+                        (acaoNormalizada === 'PAUSA' && tipoRegistro === 'PAUSOU') ||
+                        (acaoNormalizada === 'PAUSOU' && tipoRegistro === 'PAUSA') ||
+                        (acaoNormalizada === 'ACESSOU_PAGINA' && (tipoRegistro === 'ACESSOU_PAGINA' || tipoRegistro === 'ACESSO_PAGINA')) ||
+                        (acaoNormalizada === 'ACESSO_PAGINA' && (tipoRegistro === 'ACESSOU_PAGINA' || tipoRegistro === 'ACESSO_PAGINA'));
+                    
+                    if (!matches) {
+                        passa = false;
+                    }
                 }
 
                 if (data) {
@@ -1002,54 +1077,37 @@
                 return;
             }
 
-            let csvContent = 'ATIVIDADES DOS USUÁRIOS\n';
-            csvContent += `Exportado em: ${new Date().toLocaleString('pt-BR')}\n\n`;
-            csvContent += 'Data/Hora,Usuário,Email,Ação,Ticket,Detalhes\n';
+            let csvContent = 'ATIVIDADES DOS USUÁRIOS - AUDITORIA COMPLETA\n';
+            csvContent += `Exportado em: ${new Date().toLocaleString('pt-BR')}\n`;
+            csvContent += `Total de registros: ${registrosFiltrados.length}\n\n`;
+            csvContent += 'Data,Hora,Usuário,Email,Ação,Descrição,Ticket,Página,Duração,Motivo\n';
 
             registrosFiltrados.forEach(registro => {
-                const data = new Date(registro.timestamp).toLocaleString('pt-BR');
-                let acao = '';
-                let detalhes = '';
-
+                const data = new Date(registro.timestamp);
+                const dataFormatada = data.toLocaleDateString('pt-BR');
+                const horaFormatada = data.toLocaleTimeString('pt-BR');
+                
                 const tipo = registro.tipo || 'DESCONHECIDO';
-                switch (tipo) {
-                    case 'INICIO':
-                    case 'INICIOU':
-                        acao = 'Iniciou';
-                        detalhes = registro.descricao;
-                        break;
-                    case 'FIM':
-                    case 'FINALIZOU':
-                        acao = 'Finalizou';
-                        detalhes = `Duração: ${registro.duracao}`;
-                        break;
-                    case 'PAUSA':
-                    case 'PAUSOU':
-                        acao = 'Pausou';
-                        detalhes = `Motivo: ${registro.motivo_pausa || registro.motivo}`;
-                        break;
-                    case 'RETOMOU':
-                        acao = 'Retomou';
-                        detalhes = `Pausa: ${registro.tempoPausa}`;
-                        break;
-                    case 'EXCLUSAO':
-                        acao = 'Deletou';
-                        detalhes = `Motivo: ${registro.motivo_exclusao}`;
-                        break;
-                    case 'LOGIN':
-                        acao = 'Login';
-                        detalhes = 'Conectado ao sistema';
-                        break;
-                    case 'LOGOUT':
-                        acao = 'Logout';
-                        detalhes = 'Desconectado do sistema';
-                        break;
-                    default:
-                        acao = tipo;
-                        detalhes = registro.descricao || '-';
-                }
+                const nomeUsuario = registro.nome_usuario || registro.email_usuario || 'Usuário Desconhecido';
+                const emailUsuario = registro.email_usuario || '-';
+                const descricao = registro.descricao || '-';
+                const ticket = registro.ticket || '-';
+                const pagina = registro.pagina || '-';
+                const duracao = registro.duracao || '-';
+                const motivo = registro.motivo_pausa || registro.motivo || '-';
+                
+                // Traduzir tipo de ação
+                let acaoLabel = tipo;
+                if (tipo === 'INICIO' || tipo === 'INICIOU') acaoLabel = 'Iniciou Atividade';
+                else if (tipo === 'FIM' || tipo === 'FINALIZOU') acaoLabel = 'Finalizou Atividade';
+                else if (tipo === 'PAUSA' || tipo === 'PAUSOU') acaoLabel = 'Pausou Atividade';
+                else if (tipo === 'RETOMOU') acaoLabel = 'Retomou Atividade';
+                else if (tipo === 'EXCLUSAO') acaoLabel = 'Deletou Atividade';
+                else if (tipo === 'LOGIN') acaoLabel = 'Login';
+                else if (tipo === 'LOGOUT') acaoLabel = 'Logout';
+                else if (tipo === 'ACESSOU_PAGINA' || tipo === 'ACESSO_PAGINA') acaoLabel = 'Acessou Página';
 
-                csvContent += `"${data}","${registro.nome_usuario}","${registro.email_usuario}","${acao}","#${registro.ticket}","${detalhes}"\n`;
+                csvContent += `"${dataFormatada}","${horaFormatada}","${nomeUsuario}","${emailUsuario}","${acaoLabel}","${descricao}","#${ticket}","${pagina}","${duracao}","${motivo}"\n`;
             });
 
             const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1057,11 +1115,12 @@
             const url = URL.createObjectURL(blob);
             const dataAtual = new Date().toISOString().split('T')[0];
             link.setAttribute('href', url);
-            link.setAttribute('download', `atividades-usuarios_${dataAtual}.csv`);
+            link.setAttribute('download', `auditoria-atividades-usuarios_${dataAtual}.csv`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            console.log('✅ Arquivo CSV exportado com sucesso');
         }
 
         // CALCULAR % DE ATIVIDADES ABERTAS POR COLABORADOR
@@ -1150,6 +1209,12 @@
                 function exibirDadosAbertas(dados) {
                     const container = document.getElementById('percentualAbertasContainer');
                     
+                    // ✅ CORRIGIDO: Verificar se elemento existe antes de tentar acessar
+                    if (!container) {
+                        console.warn('⚠️ Elemento #percentualAbertasContainer não encontrado. Pulando exibição de atividades abertas.');
+                        return;
+                    }
+                    
                     if (dados.length === 0) {
                         exibirSemDados();
                         return;
@@ -1201,6 +1266,13 @@
 
                 function exibirSemDados() {
                     const container = document.getElementById('percentualAbertasContainer');
+                    
+                    // ✅ CORRIGIDO: Verificar se elemento existe
+                    if (!container) {
+                        console.warn('⚠️ Elemento #percentualAbertasContainer não encontrado');
+                        return;
+                    }
+                    
                     container.innerHTML = `
                         <div style="grid-column: 1/-1; text-align: center; color: #999; padding: 40px;">
                             Nenhuma atividade encontrada. Verifique se há dados em atividades.
@@ -1211,11 +1283,15 @@
             } catch (erro) {
                 console.error('Erro ao calcular atividades abertas:', erro);
                 const container = document.getElementById('percentualAbertasContainer');
-                container.innerHTML = `
-                    <div style="grid-column: 1/-1; text-align: center; color: #e74c3c; padding: 40px;">
-                        Erro ao carregar dados de atividades abertas.
-                    </div>
-                `;
+                
+                // ✅ CORRIGIDO: Verificar se elemento existe antes de acessar
+                if (container) {
+                    container.innerHTML = `
+                        <div style="grid-column: 1/-1; text-align: center; color: #e74c3c; padding: 40px;">
+                            Erro ao carregar dados de atividades abertas.
+                        </div>
+                    `;
+                }
             }
         }
 
