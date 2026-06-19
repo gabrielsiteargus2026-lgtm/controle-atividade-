@@ -1575,11 +1575,12 @@
             tabelaHTML += '</table>';
             tabelaPausasElement.innerHTML = tabelaHTML;
 
-            // ===== RENDERIZAR LISTA DE ATIVIDADES CRIADAS - DADOS DO HISTÓRICO =====
+            // ===== RENDERIZAR LISTA DE ATIVIDADES CRIADAS - DADOS DO HISTÓRICO E EM ANDAMENTO =====
             const listaAtividadesElement = document.getElementById('listaAtividadesCriadas');
             
-            // Usar atividadesGlobais carregadas do histórico
-            console.log('📊 DEBUG - atividadesGlobais:', atividadesGlobais);
+            // Usar atividadesGlobais (finalizadas) + atividadesEmAndamento (em progresso)
+            console.log('📊 DEBUG - atividadesGlobais:', atividadesGlobais.length);
+            console.log('📊 DEBUG - atividadesEmAndamento:', atividadesEmAndamento.length);
 
             // Obter data de hoje (sem horas) - formato YYYY-MM-DD
             const hoje = new Date();
@@ -1589,28 +1590,36 @@
             
             console.log('📅 Data de hoje:', dataHojeString);
             
+            // Combinar atividades finalizadas e em andamento
+            const todasAsAtividades = [
+                ...(Array.isArray(atividadesGlobais) ? atividadesGlobais : []),
+                ...(Array.isArray(atividadesEmAndamento) ? atividadesEmAndamento : [])
+            ];
+            
+            console.log('📋 Total de atividades combinadas:', todasAsAtividades.length);
+            
             // Filtrar apenas atividades criadas hoje (sem reaberturas)
-            const atividadesCriadas = atividadesGlobais.filter(a => {
+            const atividadesCriadas = todasAsAtividades.filter(a => {
                 if (!a || a.isReabertura) {
                     return false;
                 }
                 
                 // Converter data_criacao para objeto Date
-                const dataCriacao = new Date(a.data_criacao || a.dataCriacao || a.data || 0);
+                const dataCriacao = new Date(a.data_criacao || a.dataCriacao || a.dataInicio || a.data || 0);
                 const dataAtividadeString = dataCriacao.getFullYear() + '-' + 
                                            String(dataCriacao.getMonth() + 1).padStart(2, '0') + '-' + 
                                            String(dataCriacao.getDate()).padStart(2, '0');
                 
-                console.log('🔍 Comparando data:', dataAtividadeString, 'com hoje:', dataHojeString);
+                console.log('🔍 Comparando data:', dataAtividadeString, 'com hoje:', dataHojeString, '- Atividade:', a.ticket || a.id);
                 
                 return dataAtividadeString === dataHojeString;
             }).sort((a, b) => {
-                const dataA = new Date(a.data_criacao || a.dataCriacao || a.data || 0);
-                const dataB = new Date(b.data_criacao || b.dataCriacao || b.data || 0);
+                const dataA = new Date(a.data_criacao || a.dataCriacao || a.dataInicio || a.data || 0);
+                const dataB = new Date(b.data_criacao || b.dataCriacao || b.dataInicio || b.data || 0);
                 return dataB - dataA;
             });
 
-            console.log('✅ Atividades do dia filtradas:', atividadesCriadas);
+            console.log('✅ Atividades do dia filtradas:', atividadesCriadas.length);
 
             let listaHTML = '';
             
@@ -1619,14 +1628,22 @@
             } else {
                 listaHTML = '<div style="display: flex; flex-direction: column; gap: 10px;">';
                 atividadesCriadas.slice(0, 10).forEach(atividade => {
-                    // Cor padrão azul para atividades criadas
-                    const corBorder = '#3b82f6';
+                    // Determinar status da atividade
+                    const statusAtividade = obterStatusAtividade(atividade);
+                    const emAndamento = statusAtividade === 'em_andamento' || (!atividade.dataFim && !atividade.horaFim);
+                    
+                    // Cor da borda conforme status
+                    const corBorder = emAndamento ? '#10b981' : '#3b82f6'; // Verde se em andamento, azul se finalizado
+                    const statusBadge = emAndamento ? '🔄 Em Andamento' : '✅ Finalizado';
+                    const statusColor = emAndamento ? '#10b981' : '#3b82f6';
                     
                     const ticket = atividade.ticket || atividade.id || '-';
                     const chave = atividade.chaveAtividade || atividade.chave || '-';
-                    const usuario = atividade.colaborador || atividade.usuario || 'Usuário';
+                    const usuario = atividade.colaborador || atividade.usuario || atividade.nome_usuario || 'Usuário';
+                    const emailUsuario = atividade.email_usuario || 'email desconhecido';
+                    const descricao = atividade.descricao || atividade.titulo || 'Sem descrição';
                     
-                    const dataCriacao = new Date(atividade.data_criacao || atividade.dataCriacao || atividade.data || 0);
+                    const dataCriacao = new Date(atividade.data_criacao || atividade.dataCriacao || atividade.dataInicio || atividade.data || 0);
                     
                     const dataFormatada = dataCriacao.toLocaleDateString('pt-BR', {
                         day: '2-digit',
@@ -1639,27 +1656,42 @@
                     });
                     
                     listaHTML += `
-                    <div style="border-left: 4px solid ${corBorder}; background: #f9fafb; padding: 12px; border-radius: 4px; cursor: pointer; transition: all 0.2s;" 
+                    <div style="border-left: 4px solid ${corBorder}; background: #f9fafb; padding: 14px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" 
                          onmouseover="this.style.background='#f3f4f6'; this.style.transform='translateX(4px)';" 
                          onmouseout="this.style.background='#f9fafb'; this.style.transform='translateX(0)';">
-                        <div style="display: flex; justify-content: space-between; align-items: start; gap: 10px;">
+                        <!-- Primeira linha: Identificadores e Status -->
+                        <div style="display: flex; justify-content: space-between; align-items: start; gap: 10px; margin-bottom: 8px;">
                             <div style="flex: 1; min-width: 0;">
-                                <div style="font-weight: 600; color: #1f2937; font-size: 0.95em; word-break: break-word;">
-                                    <span style="background: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 3px; margin-right: 8px; display: inline-block;">${chave}</span>
-                                    <span style="background: #f0fdf4; color: #15803d; padding: 2px 6px; border-radius: 3px; display: inline-block;">#${ticket}</span>
-                                </div>
-                                <div style="color: #6b7280; font-size: 0.8em; margin-top: 6px; display: flex; align-items: center; gap: 4px;">
-                                    <span style="width: 16px; height: 16px; background: #3b82f6; color: white; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.7em; font-weight: bold;">👤</span>
-                                    <span>${usuario}</span>
+                                <div style="font-weight: 600; color: #1f2937; font-size: 0.95em; word-break: break-word; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                    <span style="background: #e0e7ff; color: #3730a3; padding: 3px 8px; border-radius: 3px; display: inline-block; font-size: 0.85em;">${chave}</span>
+                                    <span style="background: #f0fdf4; color: #15803d; padding: 3px 8px; border-radius: 3px; display: inline-block; font-size: 0.85em;">#${ticket}</span>
+                                    <span style="background: ${statusColor}20; color: ${statusColor}; padding: 3px 8px; border-radius: 3px; display: inline-block; font-size: 0.75em; font-weight: 600;">${statusBadge}</span>
                                 </div>
                             </div>
-                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right;">
-                                <div style="font-size: 0.75em; color: #999; font-weight: 500;">
-                                    ${dataFormatada}
-                                </div>
-                                <div style="font-size: 0.75em; color: #666;">
+                            <!-- Data e Hora aumentadas -->
+                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; min-width: fit-content;">
+                                <div style="font-size: 0.95em; color: #1f2937; font-weight: 600;">
                                     ${horaFormatada}
                                 </div>
+                                <div style="font-size: 0.85em; color: #6b7280; font-weight: 500;">
+                                    ${dataFormatada}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Segunda linha: Descrição -->
+                        <div style="background: #f3f4f6; padding: 8px 10px; border-radius: 4px; margin-bottom: 8px; border-left: 2px solid ${statusColor};">
+                            <div style="font-size: 0.85em; color: #374151; line-height: 1.4;">
+                                ${descricao.substring(0, 150)}${descricao.length > 150 ? '...' : ''}
+                            </div>
+                        </div>
+                        
+                        <!-- Terceira linha: Usuário que criou + Email -->
+                        <div style="display: flex; align-items: center; gap: 8px; font-size: 0.8em;">
+                            <span style="width: 18px; height: 18px; background: #3b82f6; color: white; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.75em; font-weight: bold;">👤</span>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="color: #1f2937; font-weight: 600;">${usuario}</div>
+                                <div style="color: #6b7280; font-size: 0.75em; word-break: break-word;">${emailUsuario}</div>
                             </div>
                         </div>
                     </div>
