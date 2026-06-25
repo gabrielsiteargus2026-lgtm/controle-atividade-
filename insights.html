@@ -4,7 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Insights - Controle</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script>
+        (function(){
+            function loadScript(src, onload, onerror){
+                var s = document.createElement('script');
+                s.src = src;
+                s.onload = onload;
+                s.onerror = onerror;
+                document.head.appendChild(s);
+            }
+
+            // Tentar CDN primeiro; se falhar (Tracking Prevention), tentar fallback local em ./vendor/chart.min.js
+            loadScript('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js', function(){
+                console.log('Chart.js carregado via CDN');
+                if (typeof atualizarDashboard === 'function') setTimeout(atualizarDashboard, 50);
+            }, function(){
+                console.warn('Falha ao carregar Chart.js via CDN. Tentando fallback local: ./vendor/chart.min.js');
+                loadScript('./vendor/chart.min.js', function(){
+                    console.log('Chart.js carregado via fallback local');
+                    if (typeof atualizarDashboard === 'function') setTimeout(atualizarDashboard, 50);
+                }, function(){
+                    console.error('Não foi possível carregar Chart.js. Gráficos serão desativados.');
+                });
+            });
+        })();
+    </script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
@@ -965,17 +989,42 @@
             }
         };
 
+        function isTicketFinalizado(ticketId) {
+            const id = String(ticketId);
+            const atividadesList = Array.isArray(atividadesGlobais) ? atividadesGlobais : Object.values(atividadesGlobais || {});
+            return atividadesList.some(a => a && String(a.ticket) === id);
+        }
+
+        function obterPausasAtivasPorTicket() {
+            const ultimaPausaPorTicket = {};
+            if (!historicoPausas) return {};
+            const historicoArray = Array.isArray(historicoPausas) ? historicoPausas : Object.values(historicoPausas);
+            historicoArray.forEach(p => {
+                if (!p || !p.ticket) return;
+                const ticketId = String(p.ticket);
+                ultimaPausaPorTicket[ticketId] = p;
+            });
+
+            Object.keys(ultimaPausaPorTicket).forEach(ticketId => {
+                const pausa = ultimaPausaPorTicket[ticketId];
+                if (!pausa || pausa.status !== 'Pausado' || pausa.horaRetomada || isTicketFinalizado(ticketId)) {
+                    delete ultimaPausaPorTicket[ticketId];
+                }
+            });
+
+            return ultimaPausaPorTicket;
+        }
+
+        function obterTicketsPausadosAtivos() {
+            return new Set(Object.keys(obterPausasAtivasPorTicket()));
+        }
+
         // Gráfico 1: Porcentagem de Atividades por Colaborador (Gráficos de Pizza)
         function renderizarAtividadesAbertas() {
             console.log('Renderizando gráficos de pizza de atividades por colaborador...');
             
-            // Criar conjunto de tickets pausados (mesmo que em Resumo)
-            const ticketsPausados = new Set();
-            historicoPausas.forEach(p => {
-                if (p && p.ticket) {
-                    ticketsPausados.add(p.ticket);
-                }
-            });
+            const pausasAtivas = obterPausasAtivasPorTicket();
+            const ticketsPausados = new Set(Object.keys(pausasAtivas));
             
             const colaboradores = {};
             
@@ -999,13 +1048,15 @@
                 colaboradores[a.colaborador]++;
             });
             
-            // Contar atividades por colaborador (pausadas - apenas status 'Pausado')
-            historicoPausas.forEach(p => {
-                if (!p || !p.colaborador || p.status !== 'Pausado') return;
-                if (!colaboradores[p.colaborador]) {
-                    colaboradores[p.colaborador] = 0;
-                }
-                colaboradores[p.colaborador]++;
+            // Contar atividades por colaborador (pausadas - apenas tickets ativos em pausa)
+            const ticketsPausadosPorColaborador = {};
+            Object.values(pausasAtivas).forEach(p => {
+                if (!p || !p.ticket || !p.colaborador) return;
+                if (ticketsPausadosPorColaborador[p.ticket]) return;
+                ticketsPausadosPorColaborador[p.ticket] = p.colaborador;
+            });
+            Object.values(ticketsPausadosPorColaborador).forEach(colaborador => {
+                colaboradores[colaborador] = (colaboradores[colaborador] || 0) + 1;
             });
 
             // Calcular total de atividades criadas (mesma fórmula do card "Total Criadas")
@@ -1014,11 +1065,7 @@
                 a && a.ticket && !ticketsPausados.has(a.ticket) && !a.isReabertura
             );
             const totalEmAndamento = atividadesEmAndamentoSemPausa.length;
-            const totalPausadas = historicoPausas ? 
-                (Array.isArray(historicoPausas) ? 
-                    historicoPausas.filter(p => p && p.status === 'Pausado' && !p.isReabertura).length : 
-                    Object.values(historicoPausas).filter(p => p && p.status === 'Pausado' && !p.isReabertura).length
-                ) : 0;
+            const totalPausadas = ticketsPausados.size;
             const totalAtividadesCriadas = totalConcluidas + totalEmAndamento + totalPausadas;
 
             console.log('Atividades por colaborador:', colaboradores);
@@ -1125,12 +1172,13 @@
                 const grupo = pausa.grupo && pausa.grupo !== 'Não definido' ? pausa.grupo : identificarSetor(pausa.motivo);
                 
                 // Determinar status
-                const statusPausa = pausa.status || 'Retomado';
-                const corStatus = pausa.status === 'Pausado' ? '#ffd700' : '#51cf66';
+                const isFinalizado = isTicketFinalizado(pausa.ticket);
+                const statusPausa = isFinalizado ? 'Finalizado' : (pausa.status === 'Pausado' ? 'Pausado' : 'Retomado');
+                const corStatus = isFinalizado ? '#38bdf8' : (pausa.status === 'Pausado' ? '#ffd700' : '#51cf66');
                 
                 // ⭐ USAR tempoPausaFormatado (duração real da pausa) ao invés de duracao (duração da atividade)
                 const duracaoPausa = pausa.tempoPausaFormatado || pausa.duracao || 'N/A';
-                const dataRetomada = pausa.dataRetomada || (pausa.status === 'Retomado' ? pausa.dataInicio : '-');
+                const dataRetomada = pausa.dataRetomada || (statusPausa === 'Retomado' ? pausa.dataInicio : '-');
                 
                 tabelaHtml += `
                     <tr>
@@ -1230,12 +1278,8 @@
             console.log('Renderizando gráfico de atividades criadas por dia...');
             
             // Criar conjunto de tickets pausados (mesma lógica de Total Criados)
-            const ticketsPausados = new Set();
-            historicoPausas.forEach(p => {
-                if (p && p.ticket) {
-                    ticketsPausados.add(p.ticket);
-                }
-            });
+            const pausasAtivas = obterPausasAtivasPorTicket();
+            const ticketsPausados = new Set(Object.keys(pausasAtivas));
             
             // Contar total de atividades (concluídas + em andamento sem pausas + pausadas) por data
             const atividadesPorDia = {};
@@ -1258,9 +1302,9 @@
                 atividadesPorDia[data]++;
             });
             
-            // Contar atividades pausadas (apenas as com status === 'Pausado')
-            historicoPausas.forEach(p => {
-                if (!p || !p.dataInicio || p.status !== 'Pausado') return;
+            // Contar atividades pausadas (apenas as com status === 'Pausado' e ainda ativas)
+            Object.values(pausasAtivas).forEach(p => {
+                if (!p || !p.dataInicio) return;
                 const data = p.dataInicio;
                 if (!atividadesPorDia[data]) atividadesPorDia[data] = 0;
                 atividadesPorDia[data]++;
@@ -1344,9 +1388,10 @@
                 atividadesPorDia[data]++;
             });
             
-            // Contar atividades pausadas (apenas as com status === 'Pausado')
-            historicoPausas.forEach(p => {
-                if (!p || !p.dataInicio || p.status !== 'Pausado') return;
+            // Contar atividades pausadas (apenas as com status === 'Pausado' e ainda ativas)
+            const pausasAtivas = obterPausasAtivasPorTicket();
+            Object.values(pausasAtivas).forEach(p => {
+                if (!p || !p.dataInicio) return;
                 const data = p.dataInicio;
                 if (!atividadesPorDia[data]) atividadesPorDia[data] = 0;
                 atividadesPorDia[data]++;
@@ -1458,23 +1503,15 @@
             const totalConcluidas = atividadesGlobais ? atividadesGlobais.filter(a => !a.isReabertura).length : 0;
             
             // 2. Total de atividades em andamento (excluindo apenas as que têm pausas ATIVAS com status === 'Pausado')
-            const ticketsPausados = new Set();
-            historicoPausas.forEach(p => {
-                if (p && p.ticket && p.status === 'Pausado') {
-                    ticketsPausados.add(p.ticket);
-                }
-            });
+            const pausasAtivas = obterPausasAtivasPorTicket();
+            const ticketsPausados = new Set(Object.keys(pausasAtivas));
             const atividadesEmAndamentoSemPausa = atividadesEmAndamento.filter(a => 
                 a && a.ticket && !ticketsPausados.has(a.ticket) && !a.isReabertura
             );
             const totalEmAndamento = atividadesEmAndamentoSemPausa.length;
             
-            // 3. Total de atividades pausadas (APENAS as que têm status === 'Pausado', não as retomadas, e excludindo reaberturas)
-            const totalPausadas = historicoPausas ? 
-                (Array.isArray(historicoPausas) ? 
-                    historicoPausas.filter(p => p && p.status === 'Pausado' && !p.isReabertura).length : 
-                    Object.values(historicoPausas).filter(p => p && p.status === 'Pausado' && !p.isReabertura).length
-                ) : 0;
+            // 3. Total de atividades pausadas (APENAS tickets ativos com status === 'Pausado')
+            const totalPausadas = ticketsPausados.size;
             
             // 4. Total de atividades criadas (soma de todos os status)
             const totalAtividadesCriadas = totalConcluidas + totalEmAndamento + totalPausadas;
