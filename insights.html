@@ -473,10 +473,6 @@
         
         <!-- CARDS DE RESUMO RÁPIDO -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
-            <div style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <div style="font-size: 2em; font-weight: bold;" id="totalAtividadesCriadas">0</div>
-                <div style="font-size: 0.9em; opacity: 0.9;">Total Criados</div>
-            </div>
             <div style="background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <div style="font-size: 2em; font-weight: bold;" id="totalEmAndamento">0</div>
                 <div style="font-size: 0.9em; opacity: 0.9;">Em Andamento</div>
@@ -488,6 +484,10 @@
             <div style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <div style="font-size: 2em; font-weight: bold;" id="totalConcluidas">0</div>
                 <div style="font-size: 0.9em; opacity: 0.9;">Atividades Concluídas</div>
+            </div>
+            <div style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 2em; font-weight: bold;" id="totalAtividadesCriadas">0</div>
+                <div style="font-size: 0.9em; opacity: 0.9;">Total Criados</div>
             </div>
         </div>
         
@@ -1541,21 +1541,22 @@
             document.getElementById('totalPausadas').textContent = totalPausadas;
 
             // ===== RENDERIZAR GRÁFICO DE BARRAS =====
+            // Ordem alterada: Em Andamento, Pausadas, Atividades Concluídas, Total Criadas
             const dados = [
-                totalAtividadesCriadas,
                 totalEmAndamento,
                 totalPausadas,
-                totalConcluidas
+                totalConcluidas,
+                totalAtividadesCriadas
             ];
             
             const labels = [
-                'Total Criados',
                 'Em Andamento',
                 'Pausadas',
-                'Atividades Concluídas'
+                'Atividades Concluídas',
+                'Total Criados'
             ];
 
-            const cores = ['#3b82f6', '#9ca3af', '#6b7280', '#60a5fa'];
+            const cores = ['#9ca3af', '#6b7280', '#60a5fa', '#3b82f6'];
 
             const ctx = document.getElementById('chartResumoAtividades').getContext('2d');
             if (chartsInstances.chartResumoAtividades) chartsInstances.chartResumoAtividades.destroy();
