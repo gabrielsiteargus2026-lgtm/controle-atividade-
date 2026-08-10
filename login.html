@@ -518,11 +518,10 @@
 
             console.log('Iniciando criação de conta para:', email);
             
-            // Verificação importante: Firebase está inicializado?
-            if (!window.auth || !window.db) {
-                console.error('Firebase não inicializado ainda!');
+            // Verificação importante: Firebase Auth está inicializado?
+            if (!window.auth) {
+                console.error('Firebase Auth não inicializado ainda!');
                 console.log('   auth:', !!window.auth);
-                console.log('   db:', !!window.db);
                 showAlert('Firebase não está pronto. Por favor, recarregue a página e tente novamente.', 'error');
                 return;
             }
