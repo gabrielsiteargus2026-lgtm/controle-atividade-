@@ -1017,12 +1017,6 @@
                 authCheckInProgress = false;
                 authCheckCompleted = true;
 
-                // 🧪 MODO TESTE: Permitir login sem autenticação Firebase
-                if (MODO_TESTE_ATIVO && !user) {
-                    user = { uid: 'test', email: 'teste@teste.com', displayName: 'Teste' };
-                    console.log('🧪 MODO TESTE ATIVO: Autenticação simulada');
-                }
-
                 if (user) {
                     usuarioAtual = {
                         uid: user.uid,
@@ -1302,41 +1296,6 @@
     </div>
 
     <script>
-        // 🧪 MODO TESTE: Simular autenticação e dados para testar reopening modal
-        const MODO_TESTE_ATIVO = true;
-        
-        if (MODO_TESTE_ATIVO && !localStorage.getItem('usuarioAtual')) {
-            // Simular usuário autenticado
-            window.usuarioAtual = {
-                uid: 'test-user-' + Date.now(),
-                email: 'teste@teste.com',
-                nome: 'Usuário Teste'
-            };
-            
-            // Dados de teste com um ticket concluído
-            const testAtividades = [
-                {
-                    id: 1000,
-                    chaveAtividade: 'ATIV-2026061600001',
-                    nome: 'Gabriel Oliveira',
-                    ticket: 'TICKET-001',
-                    descricao: 'Atividade de teste para validar reopening',
-                    titulo: 'Teste Modal',
-                    dataInicio: '16/06/2026',
-                    horaInicio: '09:30:00',
-                    dataFim: '16/06/2026',
-                    horaFim: '15:00:00',
-                    duracao: '05:30:00',
-                    usuario_id: 'test-user-' + Date.now(),
-                    email_usuario: 'teste@teste.com',
-                    nome_usuario: 'Usuário Teste'
-                }
-            ];
-            
-            localStorage.setItem('usuarioAtual', JSON.stringify(window.usuarioAtual));
-            localStorage.setItem('atividades', JSON.stringify(testAtividades));
-        }
-
         // Estado da aplicação
         let atividadesEmAndamento = [];
         let atividades = [];

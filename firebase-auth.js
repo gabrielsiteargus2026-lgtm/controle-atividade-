@@ -356,7 +356,7 @@ function criarWidgetUsuario(containerId = 'usuarioWidget') {
             }
         </style>
         <div class="usuario-widget">
-            <p class="usuario-widget-email">gabriel.faria@argusolutions.com.br</p>
+            <p class="usuario-widget-email">${usuarioAtual.email || 'Usuário'}</p>
             <button onclick="fazerLogout()" class="usuario-widget-btn">Sair</button>
         </div>
     `;
