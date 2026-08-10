@@ -3,6 +3,67 @@
 // ================================================================
 
 let usuarioAtual = null;
+const SESSION_EXPIRATION_KEY = 'controleAtividadeSessaoExpiraEm';
+const SESSION_DURATION_MS = 5 * 60 * 60 * 1000; // 5 horas
+let sessionTimeoutId = null;
+
+function getSessionExpiration() {
+    const value = localStorage.getItem(SESSION_EXPIRATION_KEY);
+    return value ? Number(value) : null;
+}
+
+function setSessionExpiration() {
+    const expiresAt = Date.now() + SESSION_DURATION_MS;
+    localStorage.setItem(SESSION_EXPIRATION_KEY, String(expiresAt));
+    console.log('Sessão expira em:', new Date(expiresAt).toISOString());
+}
+
+function clearSessionExpiration() {
+    localStorage.removeItem(SESSION_EXPIRATION_KEY);
+    if (sessionTimeoutId) {
+        clearTimeout(sessionTimeoutId);
+        sessionTimeoutId = null;
+    }
+}
+
+function isSessionExpired() {
+    const expiresAt = getSessionExpiration();
+    return expiresAt !== null && Date.now() >= expiresAt;
+}
+
+function scheduleSessionExpiration() {
+    if (sessionTimeoutId) {
+        clearTimeout(sessionTimeoutId);
+    }
+
+    const expiresAt = getSessionExpiration();
+    if (!expiresAt) {
+        return;
+    }
+
+    const delay = expiresAt - Date.now();
+    if (delay <= 0) {
+        handleSessionExpired();
+        return;
+    }
+
+    sessionTimeoutId = setTimeout(handleSessionExpired, delay);
+}
+
+function handleSessionExpired() {
+    console.log('Sessão expirada após 5 horas de atividade. Fazendo logout automático.');
+    clearSessionExpiration();
+    if (window.auth) {
+        window.auth.signOut().then(() => {
+            window.location.href = 'login.html';
+        }).catch(error => {
+            console.error('Erro ao encerrar sessão expirada:', error);
+            window.location.href = 'login.html';
+        });
+    } else {
+        window.location.href = 'login.html';
+    }
+}
 
 /**
  * Inicializar autenticação e redirecionar se não estiver logado
@@ -23,6 +84,12 @@ function inicializarAutenticacao() {
 function verificarAutenticacao() {
     window.auth.onAuthStateChanged(user => {
         if (user) {
+            if (isSessionExpired()) {
+                console.log('Sessão expirada detectada na verificação de autenticação.');
+                handleSessionExpired();
+                return;
+            }
+
             usuarioAtual = {
                 uid: user.uid,
                 email: user.email,
@@ -31,6 +98,7 @@ function verificarAutenticacao() {
             };
             
             console.log('Usuário autenticado:', usuarioAtual.email);
+            scheduleSessionExpiration();
             
             // Chamar callback se existir
             if (typeof onUsuarioAutenticado === 'function') {
@@ -49,6 +117,7 @@ function verificarAutenticacao() {
  */
 function fazerLogout() {
     if (confirm('Tem certeza que deseja sair?')) {
+        clearSessionExpiration();
         auth.signOut()
             .then(() => {
                 console.log('✅ Logout realizado');

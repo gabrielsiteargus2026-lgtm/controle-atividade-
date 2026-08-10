@@ -394,6 +394,8 @@
         // Inicializar variáveis globais
         window.auth = null;
         window.db = null;
+        const SESSION_EXPIRATION_KEY = 'controleAtividadeSessaoExpiraEm';
+        const SESSION_DURATION_MS = 5 * 60 * 60 * 1000; // 5 horas
         
         function showAlert(message, type = 'error') {
             const alertContainer = document.getElementById('alertContainer');
@@ -407,6 +409,29 @@
 
         function clearAlerts() {
             document.getElementById('alertContainer').innerHTML = '';
+        }
+
+        function getSessionExpiration() {
+            const timestamp = localStorage.getItem(SESSION_EXPIRATION_KEY);
+            return timestamp ? Number(timestamp) : null;
+        }
+
+        function setSessionExpiration() {
+            const expiresAt = Date.now() + SESSION_DURATION_MS;
+            localStorage.setItem(SESSION_EXPIRATION_KEY, String(expiresAt));
+            console.log('Sessão válida até:', new Date(expiresAt).toISOString());
+        }
+
+        function clearSessionExpiration() {
+            localStorage.removeItem(SESSION_EXPIRATION_KEY);
+        }
+
+        function isSessionExpired() {
+            const expiresAt = getSessionExpiration();
+            if (!expiresAt) {
+                return false;
+            }
+            return Date.now() >= expiresAt;
         }
 
         function toggleMode(mode = null) {
@@ -474,6 +499,7 @@
             window.auth.signInWithEmailAndPassword(email, password)
                 .then(userCredential => {
                     console.log('Login realizado com sucesso:', userCredential.user.email);
+                    setSessionExpiration();
                     showAlert('Login realizado com sucesso! Redirecionando...', 'success');
                     
                     // Aguardar 1 segundo antes de redirecionar
@@ -712,6 +738,21 @@
             // ⭐ Se usuário já está logado → redirecionar para index.html
             window.auth.onAuthStateChanged(user => {
                 if (user) {
+                    const expiresAt = getSessionExpiration();
+                    if (!expiresAt) {
+                        console.log('Sessão ativa sem timestamp. Ajustando expiração para 5 horas.');
+                        setSessionExpiration();
+                    }
+
+                    if (isSessionExpired()) {
+                        console.log('Sessão antiga expirada. Encerrando sessão.');
+                        clearSessionExpiration();
+                        window.auth.signOut().then(() => {
+                            window.location.href = 'login.html';
+                        });
+                        return;
+                    }
+
                     console.log('✅ Sessão encontrada para:', user.email);
                     // Redirecionar para index.html com delay para completar inicialização
                     setTimeout(() => {
