@@ -507,6 +507,13 @@
 
         <!-- GRÁFICO DE LINHAS - ATIVIDADES CRIADAS POR DIA -->
         <div class="section-title">Atividades Criadas por Dia - Comparativo Diário</div>
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+            <label for="selectMesAtividades" style="font-weight:600;">Visualizar por mês:</label>
+            <select id="selectMesAtividades" style="padding:6px 8px; border-radius:6px; border:1px solid #ddd;">
+                <option value="all">Todos os meses</option>
+            </select>
+            <small style="color:#666;">(selecione para filtrar o gráfico)</small>
+        </div>
         <div class="chart-card">
             <div class="chart-card-scrollable">
                 <canvas id="chartAtividadesCriadasPorDia"></canvas>
@@ -1273,9 +1280,65 @@
             return `${ano}-${mes}-${dia}`;
         }
 
+        // Popular seletor de mês para o gráfico de atividades criadas
+        function popularSelectMesAtividades() {
+            const select = document.getElementById('selectMesAtividades');
+            if (!select) return;
+            // coletar meses disponíveis a partir de atividadesGlobais
+            const mesesSet = new Set();
+            const pegarMesChave = (dataBR) => {
+                if (!dataBR) return null;
+                const parts = dataBR.split('/');
+                if (parts.length !== 3) return null;
+                const mes = parts[1].padStart(2, '0');
+                const ano = parts[2];
+                return `${ano}-${mes}`;
+            };
+
+            (Array.isArray(atividadesGlobais) ? atividadesGlobais : []).forEach(a => {
+                const chave = pegarMesChave(a && a.dataInicio);
+                if (chave) mesesSet.add(chave);
+            });
+            (Array.isArray(atividadesEmAndamento) ? atividadesEmAndamento : []).forEach(a => {
+                const chave = pegarMesChave(a && a.dataInicio);
+                if (chave) mesesSet.add(chave);
+            });
+
+            // ordenar meses desc
+            const meses = Array.from(mesesSet).sort().reverse();
+
+            // limpar e adicionar opções
+            select.innerHTML = '';
+            const optAll = document.createElement('option');
+            optAll.value = 'all';
+            optAll.textContent = 'Todos os meses';
+            select.appendChild(optAll);
+
+            const nomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+            meses.forEach(m => {
+                const [ano, mes] = m.split('-');
+                const opt = document.createElement('option');
+                opt.value = m;
+                const mesIdx = parseInt(mes, 10) - 1;
+                const nome = nomes[mesIdx] || mes;
+                opt.textContent = `${nome}/${ano}`;
+                select.appendChild(opt);
+            });
+
+            // evento de mudança
+            select.removeEventListener('change', handleChangeMesAtividades);
+            select.addEventListener('change', handleChangeMesAtividades);
+        }
+
+        function handleChangeMesAtividades() {
+            renderizarAtividadesCriadasPorDia();
+        }
+
         // Gráfico 4: Atividades Criadas por Dia - Comparativo Diário
         function renderizarAtividadesCriadasPorDia() {
             console.log('Renderizando gráfico de atividades criadas por dia...');
+            const select = document.getElementById('selectMesAtividades');
+            const selectedMonth = select ? select.value : 'all'; // 'YYYY-MM' or 'all'
             
             // Criar conjunto de tickets pausados (mesma lógica de Total Criados)
             const pausasAtivas = obterPausasAtivasPorTicket();
@@ -1287,6 +1350,13 @@
             // Contar atividades concluídas
             atividadesGlobais.forEach(a => {
                 if (!a || !a.dataInicio) return;
+                // filtrar por mês se necessário
+                if (selectedMonth && selectedMonth !== 'all') {
+                    const parts = a.dataInicio.split('/');
+                    if (parts.length !== 3) return;
+                    const mesChave = `${parts[2]}-${parts[1].padStart(2,'0')}`;
+                    if (mesChave !== selectedMonth) return;
+                }
                 const data = a.dataInicio;
                 if (!atividadesPorDia[data]) atividadesPorDia[data] = 0;
                 atividadesPorDia[data]++;
@@ -1295,6 +1365,13 @@
             // Contar atividades em andamento (EXCLUINDO as que têm pausas)
             atividadesEmAndamento.forEach(a => {
                 if (!a || !a.dataInicio) return;
+                // filtrar por mês se necessário
+                if (selectedMonth && selectedMonth !== 'all') {
+                    const parts = a.dataInicio.split('/');
+                    if (parts.length !== 3) return;
+                    const mesChave = `${parts[2]}-${parts[1].padStart(2,'0')}`;
+                    if (mesChave !== selectedMonth) return;
+                }
                 // Pular atividades que têm pausas registradas
                 if (a.ticket && ticketsPausados.has(a.ticket)) return;
                 const data = a.dataInicio;
@@ -1305,6 +1382,12 @@
             // Contar atividades pausadas (apenas as com status === 'Pausado' e ainda ativas)
             Object.values(pausasAtivas).forEach(p => {
                 if (!p || !p.dataInicio) return;
+                if (selectedMonth && selectedMonth !== 'all') {
+                    const parts = p.dataInicio.split('/');
+                    if (parts.length !== 3) return;
+                    const mesChave = `${parts[2]}-${parts[1].padStart(2,'0')}`;
+                    if (mesChave !== selectedMonth) return;
+                }
                 const data = p.dataInicio;
                 if (!atividadesPorDia[data]) atividadesPorDia[data] = 0;
                 atividadesPorDia[data]++;
@@ -1920,6 +2003,7 @@
             
             atualizarPeriodoAtual();
             renderizarAtividadesAbertas();
+            try { popularSelectMesAtividades(); } catch(e){console.warn('Erro ao popular seletor de mês:', e)}
             renderizarAtividadesCriadasPorDia();
             renderizarResumoAtividades();
             renderizarAnalisePausas();
