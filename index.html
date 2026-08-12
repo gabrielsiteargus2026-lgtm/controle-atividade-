@@ -716,33 +716,21 @@
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
-            overflow: hidden;
+            overflow: visible;
         }
 
-        .kanban-column:nth-child(1) .kanban-card {
-            display: flex;
-            flex-direction: column;
-            min-height: 165px;
-            max-height: 165px;
-        }
-
-        .kanban-column:nth-child(2) .kanban-card {
-            display: flex;
-            flex-direction: column;
-            min-height: 165px;
-            max-height: 165px;
-        }
-
+        .kanban-column:nth-child(1) .kanban-card,
+        .kanban-column:nth-child(2) .kanban-card,
         .kanban-column:nth-child(3) .kanban-card {
             display: flex;
             flex-direction: column;
-            min-height: 165px;
-            max-height: 165px;
+            min-height: auto;
+            max-height: none;
         }
         
         .kanban-card-content {
             flex: 1;
-            overflow-y: auto;
+            overflow-y: visible;
             padding-right: 4px;
             margin-bottom: 6px;
             font-size: 0.75em;
@@ -1051,7 +1039,6 @@
             <ul class="sidebar-menu">
                 <li><a href="index.html" class="active">Controle de Atividade</a></li>
                 <li><a href="historico.html">Histórico</a></li>
-                <li><a href="performance.html">Performance</a></li>
                 <li><a href="insights.html">Insights</a></li>
                 <li><a href="atividades-usuarios.html">Atividades dos Usuários</a></li>
                 <li><a href="database.html">Base de Dados 🔒</a></li>
@@ -1676,6 +1663,10 @@
                 atividadeReaberta.intervaloTimer = null;
                 atividadeReaberta.isReabertura = true;  // ✅ Marcar como reabertura
                 atividadeReaberta.data_reaberta = agora.toISOString(); // Data de reabertura
+                atividadeReaberta.finalizado_por = atividadeReaberta.finalizado_por || atividadeReaberta.colaborador || atividadeReaberta.nome || 'Desconhecido';
+                atividadeReaberta.reaberto_por = usuarioAtual?.nome || atividadeReaberta.reaberto_por || atividadeReaberta.nome || 'Desconhecido';
+                atividadeReaberta.nome = atividadeReaberta.reaberto_por;
+                atividadeReaberta.colaborador = atividadeReaberta.colaborador || atividadeReaberta.nome;
                 
                 atividadesEmAndamento.push(atividadeReaberta);
                 kanbanState[atividadeReaberta.id] = { status: 'em_andamento', motivoPausa: '' };
@@ -1979,6 +1970,10 @@
             atividadeReaberta.isReabertura = true;
             atividadeReaberta.data_reaberta = agora.toISOString();
             atividadeReaberta.chaveAtividade = atividadeReaberta.chaveAtividade || gerarChaveAtividade();
+            atividadeReaberta.finalizado_por = atividadeReaberta.finalizado_por || atividadeReaberta.colaborador || atividadeReaberta.nome || 'Desconhecido';
+            atividadeReaberta.reaberto_por = usuarioAtual?.nome || atividadeReaberta.reaberto_por || atividadeReaberta.nome || 'Desconhecido';
+            atividadeReaberta.nome = atividadeReaberta.reaberto_por;
+            atividadeReaberta.colaborador = atividadeReaberta.colaborador || atividadeReaberta.nome;
 
             // Adicionar ao array de em andamento
             atividadesEmAndamento.push(atividadeReaberta);
@@ -2197,7 +2192,10 @@
             atividades.unshift({
                 id: atividade.id,
                 chaveAtividade: atividade.chaveAtividade, // ✅ SEMPRE preservar chave
-                colaborador: atividade.nome,
+                nome: atividade.nome || atividade.colaborador || usuarioAtual?.nome || 'Usuário',
+                colaborador: atividade.nome || atividade.colaborador || 'Desconhecido',
+                finalizado_por: atividade.finalizado_por || atividade.nome || atividade.colaborador || 'Desconhecido',
+                reaberto_por: atividade.reaberto_por || null,
                 ticket: atividade.ticket,
                 dataInicio: atividade.dataInicio,
                 horaInicio: atividade.horaInicio,
@@ -2857,7 +2855,12 @@
                                 ${atividade.chaveAtividade ? `<div class="kanban-card-subtitle" style="color: #9c27b0; font-weight: 600; font-size: 0.8em; margin-bottom: 3px; padding: 3px 6px; background: #f3e5f5; border-radius: 3px; display: inline-block;">🔑 ${atividade.chaveAtividade}</div>` : ''}
                                 ${atividade.titulo ? `<div class="kanban-card-subtitle" style="color: #51cf66; font-weight: 600; margin-bottom: 3px;">📌 ${atividade.titulo}</div>` : ''}
                                 <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
-                                <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.nome}</div>
+                                ${atividade.isReabertura ? `
+                                <div class="kanban-card-subtitle"><strong>Reaberto por:</strong> ${atividade.reaberto_por || atividade.nome || atividade.colaborador || 'Desconhecido'}</div>
+                                <div class="kanban-card-subtitle"><strong>Colaborador que finalizou:</strong> ${atividade.finalizado_por || atividade.colaborador || atividade.nome || 'Desconhecido'}</div>
+                                ` : `
+                                <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.nome || atividade.colaborador || 'Desconhecido'}</div>
+                                `}
                                 <div class="kanban-card-subtitle"><strong>Data:</strong> ${atividade.dataInicio}</div>
                                 <div class="kanban-card-subtitle"><strong>Início:</strong> ${atividade.horaInicio}</div>
                                 <div class="kanban-card-subtitle kanban-duracao-display" style="color: #667eea; font-weight: bold; margin-top: 2px;">⏱️ ${formatarTempo(duracao)}</div>
@@ -2886,7 +2889,12 @@
                                 ${atividade.chaveAtividade ? `<div class="kanban-card-subtitle" style="color: #9c27b0; font-weight: 600; font-size: 0.8em; margin-bottom: 3px; padding: 3px 6px; background: #f3e5f5; border-radius: 3px; display: inline-block;">🔑 ${atividade.chaveAtividade}</div>` : ''}
                                 ${atividade.titulo ? `<div class="kanban-card-subtitle" style="color: #51cf66; font-weight: 600; margin-bottom: 3px;">📌 ${atividade.titulo}</div>` : ''}
                                 <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
-                                <div class="kanban-card-subtitle">${atividade.nome}</div>
+                                ${atividade.isReabertura ? `
+                                <div class="kanban-card-subtitle"><strong>Reaberto por:</strong> ${atividade.reaberto_por || atividade.nome || atividade.colaborador || 'Desconhecido'}</div>
+                                <div class="kanban-card-subtitle"><strong>Colaborador que finalizou:</strong> ${atividade.finalizado_por || atividade.colaborador || atividade.nome || 'Desconhecido'}</div>
+                                ` : `
+                                <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.nome || atividade.colaborador || 'Desconhecido'}</div>
+                                `}
                                 <div class="kanban-pause-reason">💬 ${kanbanState[atividade.id]?.motivoPausa || ''}</div>
                             </div>
                             <div class="kanban-card-actions">
@@ -2938,7 +2946,11 @@
                                 ${atividade.chaveAtividade ? `<div class="kanban-card-subtitle" style="color: #9c27b0; font-weight: 600; font-size: 0.8em; margin-bottom: 3px; padding: 3px 6px; background: #f3e5f5; border-radius: 3px; display: inline-block;">🔑 ${atividade.chaveAtividade}</div>` : ''}
                                 ${atividade.titulo ? `<div class="kanban-card-subtitle" style="color: #51cf66; font-weight: 600; margin-bottom: 3px;">📌 ${atividade.titulo}</div>` : ''}
                                 <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
-                                <div class="kanban-card-subtitle"><strong>Por:</strong> ${atividade.nome}</div>
+                                ${atividade.finalizado_por ? `
+                                <div class="kanban-card-subtitle"><strong>Colaborador que finalizou:</strong> ${atividade.finalizado_por}</div>
+                                ` : `
+                                <div class="kanban-card-subtitle"><strong>Por:</strong> ${atividade.nome || atividade.colaborador || 'Desconhecido'}</div>
+                                `}
                                 <div class="kanban-card-subtitle" style="font-size: 0.85em; color: #888;">Duração: ${atividade.duracao || 'N/A'}</div>
                                 <div style="text-align: center; color: #51cf66; font-weight: bold; margin-top: 2px;">✓ Concluído</div>
                             </div>

@@ -498,7 +498,6 @@ function obterNomePaginaAtual() {
         'index.html': 'Controle Principal',
         'historico.html': 'Histórico',
         'admin.html': 'Administrador',
-        'performance.html': 'Performance',
         'atividades-usuarios.html': 'Atividades dos Usuários',
         'dashboard-ranking.html': 'Dashboard Ranking',
         'api-ranking.html': 'API Ranking',
