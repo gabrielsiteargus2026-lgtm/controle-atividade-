@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Atividades dos Usuários - Controle de Atividade</title>
+    <title>Atividades dos Usuarios - Controle de Atividade</title>
     <style>
         * {
             margin: 0;
@@ -84,59 +84,6 @@
             color: #2c3e50;
             font-size: 2.2em;
             font-weight: 600;
-        }
-
-        .filters {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            padding: 12px;
-            margin-bottom: 30px;
-        }
-
-        .filters-title {
-            color: #5b8ec6;
-            margin-bottom: 8px;
-            font-size: 1.1em;
-            font-weight: 600;
-        }
-
-        .filters-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
-            gap: 8px;
-            align-items: flex-end;
-        }
-
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .filter-group label {
-            font-size: 0.85em;
-            margin-bottom: 3px;
-            font-weight: 500;
-        }
-
-        .filter-group input,
-        .filter-group select {
-            padding: 6px;
-            font-size: 0.9em;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-
-        .filter-group input:focus,
-        .filter-group select:focus {
-            outline: none;
-            border-color: #5b8ec6;
-            box-shadow: 0 0 3px rgba(91, 142, 198, 0.2);
-        }
-
-        .filter-buttons {
-            display: flex;
-            gap: 6px;
         }
 
         .btn {
@@ -307,15 +254,6 @@
 
             .main-content {
                 margin-left: 0;
-            }
-
-            .filters-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .filter-group input,
-            .filter-group select {
-                width: 100%;
             }
 
             .page-header {
@@ -665,8 +603,8 @@
                         localStorage.setItem('registrosAtividades', JSON.stringify(registrosAtividades));
                         console.log('💾 Dados sincronizados com localStorage');
 
-                        // Aplicar filtros e exibir
-                        aplicarFiltros();
+                        // Exibir registros
+                        exibirTodosRegistros();
                         atualizarDebug();
                         
                         if (loadingElement) loadingElement.style.display = 'none';
@@ -723,8 +661,8 @@
             // Ordenar por data (mais recente primeiro)
             registrosAtividades.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-            // Aplicar filtros e exibir
-            aplicarFiltros();
+            // Exibir registros
+            exibirTodosRegistros();
             atualizarDebug();
         }
 
@@ -788,6 +726,7 @@
                 <li><a href="historico.html">Histórico</a></li>
                 <li><a href="insights.html">Insights</a></li>
                 <li><a href="atividades-usuarios.html" class="active">Atividades dos Usuários</a></li>
+                <li><a href="acompanhamento-d1.html">Acompanhamento D-1</a></li>
                 <li><a href="database.html">Base de Dados 🔒</a></li>
                 <li><a href="admin.html">Administrador 🔒</a></li>
             </ul>
@@ -809,44 +748,9 @@
                 </div>
             </div>
 
-            <div class="filters">
-                <h2 class="filters-title">Filtros</h2>
-                <div class="filters-grid">
-                    <div class="filter-group">
-                        <label for="filterEmail">Email do Usuário</label>
-                        <input type="text" id="filterEmail" placeholder="Digite email...">
-                    </div>
-                    <div class="filter-group">
-                        <label for="filterAcao">Tipo de Ação</label>
-                        <select id="filterAcao">
-                            <option value="">-- Todas as ações --</option>
-                            <option value="INICIO">Iniciou Atividade</option>
-                            <option value="FIM">Finalizou Atividade</option>
-                            <option value="PAUSA">Pausou Atividade</option>
-                            <option value="RETOMOU">Retomou Atividade</option>
-                            <option value="EXCLUSAO">Deletou Atividade</option>
-                            <option value="LOGIN">Login</option>
-                            <option value="LOGOUT">Logout</option>
-                            <option value="ACESSOU_PAGINA">Acessou Página</option>
-                            <!-- Compatibilidade com nomes antigos -->
-                            <option value="INICIOU">Iniciou (antigo)</option>
-                            <option value="FINALIZOU">Finalizou (antigo)</option>
-                            <option value="PAUSOU">Pausou (antigo)</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="filterData">Data</label>
-                        <input type="date" id="filterData">
-                    </div>
-                    <div class="filter-buttons">
-                        <button class="btn btn-primary" id="btnAplicarFiltros" style="padding: 6px 12px; font-size: 0.9em; flex: 1;">🔎</button>
-                        <button class="btn btn-secondary" id="btnLimparFiltros" style="padding: 6px 12px; font-size: 0.9em; flex: 1;">↺</button>
-                    </div>
-                </div>
-                <div style="margin-top: 8px; margin-bottom: 20px; display: flex; gap: 6px;">
+            <div style="margin-bottom: 20px; display: flex; gap: 6px;">
                     <button class="btn export-btn" id="btnExportarCSV" style="padding: 6px 12px; font-size: 0.9em; flex: 1;">Exportar CSV</button>
                     <button class="btn btn-primary" id="btnRecarregar" style="padding: 6px 12px; font-size: 0.9em; flex: 1; background: #27ae60;">Recarregar</button>
-                </div>
             </div>
 
             <div id="loading" class="loading" style="display: none;">
@@ -997,65 +901,16 @@
             console.log('✅ Tabela atualizada com sucesso');
         }
 
-        // Aplicar filtros
-        function aplicarFiltros() {
-            const email = document.getElementById('filterEmail').value.toLowerCase();
-            const acao = document.getElementById('filterAcao').value;
-            const data = document.getElementById('filterData').value;
-
-            registrosFiltrados = registrosAtividades.filter(registro => {
-                let passa = true;
-
-                // ✅ CORRIGIDO: Tratar campo email_usuario com segurança
-                if (email) {
-                    const emailRegistro = (registro.email_usuario || '').toLowerCase();
-                    if (!emailRegistro.includes(email)) {
-                        passa = false;
-                    }
-                }
-
-                // ✅ CORRIGIDO: Suportar compatibilidade de tipos (PAUSA/PAUSOU, INICIO/INICIOU, etc)
-                if (acao) {
-                    // Normalizar tipo para comparação flexível
-                    const tipoRegistro = (registro.tipo || '').toUpperCase();
-                    const acaoNormalizada = acao.toUpperCase();
-                    
-                    // Validar correspondência (suportando variações como PAUSA/PAUSOU)
-                    const matches = 
-                        tipoRegistro === acaoNormalizada ||
-                        (acaoNormalizada === 'INICIO' && tipoRegistro === 'INICIOU') ||
-                        (acaoNormalizada === 'INICIOU' && tipoRegistro === 'INICIO') ||
-                        (acaoNormalizada === 'FIM' && tipoRegistro === 'FINALIZOU') ||
-                        (acaoNormalizada === 'FINALIZOU' && tipoRegistro === 'FIM') ||
-                        (acaoNormalizada === 'PAUSA' && tipoRegistro === 'PAUSOU') ||
-                        (acaoNormalizada === 'PAUSOU' && tipoRegistro === 'PAUSA') ||
-                        (acaoNormalizada === 'ACESSOU_PAGINA' && (tipoRegistro === 'ACESSOU_PAGINA' || tipoRegistro === 'ACESSO_PAGINA')) ||
-                        (acaoNormalizada === 'ACESSO_PAGINA' && (tipoRegistro === 'ACESSOU_PAGINA' || tipoRegistro === 'ACESSO_PAGINA'));
-                    
-                    if (!matches) {
-                        passa = false;
-                    }
-                }
-
-                if (data) {
-                    const dataRegistro = new Date(registro.timestamp).toISOString().split('T')[0];
-                    if (dataRegistro !== data) {
-                        passa = false;
-                    }
-                }
-
-                return passa;
-            });
+        // Exibir todos os registros
+        function exibirTodosRegistros() {
+            registrosFiltrados = [...registrosAtividades];
 
             exibirAtividades();
             atualizarDebug();
         }
 
-        // Limpar filtros
-        function limparFiltros() {
-            document.getElementById('filterEmail').value = '';
-            document.getElementById('filterAcao').value = '';
-            document.getElementById('filterData').value = '';
+        // Restaurar todos os registros
+        function restaurarTodosRegistros() {
             registrosFiltrados = [...registrosAtividades];
             exibirAtividades();
             atualizarDebug();
@@ -1064,7 +919,7 @@
         // Exportar para CSV
         function exportarCSV() {
             if (registrosFiltrados.length === 0) {
-                alert('Nenhum dado para exportar! Aplique filtros primeiro.');
+                alert('Nenhum dado para exportar!');
                 return;
             }
 
@@ -1199,6 +1054,11 @@
 
                 function exibirDadosAbertas(dados) {
                     const container = document.getElementById('percentualAbertasContainer');
+                    const cores = {
+                        percentual: '#5b8ec6',
+                        concluidas: '#27ae60',
+                        pausadas: '#f39c12'
+                    };
                     
                     // ✅ CORRIGIDO: Verificar se elemento existe antes de tentar acessar
                     if (!container) {
@@ -1213,7 +1073,7 @@
 
                     let html = '';
                     dados.forEach(colab => {
-                        const cor = colab.percentualAberto > 50 ? '#ff6b6b' : (colab.percentualAberto > 20 ? '#ffc93c' : '#51cf66');
+                        const cor = cores.percentual;
                         
                         html += `
                             <div style="
@@ -1239,11 +1099,11 @@
                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85em;">
                                         <div>
                                             <div style="color: #666; margin-bottom: 2px;">Concluídas</div>
-                                            <div style="font-weight: 600; color: #51cf66;">${colab.concluidas}</div>
+                                            <div style="font-weight: 600; color: ${cores.concluidas};">${colab.concluidas}</div>
                                         </div>
                                         <div>
                                             <div style="color: #666; margin-bottom: 2px;">Pausadas</div>
-                                            <div style="font-weight: 600; color: #ffc93c;">${colab.pausadas}</div>
+                                            <div style="font-weight: 600; color: ${cores.pausadas};">${colab.pausadas}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -1304,8 +1164,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             console.log('DOM carregado, adicionando event listeners...');
             
-            document.getElementById('btnAplicarFiltros').addEventListener('click', aplicarFiltros);
-            document.getElementById('btnLimparFiltros').addEventListener('click', limparFiltros);
             document.getElementById('btnExportarCSV').addEventListener('click', exportarCSV);
             document.getElementById('btnRecarregar').addEventListener('click', () => {
                 console.log('Recarregando dados manualmente...');

@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acompanhamento D-1 - Controle de Atividade</title>
+    <script>
+        (function() {
+            function carregarChart(src, sucesso, falha) {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = sucesso;
+                script.onerror = falha;
+                document.head.appendChild(script);
+            }
+
+            carregarChart('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js', function() {
+                window.chartPronto = true;
+                if (typeof renderizarGraficoDiario === 'function') renderizarGraficoDiario();
+            }, function() {
+                carregarChart('./vendor/chart.min.js', function() {
+                    window.chartPronto = true;
+                    if (typeof renderizarGraficoDiario === 'function') renderizarGraficoDiario();
+                }, function() { console.warn('Chart.js não disponível.'); });
+            });
+        })();
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fa;
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: #2c3e50;
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .sidebar-logo { width: 100%; height: 80px; object-fit: contain; margin-bottom: 30px; }
+        .sidebar-menu { list-style: none; }
+        .sidebar-menu li { margin-bottom: 10px; }
+        .sidebar-menu a {
+            display: block;
+            padding: 12px 15px;
+            color: #ecf0f1;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        .sidebar-menu a:hover { background: #5b8ec6; color: white; padding-left: 20px; }
+        .sidebar-menu a.active { background: #5b8ec6; color: white; border-left: 4px solid #fff; }
+
+        .container { width: calc(100% - 280px); max-width: none; margin: 0 0 0 280px; }
+        .header { text-align: center; padding: 20px 0 30px; }
+        .header { position: relative; }
+        .header h1 { color: #2c3e50; font-size: 2.2em; font-weight: 600; }
+        .header p { color: #667; margin-top: 8px; }
+        .btn-captura { position: absolute; right: 0; top: 44px; padding: 7px 10px; font-size: .78em; background: #eef2f7; color: #1e3a5f; border: 1px solid #cbd5e1; box-shadow: none; }
+        .btn-captura:hover { background: #dbeafe; box-shadow: none; }
+        .btn-captura:disabled { opacity: .65; cursor: wait; }
+        .modo-captura .btn-captura { display: none; }
+        body.captura-ativa { padding: 0 !important; }
+        .modo-captura { width: 100% !important; max-width: none !important; margin-left: 0 !important; margin-right: 0 !important; }
+        .modo-captura .charts-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+        .modo-captura .charts-grid .card:nth-child(-n+3) { grid-column: span 2; }
+        .modo-captura .charts-grid .card:nth-child(n+4) { grid-column: span 3; }
+        .modo-captura .chart-container canvas { width: 100% !important; }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .filters { display: flex; align-items: end; gap: 16px; flex-wrap: wrap; }
+        .form-group { min-width: 210px; flex: 1; }
+        label { display: block; color: #2c3e50; font-weight: 600; margin-bottom: 8px; }
+        input, select {
+            width: 100%;
+            padding: 11px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 1em;
+            background: white;
+        }
+        input:focus, select:focus { outline: none; border-color: #5b8ec6; }
+        button {
+            border: 0;
+            border-radius: 5px;
+            padding: 12px 18px;
+            background: #5b8ec6;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        button:hover { background: #4a75b0; box-shadow: 0 4px 12px rgba(91, 142, 198, 0.35); }
+        .btn-secondary { background: #95a5a6; }
+        .btn-secondary:hover { background: #7f8c8d; }
+
+        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .summary-card { color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,.1); }
+        .summary-card:nth-child(1) { background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%); }
+        .summary-card:nth-child(2) { background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); }
+        .summary-card:nth-child(3) { background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%); }
+        .summary-card:nth-child(4) { background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); }
+        .summary-label { font-size: .9em; opacity: .9; }
+        .summary-value { font-size: 2em; font-weight: 700; margin-bottom: 4px; }
+        .summary-heading { display: flex; align-items: center; gap: 10px; color: #2c3e50; font-size: 1.35em; margin: 20px 0 14px; }
+        .summary-heading input { width: auto; padding: 6px 9px; font-size: .75em; }
+
+        .chart-section { margin-top: 20px; }
+        .chart-title { color: #2c3e50; font-size: 1.25em; margin-bottom: 14px; }
+        .chart-caption { color: #1e3a5f; font-size: .9em; font-weight: 600; margin: -6px 0 8px; }
+        .chart-filter { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .chart-filter label { margin: 0; }
+        .chart-filter select { width: auto; padding: 7px 10px; }
+        .chart-filter input { width: auto; padding: 7px 10px; }
+        .charts-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 20px; }
+        .charts-grid .card:nth-child(-n+3) { grid-column: span 2; }
+        .charts-grid .card:nth-child(n+4) { grid-column: span 3; }
+        .chart-container { position: relative; height: 360px; }
+        .chart-container.small { height: 300px; }
+        .tempo-lista { display: flex; flex-direction: column; gap: 10px; min-height: 250px; }
+        .tempo-lista-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border-left: 4px solid #1e3a5f; background: #f3f4f6; border-radius: 5px; color: #2c3e50; }
+        .tempo-lista-colaborador { font-weight: 600; }
+        .tempo-lista-valor { color: #1e3a5f; font-size: 1.15em; font-weight: 700; white-space: nowrap; }
+        .pausas-lista { display: flex; flex-direction: column; gap: 12px; min-height: 250px; }
+        .pausas-lista-item { padding: 12px 14px; border-left: 4px solid #1e3a5f; background: #f3f4f6; border-radius: 5px; color: #2c3e50; }
+        .pausas-lista-titulo { display: flex; justify-content: space-between; align-items: center; gap: 16px; color: #1e3a5f; font-weight: 700; margin-bottom: 8px; }
+        .pausas-lista-total { white-space: nowrap; }
+        .pausas-lista-setor { padding: 3px 0 3px 12px; color: #4b5563; }
+        .pausas-lista-ticket { display: grid; grid-template-columns: 1.15fr 1fr 1.35fr 1.35fr 1.45fr; gap: 12px; align-items: center; padding: 7px 10px; color: #4b5563; background: #fff; border-radius: 3px; }
+        .pausas-lista-ticket span { min-width: 0; white-space: nowrap; }
+        .pausas-lista-valor { color: #1e3a5f; font-weight: 700; }
+
+        .section-title { color: #2c3e50; margin-bottom: 16px; font-size: 1.25em; }
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        thead { background: #5b8ec6; color: white; }
+        th, td { padding: 13px 12px; text-align: left; border-bottom: 1px solid #e6e6e6; }
+        tbody tr:hover { background: #f5f8fc; }
+        .empty-state { text-align: center; color: #777; padding: 36px; }
+        .status { display: inline-block; padding: 4px 9px; border-radius: 12px; font-size: .82em; font-weight: 600; background: #e8f5e9; color: #2e7d32; }
+        .status.pending { background: #fff3cd; color: #856404; }
+        .date-caption { color: #5b8ec6; font-weight: 600; margin-bottom: 18px; }
+        .user-widget { position: fixed; right: 20px; top: 15px; z-index: 1001; }
+
+        @media (max-width: 1100px) {
+            .sidebar { position: relative; width: 100%; height: auto; margin: -20px -20px 20px; }
+            .container { width: 100%; margin-left: 0; }
+            .user-widget { position: static; text-align: right; margin-bottom: 10px; }
+            .summary-grid { grid-template-columns: repeat(2, 1fr); }
+            .charts-grid { grid-template-columns: 1fr; }
+            .charts-grid .card { grid-column: span 1; }
+            .btn-captura { position: static; margin-top: 10px; }
+        }
+        @media (max-width: 520px) { .summary-grid { grid-template-columns: 1fr; } .filters { display: block; } .form-group, .filters button { width: 100%; margin-bottom: 12px; } .pausas-lista-ticket { grid-template-columns: 1fr; gap: 4px; } }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="firebase-auth.js"></script>
+    <script>
+        if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('COLE_AQUI')) {
+            firebase.initializeApp(FIREBASE_CONFIG);
+            window.auth = firebase.auth();
+            window.db = firebase.database();
+            window.FIREBASE_OK = true;
+            inicializarAutenticacao();
+        } else {
+            window.FIREBASE_OK = false;
+        }
+
+        if (typeof window.onUsuarioAutenticado === 'undefined') {
+            window.onUsuarioAutenticado = function() {
+                if (typeof registrarAcessoPagina === 'function') registrarAcessoPagina();
+                if (typeof criarWidgetUsuario === 'function') criarWidgetUsuario('usuarioWidget');
+                carregarAtividades();
+            };
+        }
+    </script>
+</head>
+<body>
+    <div id="usuarioWidget" class="user-widget"></div>
+    <aside class="sidebar">
+        <img src="argus-logo 1.png" alt="Argus" class="sidebar-logo">
+        <nav>
+            <ul class="sidebar-menu">
+                <li><a href="index.html">Controle de Atividade</a></li>
+                <li><a href="historico.html">Histórico</a></li>
+                <li><a href="insights.html">Insights</a></li>
+                <li><a href="atividades-usuarios.html">Atividades dos Usuários</a></li>
+                <li><a href="acompanhamento-d1.html" class="active">Acompanhamento D-1</a></li>
+                <li><a href="database.html">Base de Dados 🔒</a></li>
+                <li><a href="admin.html">Administrador 🔒</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main class="container">
+        <header class="header">
+            <h1>Acompanhamento D-1</h1>
+            <button type="button" id="btnCapturarGraficos" class="btn-captura" title="Baixar imagem completa dos gráficos">Capturar</button>
+        </header>
+
+        <h2 class="summary-heading">Resumo de atividades - <input type="date" id="dataResumoCards" aria-label="Data do resumo"></h2>
+        <section class="summary-grid" aria-label="Resumo do dia">
+            <div class="summary-card"><div class="summary-value" id="totalEmAndamento">0</div><div class="summary-label">Em Andamento</div></div>
+            <div class="summary-card"><div class="summary-value" id="totalPausadas">0</div><div class="summary-label">Pausadas</div></div>
+            <div class="summary-card"><div class="summary-value" id="totalConcluidas">0</div><div class="summary-label">Atividades Concluídas</div></div>
+            <div class="summary-card"><div class="summary-value" id="totalAtividadesCriadas">0</div><div class="summary-label">Total Criadas</div></div>
+        </section>
+
+        <section class="card chart-section">
+            <h2 class="chart-title">Atividades Criadas por Dia - Comparativo Diário</h2>
+            <div class="chart-filter">
+                <label for="selectMesAtividades">Visualizar por mês:</label>
+                <select id="selectMesAtividades"><option value="all">Todos os meses</option></select>
+            </div>
+            <div class="chart-caption">Total de Atividades Criadas</div>
+            <div class="chart-container"><canvas id="chartAtividadesCriadasPorDia"></canvas></div>
+        </section>
+
+        <section class="charts-grid chart-section">
+            <div class="card">
+                <h2 class="chart-title">Atividades Criadas por Colaborador</h2>
+                <div id="legendaAtividadesPorColaborador" class="chart-caption"></div>
+                <div class="chart-container small"><canvas id="chartAtividadesPorColaborador"></canvas></div>
+            </div>
+            <div class="card">
+                <h2 class="chart-title">Status por Colaborador</h2>
+                <div class="chart-container small"><canvas id="chartStatusPorColaborador"></canvas></div>
+            </div>
+            <div class="card">
+                <h2 class="chart-title">Tempo Médio por Atividade</h2>
+                <div id="listaTempoMedioAtividade" class="tempo-lista"></div>
+            </div>
+            <div class="card">
+                <h2 class="chart-title">Pausas por Setor</h2>
+                <div class="chart-caption">Quantidade de pausas</div>
+                <div class="chart-container small"><canvas id="chartPausasPorSetor"></canvas></div>
+            </div>
+            <div class="card">
+                <h2 class="chart-title">Pausas por Colaborador e Setor</h2>
+                <div id="listaPausasPorColaborador" class="pausas-lista"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        let atividades = [];
+        let atividadesEmAndamento = [];
+        let historicoPausas = [];
+        let registrosAtividades = [];
+        let graficoDiario;
+        let graficoColaboradores;
+        let graficoStatusColaboradores;
+        let graficoPausasColaboradores;
+        let graficoTempoMedio;
+        let graficoPausasSetor;
+        let filtroMesInicializado = false;
+        const PALETA_GRAFICOS = ['#6b7280', '#1e3a5f', '#60a5fa'];
+        const PLUGIN_VALORES_COLUNAS = {
+            id: 'valoresNasColunas',
+            afterDatasetsDraw(chart) {
+                const contexto = chart.ctx;
+                contexto.save();
+                contexto.fillStyle = '#1f2937';
+                contexto.font = '600 12px Segoe UI';
+                contexto.textAlign = 'center';
+                chart.data.datasets.forEach((dataset, indiceDataset) => {
+                    chart.getDatasetMeta(indiceDataset).data.forEach((barra, indice) => {
+                        const valor = dataset.data[indice];
+                        if (Number(valor) !== 0 && valor !== null && valor !== undefined) {
+                            contexto.textAlign = 'center';
+                                contexto.fillText(valor, barra.x, Math.max(barra.y - 18, 18));
+                        }
+                    });
+                });
+                contexto.restore();
+            }
+        };
+
+        function dataD1() {
+            const data = new Date();
+            data.setDate(data.getDate() - 1);
+            return data.toISOString().slice(0, 10);
+        }
+
+        function dataAtividadeParaISO(data) {
+            if (!data) return '';
+            const partes = String(data).split('/');
+            return partes.length === 3 ? `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}` : String(data).slice(0, 10);
+        }
+
+        function dataRegistroParaISO(timestamp) {
+            if (!timestamp) return '';
+            const data = new Date(timestamp);
+            if (Number.isNaN(data.getTime())) return '';
+            return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
+        }
+
+        function normalizarLista(dados) {
+            if (!dados) return [];
+            const lista = Array.isArray(dados) ? dados : Object.values(dados);
+            const unicos = new Map();
+            lista.forEach(item => { if (item) unicos.set(item.id || item.ticket || JSON.stringify(item), item); });
+            return [...unicos.values()];
+        }
+
+        function normalizarRegistros(dados) {
+            if (!dados) return [];
+            return (Array.isArray(dados) ? dados : Object.values(dados)).filter(item => item && item.timestamp && item.tipo);
+        }
+
+        function normalizarPausas(dados) {
+            if (!dados) return [];
+            return (Array.isArray(dados) ? dados : Object.values(dados)).filter(item => item && typeof item === 'object');
+        }
+
+        function lerLocalStorage() {
+            const ler = chave => {
+                try { return normalizarLista(JSON.parse(localStorage.getItem(chave) || '[]')); } catch (erro) { return []; }
+            };
+            const lerPausas = () => {
+                try { return normalizarPausas(JSON.parse(localStorage.getItem('historicoPausas') || '[]')); } catch (erro) { return []; }
+            };
+            const lerRegistros = () => {
+                try { return normalizarRegistros(JSON.parse(localStorage.getItem('registrosAtividades') || '[]')); } catch (erro) { return []; }
+            };
+            return {
+                atividades: ler('atividades'),
+                emAndamento: ler('atividadesEmAndamento'),
+                pausas: lerPausas(),
+                registros: lerRegistros()
+            };
+        }
+
+        function carregarAtividades() {
+            if (window.FIREBASE_OK && window.db) {
+                Promise.all([
+                    window.db.ref('atividades').once('value'),
+                    window.db.ref('atividadesEmAndamento').once('value'),
+                    window.db.ref('historicoPausas').once('value'),
+                    window.db.ref('registrosAtividades').once('value')
+                ]).then(([atividadesSnapshot, andamentoSnapshot, pausasSnapshot, registrosSnapshot]) => {
+                    atividades = normalizarLista(atividadesSnapshot.val());
+                    atividadesEmAndamento = normalizarLista(andamentoSnapshot.val());
+                    historicoPausas = normalizarPausas(pausasSnapshot.val());
+                    registrosAtividades = normalizarRegistros(registrosSnapshot.val());
+                    renderizar();
+                }).catch(() => {
+                    const dados = lerLocalStorage();
+                    atividades = dados.atividades;
+                    atividadesEmAndamento = dados.emAndamento;
+                    historicoPausas = dados.pausas;
+                    registrosAtividades = dados.registros;
+                    renderizar();
+                });
+            } else {
+                const dados = lerLocalStorage();
+                atividades = dados.atividades;
+                atividadesEmAndamento = dados.emAndamento;
+                historicoPausas = dados.pausas;
+                registrosAtividades = dados.registros;
+                renderizar();
+            }
+        }
+
+        function minutosDaDuracao(valor) {
+            if (!valor) return 0;
+            const partes = String(valor).split(':').map(Number);
+            if (partes.some(Number.isNaN)) return 0;
+            return partes.length === 3 ? partes[0] * 60 + partes[1] + partes[2] / 60 : partes[0] * 60 + partes[1];
+        }
+
+        function formatarMinutos(minutos) { return `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(Math.round(minutos % 60)).padStart(2, '0')}`; }
+
+        function formatarHoras(minutos) {
+            const totalMinutos = Math.max(0, Math.round(minutos || 0));
+            return `${Math.floor(totalMinutos / 60)}h ${String(totalMinutos % 60).padStart(2, '0')}min`;
+        }
+
+        function identificarSetorPausa(motivo) {
+            if (!motivo) return 'Não definido';
+            const motivoNormalizado = String(motivo).toLowerCase();
+            const setores = {
+                Engenharia: ['engenharia', 'dev', 'desenvolvimen', 'código', 'programa'],
+                'QA/Testes': ['qa', 'teste', 'tester', 'qualidade', 'testing'],
+                Produto: ['produto', 'pm', 'business', 'requisito'],
+                Design: ['design', 'ui', 'ux', 'designer', 'visual'],
+                'Infra/DevOps': ['infra', 'devops', 'deploy', 'servidor', 'banco dados'],
+                Análise: ['análise', 'analysis', 'dados', 'relatório']
+            };
+            const setorEncontrado = Object.entries(setores).find(([, palavras]) => palavras.some(palavra => motivoNormalizado.includes(palavra)));
+            return setorEncontrado ? setorEncontrado[0] : 'Não definido';
+        }
+
+        function obterSetorPausa(item) {
+            const grupo = item.grupo && item.grupo !== 'Não definido' && item.grupo !== '-' ? item.grupo : '';
+            const setor = item.setor && item.setor !== '-' ? item.setor : '';
+            return grupo || setor || identificarSetorPausa(item.motivo);
+        }
+
+        function converterDataHoraPausa(data, hora) {
+            if (!data || !hora || data === '-') return null;
+            const partesData = String(data).split('/').map(Number);
+            const partesHora = String(hora).split(':').map(Number);
+            if (partesData.length !== 3 || partesHora.length < 2 || partesData.some(Number.isNaN) || partesHora.some(Number.isNaN)) return null;
+            const resultado = new Date(partesData[2], partesData[1] - 1, partesData[0], partesHora[0], partesHora[1], partesHora[2] || 0);
+            return Number.isNaN(resultado.getTime()) ? null : resultado;
+        }
+
+        function calcularMinutosPausa(item) {
+            const inicio = converterDataHoraPausa(item.dataPausa || item.dataInicio, item.horaPausa);
+            const fim = converterDataHoraPausa(item.dataRetomada || item.dataPausa || item.dataInicio, item.horaRetomada);
+            if (inicio && fim && fim >= inicio) return (fim.getTime() - inicio.getTime()) / 60000;
+            if (item.tempoPausaMs !== undefined && item.tempoPausaMs !== null) return Number(item.tempoPausaMs) / 60000;
+            return minutosDaDuracao(item.tempoPausaFormatado || item.tempoPausa);
+        }
+
+        function obterPausasAtivasPorTicket() {
+            const pausasPorTicket = {};
+            historicoPausas.forEach(pausa => {
+                if (pausa && pausa.ticket) pausasPorTicket[String(pausa.ticket)] = pausa;
+            });
+            Object.keys(pausasPorTicket).forEach(ticket => {
+                const pausa = pausasPorTicket[ticket];
+                const finalizado = atividades.some(item => String(item.ticket) === ticket);
+                if (pausa.status !== 'Pausado' || pausa.horaRetomada || finalizado) delete pausasPorTicket[ticket];
+            });
+            return pausasPorTicket;
+        }
+
+        function contarStatus(data) {
+            const pausasAtivas = obterPausasAtivasPorTicket();
+            const ticketsPausados = new Set(Object.keys(pausasAtivas));
+            const concluidas = atividades.filter(item => dataAtividadeParaISO(item.dataInicio) === data).length;
+            const emAndamento = atividadesEmAndamento.filter(item => dataAtividadeParaISO(item.dataInicio) === data && (!item.ticket || !ticketsPausados.has(String(item.ticket)))).length;
+            const pausasNoDia = historicoPausas.filter(item => dataAtividadeParaISO(item.dataPausa || item.dataInicio) === data);
+            const ticketsPausadosNoDia = new Set(pausasNoDia.map(item => item.ticket || item.id || item.chaveAtividade).filter(Boolean));
+            const pausadas = ticketsPausadosNoDia.size || pausasNoDia.length;
+            const criadas = new Set();
+            [...atividades, ...atividadesEmAndamento, ...historicoPausas].forEach(item => {
+                if (dataAtividadeParaISO(item.dataInicio) !== data) return;
+                criadas.add(item.id || item.ticket || item.chaveAtividade || JSON.stringify(item));
+            });
+            return { emAndamento, pausadas, concluidas, criadas: criadas.size };
+        }
+
+        function atualizarCards(data) {
+            const totais = contarStatus(data || dataD1());
+            document.getElementById('totalEmAndamento').textContent = totais.emAndamento;
+            document.getElementById('totalPausadas').textContent = totais.pausadas;
+            document.getElementById('totalConcluidas').textContent = totais.concluidas;
+            document.getElementById('totalAtividadesCriadas').textContent = totais.criadas;
+        }
+
+        function popularSelectMesAtividades() {
+            const meses = new Set();
+            [...atividades, ...atividadesEmAndamento, ...historicoPausas].forEach(item => {
+                const data = dataAtividadeParaISO(item.dataInicio);
+                if (data) meses.add(data.slice(0, 7));
+            });
+            const nomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+            const select = document.getElementById('selectMesAtividades');
+            const mesAtual = new Date().toISOString().slice(0, 7);
+            meses.add(mesAtual);
+            select.innerHTML = '<option value="all">Todos os meses</option>' + [...meses].sort().reverse().map(mes => {
+                const [ano, numero] = mes.split('-');
+                return `<option value="${mes}">${nomes[Number(numero) - 1]}/${ano}</option>`;
+            }).join('');
+            select.value = mesAtual;
+            filtroMesInicializado = true;
+        }
+
+        function renderizarGraficoDiario() {
+            if (!window.chartPronto || typeof Chart === 'undefined') return;
+            if (!filtroMesInicializado) popularSelectMesAtividades();
+            const pausasAtivas = obterPausasAtivasPorTicket();
+            const ticketsPausados = new Set(Object.keys(pausasAtivas));
+            const porDia = {};
+            const adicionar = (item, data) => {
+                if (!item || !data || (dataAtividadeParaISO(data).slice(0, 7) !== document.getElementById('selectMesAtividades').value && document.getElementById('selectMesAtividades').value !== 'all')) return;
+                const iso = dataAtividadeParaISO(data);
+                porDia[iso] = (porDia[iso] || 0) + 1;
+            };
+            atividades.forEach(item => adicionar(item, item.dataInicio));
+            atividadesEmAndamento.forEach(item => {
+                if (!item.ticket || !ticketsPausados.has(String(item.ticket))) adicionar(item, item.dataInicio);
+            });
+            Object.values(pausasAtivas).forEach(item => adicionar(item, item.dataInicio));
+
+            const datas = Object.keys(porDia).sort();
+            const labels = datas.map(data => data.split('-').reverse().join('/'));
+            const canvas = document.getElementById('chartAtividadesCriadasPorDia');
+            if (graficoDiario) graficoDiario.destroy();
+            graficoDiario = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: { labels, datasets: [{ label: 'Total de Atividades Criadas', data: datas.map(data => porDia[data]), borderColor: PALETA_GRAFICOS[1], backgroundColor: 'rgba(96, 165, 250, 0.18)', borderWidth: 3, fill: true, tension: 0.4, pointBackgroundColor: PALETA_GRAFICOS[1], pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 6, pointHoverRadius: 8 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 30, ticks: { precision: 0, stepSize: 1 } } } },
+                plugins: [{
+                    id: 'valoresNosPontos',
+                    afterDatasetsDraw(chart) {
+                        const contexto = chart.ctx;
+                        contexto.save();
+                        contexto.fillStyle = '#2c3e50';
+                        contexto.font = '600 12px Segoe UI';
+                        contexto.textAlign = 'center';
+                        chart.getDatasetMeta(0).data.forEach((ponto, indice) => contexto.fillText(chart.data.datasets[0].data[indice], ponto.x, Math.max(ponto.y - 28, 18)));
+                        contexto.restore();
+                    }
+                }]
+            });
+        }
+
+        function renderizarGraficoColaboradores() {
+            if (!window.chartPronto || typeof Chart === 'undefined') return;
+            const data = obterDiaGrafico();
+            const porColaborador = {};
+            registrosAtividades
+                .filter(registro => registro.tipo === 'INICIO' && dataRegistroParaISO(registro.timestamp) === data)
+                .forEach(registro => {
+                    const colaborador = registro.colaborador || registro.nome_usuario || registro.email_usuario || 'Não informado';
+                    porColaborador[colaborador] = (porColaborador[colaborador] || 0) + 1;
+                });
+
+            const nomes = Object.keys(porColaborador).sort((a, b) => porColaborador[b] - porColaborador[a]);
+            const canvas = document.getElementById('chartAtividadesPorColaborador');
+            const dataFormatada = data.split('-').reverse().join('/');
+            document.getElementById('legendaAtividadesPorColaborador').textContent = `Atividades Criadas em ${dataFormatada}`;
+            if (graficoColaboradores) graficoColaboradores.destroy();
+            graficoColaboradores = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: { labels: nomes, datasets: [{ label: '', data: nomes.map(nome => porColaborador[nome]), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[1], borderWidth: 1, borderRadius: 5 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 10, ticks: { precision: 0, stepSize: 1 } } } },
+                plugins: [PLUGIN_VALORES_COLUNAS]
+            });
+        }
+
+        function obterDiaGrafico() { return document.getElementById('dataResumoCards').value || dataD1(); }
+
+        function renderizarGraficoStatusColaboradores() {
+            if (!window.chartPronto || typeof Chart === 'undefined') return;
+            const data = obterDiaGrafico();
+            const pausasAtivas = obterPausasAtivasPorTicket();
+            const ticketsPausados = new Set(Object.keys(pausasAtivas));
+            const contagens = {};
+            const garantirColaborador = colaborador => {
+                const nome = colaborador || 'Não informado';
+                if (!contagens[nome]) contagens[nome] = { andamento: 0, pausada: 0, finalizada: 0 };
+                return contagens[nome];
+            };
+
+            atividadesEmAndamento
+                .filter(item => dataAtividadeParaISO(item.dataInicio) === data && (!item.ticket || !ticketsPausados.has(String(item.ticket))))
+                .forEach(item => garantirColaborador(item.nome || item.colaborador).andamento++);
+            historicoPausas
+                .filter(item => dataAtividadeParaISO(item.dataPausa || item.dataInicio) === data)
+                .forEach(item => garantirColaborador(item.colaborador || item.nome).pausada++);
+            atividades
+                .filter(item => dataAtividadeParaISO(item.dataInicio) === data)
+                .forEach(item => garantirColaborador(item.nome || item.colaborador).finalizada++);
+
+            const nomes = Object.keys(contagens).sort((a, b) => {
+                const totalA = Object.values(contagens[a]).reduce((total, valor) => total + valor, 0);
+                const totalB = Object.values(contagens[b]).reduce((total, valor) => total + valor, 0);
+                return totalB - totalA || a.localeCompare(b);
+            });
+            const canvas = document.getElementById('chartStatusPorColaborador');
+            if (graficoStatusColaboradores) graficoStatusColaboradores.destroy();
+            graficoStatusColaboradores = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: nomes,
+                    datasets: [
+                        { label: 'Em andamento', data: nomes.map(nome => contagens[nome].andamento), backgroundColor: PALETA_GRAFICOS[0], borderColor: PALETA_GRAFICOS[0], borderWidth: 1, borderRadius: 4 },
+                        { label: 'Pausada', data: nomes.map(nome => contagens[nome].pausada), backgroundColor: PALETA_GRAFICOS[2], borderColor: PALETA_GRAFICOS[2], borderWidth: 1, borderRadius: 4 },
+                        { label: 'Finalizada', data: nomes.map(nome => contagens[nome].finalizada), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[1], borderWidth: 1, borderRadius: 4 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom' } }, scales: { x: { position: 'top' }, y: { beginAtZero: true, ticks: { precision: 0, stepSize: 1 } } } },
+                plugins: [PLUGIN_VALORES_COLUNAS]
+            });
+        }
+
+        function renderizarGraficoPausasColaboradores() {
+            const data = obterDiaGrafico();
+            const agrupado = {};
+            historicoPausas.filter(item => {
+                const dataPausa = dataAtividadeParaISO(item.dataPausa || item.dataInicio);
+                return dataPausa === data;
+            }).forEach(item => {
+                const colaborador = item.colaborador || item.nome || 'Não informado';
+                const setor = obterSetorPausa(item);
+                if (!agrupado[colaborador]) agrupado[colaborador] = {};
+                if (!agrupado[colaborador][setor]) agrupado[colaborador][setor] = { quantidade: 0, pausas: [] };
+                agrupado[colaborador][setor].quantidade++;
+                agrupado[colaborador][setor].pausas.push({
+                    ticket: item.ticket || '-',
+                    inicio: item.horaPausa || '-',
+                    fim: item.horaRetomada || '-',
+                    minutos: calcularMinutosPausa(item)
+                });
+            });
+
+            const colaboradores = Object.keys(agrupado).sort();
+            const lista = document.getElementById('listaPausasPorColaborador');
+            if (colaboradores.length === 0) {
+                lista.innerHTML = '<div class="empty-state">Nenhuma pausa registrada</div>';
+                return;
+            }
+            lista.innerHTML = colaboradores.map(colaborador => {
+                const ordemSetores = ['Customer', 'Engenharia', 'Pós-Vendas', 'Pós-vendas', 'Inteligência', 'CCO'];
+                const setores = Object.entries(agrupado[colaborador]).sort(([setorA], [setorB]) => {
+                    const indiceA = ordemSetores.indexOf(setorA);
+                    const indiceB = ordemSetores.indexOf(setorB);
+                    return (indiceA === -1 ? 99 : indiceA) - (indiceB === -1 ? 99 : indiceB) || setorA.localeCompare(setorB);
+                });
+                const total = setores.reduce((soma, [, dados]) => soma + dados.quantidade, 0);
+                const detalhes = setores.map(([setor, dados]) => `<div class="pausas-lista-setor">${dados.pausas.map(pausa => `<div class="pausas-lista-ticket"><span>Ticket: ${pausa.ticket}</span><span>${setor}</span><span>Início: ${pausa.inicio}</span><span>Fim: ${pausa.fim}</span><span>Tempo total: ${formatarHoras(pausa.minutos)}</span></div>`).join('')}</div>`).join('');
+                return `<div class="pausas-lista-item"><div class="pausas-lista-titulo"><span>${colaborador} -</span><span class="pausas-lista-total">total de pausas: ${total}</span></div>${detalhes}</div>`;
+            }).join('');
+        }
+
+        function renderizarGraficoTempoMedio() {
+            const data = obterDiaGrafico();
+            const tempos = {};
+            atividades.filter(item => dataAtividadeParaISO(item.dataInicio) === data && item.duracao).forEach(item => {
+                const colaborador = item.nome || item.colaborador || 'Não informado';
+                if (!tempos[colaborador]) tempos[colaborador] = [];
+                tempos[colaborador].push(minutosDaDuracao(item.duracao));
+            });
+            const nomes = Object.keys(tempos).sort();
+            const medias = nomes.map(nome => tempos[nome].reduce((total, valor) => total + valor, 0) / tempos[nome].length);
+            const lista = document.getElementById('listaTempoMedioAtividade');
+            if (nomes.length === 0) {
+                lista.innerHTML = '<div class="empty-state">Nenhuma atividade concluída</div>';
+                return;
+            }
+            lista.innerHTML = nomes.map((nome, indice) => {
+                const minutos = Math.round(medias[indice]);
+                const horas = Math.floor(minutos / 60);
+                const minutosRestantes = minutos % 60;
+                return `<div class="tempo-lista-item"><span class="tempo-lista-colaborador">${nome}</span><span class="tempo-lista-valor">${horas}h ${String(minutosRestantes).padStart(2, '0')}min</span></div>`;
+            }).join('');
+        }
+
+        function renderizarGraficoPausasSetor() {
+            if (!window.chartPronto || typeof Chart === 'undefined') return;
+            const data = obterDiaGrafico();
+            const porSetor = {};
+            historicoPausas.filter(item => dataAtividadeParaISO(item.dataPausa || item.dataInicio) === data).forEach(item => {
+                const setor = obterSetorPausa(item);
+                porSetor[setor] = (porSetor[setor] || 0) + 1;
+            });
+            const setores = Object.keys(porSetor).sort((a, b) => porSetor[b] - porSetor[a]);
+            const canvas = document.getElementById('chartPausasPorSetor');
+            if (graficoPausasSetor) graficoPausasSetor.destroy();
+            graficoPausasSetor = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: { labels: setores, datasets: [{ label: 'Quantidade de pausas', data: setores.map(setor => porSetor[setor]), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[2], borderWidth: 1, borderRadius: 5 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 10, ticks: { precision: 0, stepSize: 1 } } } },
+                plugins: [PLUGIN_VALORES_COLUNAS]
+            });
+        }
+
+        function renderizar() {
+            atualizarCards(document.getElementById('dataResumoCards').value || dataD1());
+            popularSelectMesAtividades();
+            renderizarGraficoDiario();
+            renderizarGraficoColaboradores();
+            renderizarGraficoStatusColaboradores();
+            renderizarGraficoPausasColaboradores();
+            renderizarGraficoTempoMedio();
+            renderizarGraficoPausasSetor();
+        }
+
+        document.getElementById('selectMesAtividades').addEventListener('change', renderizarGraficoDiario);
+        document.getElementById('dataResumoCards').addEventListener('change', () => {
+            const data = document.getElementById('dataResumoCards').value || dataD1();
+            atualizarCards(data);
+            renderizarGraficoColaboradores();
+            renderizarGraficoStatusColaboradores();
+            renderizarGraficoPausasColaboradores();
+            renderizarGraficoTempoMedio();
+            renderizarGraficoPausasSetor();
+        });
+        document.getElementById('dataResumoCards').value = dataD1();
+
+        async function capturarGraficos() {
+            const botao = document.getElementById('btnCapturarGraficos');
+            const area = document.querySelector('main.container');
+            if (typeof html2canvas === 'undefined') {
+                alert('Não foi possível carregar a ferramenta de captura.');
+                return;
+            }
+
+            botao.disabled = true;
+            botao.textContent = 'Gerando...';
+            document.body.classList.add('captura-ativa');
+            area.classList.add('modo-captura');
+            try {
+                await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+                [graficoDiario, graficoColaboradores, graficoStatusColaboradores, graficoPausasSetor].forEach(grafico => {
+                    if (grafico) grafico.resize();
+                });
+                await new Promise(resolve => requestAnimationFrame(resolve));
+                const imagem = await html2canvas(area, {
+                    backgroundColor: '#f8f9fa',
+                    scale: 2,
+                    useCORS: true,
+                    scrollX: 0,
+                    scrollY: -window.scrollY,
+                    width: area.clientWidth,
+                    height: area.scrollHeight,
+                    windowWidth: area.clientWidth,
+                    windowHeight: area.scrollHeight
+                });
+                imagem.toBlob(blob => {
+                    if (!blob) return;
+                    const link = document.createElement('a');
+                    link.download = `acompanhamento-d1-${new Date().toISOString().slice(0, 10)}.png`;
+                    link.href = URL.createObjectURL(blob);
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                }, 'image/png');
+            } finally {
+                area.classList.remove('modo-captura');
+                document.body.classList.remove('captura-ativa');
+                botao.disabled = false;
+                botao.textContent = 'Capturar';
+            }
+        }
+
+        document.getElementById('btnCapturarGraficos').addEventListener('click', capturarGraficos);
+        carregarAtividades();
+    </script>
+</body>
+</html>

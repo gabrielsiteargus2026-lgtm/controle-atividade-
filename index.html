@@ -1041,6 +1041,7 @@
                 <li><a href="historico.html">Histórico</a></li>
                 <li><a href="insights.html">Insights</a></li>
                 <li><a href="atividades-usuarios.html">Atividades dos Usuários</a></li>
+                <li><a href="acompanhamento-d1.html">Acompanhamento D-1</a></li>
                 <li><a href="database.html">Base de Dados 🔒</a></li>
                 <li><a href="admin.html">Administrador 🔒</a></li>
             </ul>
@@ -1144,8 +1145,9 @@
                         <option value="">-- Selecione o grupo --</option>
                         <option value="Engenharia">Engenharia</option>
                         <option value="Customer">Customer</option>
+                        <option value="CCO">CCO</option>
                         <option value="Inteligência">Inteligência</option>
-                        <option value="Pós-vendas">Pós-vendas</option>
+                        <option value="Pós-Vendas">Pós-Vendas</option>
                     </select>
                 </div>
                 <div class="modal-footer">
@@ -1318,12 +1320,15 @@
                 return {
                     'Engenharia': 0,
                     'Customer': 0,
+                    'CCO': 0,
                     'Inteligência': 0,
                     'Pós-Vendas': 0,
                     'total_atividades': 0
                 };
             }
-            return JSON.parse(contadores);
+            const dados = JSON.parse(contadores);
+            if (dados.CCO === undefined) dados.CCO = 0;
+            return dados;
         }
 
         function salvarContadores(contadores) {
@@ -1343,6 +1348,7 @@
             const contadores = {
                 'Engenharia': 0,
                 'Customer': 0,
+                'CCO': 0,
                 'Inteligência': 0,
                 'Pós-Vendas': 0,
                 'total_atividades': 0
@@ -2503,6 +2509,11 @@
                 return;
             }
 
+            if (!grupo) {
+                mostrarAlerta('erro', 'Selecione o setor da pausa antes de continuar');
+                return;
+            }
+
             const agora = new Date();
             const atividadePausa = atividadesEmAndamento.find(a => a && a.id === atividadePausando);
             
@@ -2531,6 +2542,7 @@
                     grupo: grupo || 'Não definido',
                     status: 'Pausado',
                     dataInicio: atividadePausa.dataInicio || '-',
+                    dataPausa: agora.toLocaleDateString('pt-BR'),
                     horaPausa: agora.toLocaleTimeString('pt-BR'),
                     horaRetomada: null,
                     tempoPausaMs: 0,
@@ -2546,7 +2558,7 @@
 
             // Incrementar contador acumulado de pausas
             const grupoNormalizado = grupo || 'Não definido';
-            if (['Engenharia', 'Customer', 'Inteligência', 'Pós-Vendas'].includes(grupoNormalizado)) {
+            if (['Engenharia', 'Customer', 'CCO', 'Inteligência', 'Pós-Vendas'].includes(grupoNormalizado)) {
                 incrementarContadorPausa(grupoNormalizado);
             }
 
@@ -2610,6 +2622,7 @@
                             grupo: estadoPausa.grupoPausa || 'Não definido',
                             status: 'Retomado',
                             dataInicio: atividade.dataInicio || '-',
+                            dataPausa: new Date(estadoPausa.tempoInicioPausa).toLocaleDateString('pt-BR'),
                             horaPausa: new Date(estadoPausa.tempoInicioPausa).toLocaleTimeString('pt-BR'),
                             horaRetomada: agora.toLocaleTimeString('pt-BR'),
                             dataRetomada: agora.toLocaleDateString('pt-BR'),

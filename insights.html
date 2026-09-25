@@ -389,6 +389,14 @@
             .kpi-container {
                 grid-template-columns: 1fr;
             }
+
+            #containerGraficosPizza {
+                grid-template-columns: 1fr !important;
+            }
+
+            #topColaboradores {
+                grid-template-columns: 1fr !important;
+            }
         }
 
         /* Botão Discreto de Atualizar */
@@ -450,6 +458,7 @@
                 <li><a href="historico.html">Histórico</a></li>
                 <li><a href="insights.html" class="active">Insights</a></li>
                 <li><a href="atividades-usuarios.html">Atividades dos Usuários</a></li>
+                <li><a href="acompanhamento-d1.html">Acompanhamento D-1</a></li>
                 <li><a href="database.html">Base de Dados 🔒</a></li>
                 <li><a href="admin.html">Administrador 🔒</a></li>
             </ul>
@@ -588,7 +597,7 @@
 
         <!-- PERCENTUAL DE ATIVIDADES POR COLABORADOR (Gráficos de Pizza) -->
         <div class="section-title">Porcentagem de Atividades por Colaborador</div>
-        <div id="containerGraficosPizza" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px;">
+        <div id="containerGraficosPizza" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-bottom: 30px;">
             <!-- Os gráficos de pizza serão inseridos dinamicamente aqui -->
         </div>
 
@@ -1027,6 +1036,10 @@
         // Gráfico 1: Porcentagem de Atividades por Colaborador (Gráficos de Pizza)
         function renderizarAtividadesAbertas() {
             console.log('Renderizando gráficos de pizza de atividades por colaborador...');
+            const coresAtividadesColaborador = [
+                '#2563eb', '#0891b2', '#0d9488', '#16a34a', '#65a30d',
+                '#ca8a04', '#ea580c', '#dc2626', '#c026d3', '#7c3aed'
+            ];
             
             const pausasAtivas = obterPausasAtivasPorTicket();
             const ticketsPausados = new Set(Object.keys(pausasAtivas));
@@ -1096,7 +1109,7 @@
 
                 // Criar container do card
                 const cardDiv = document.createElement('div');
-                cardDiv.style.cssText = 'background: white; border-radius: 10px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);';
+                cardDiv.style.cssText = 'width: 100%; min-width: 0; background: white; border-radius: 10px; padding: 15px; box-sizing: border-box; box-shadow: 0 2px 8px rgba(0,0,0,0.1);';
                 
                 // Criar titulo com nome em maiúscula
                 const titulo = document.createElement('h4');
@@ -1108,7 +1121,7 @@
                 const canvas = document.createElement('canvas');
                 const canvasId = `chartPizza_${idx}`;
                 canvas.id = canvasId;
-                canvas.style.cssText = 'max-width: 100%;';
+                canvas.style.cssText = 'display: block; width: 100%; max-width: 100%;';
                 cardDiv.appendChild(canvas);
 
                 // Criar label com informações comparativas
@@ -1127,7 +1140,7 @@
                         labels: [nome, 'Restante'],
                         datasets: [{
                             data: [quantidadeColaborador, restoAtividades],
-                            backgroundColor: [CORES[idx % CORES.length], '#e5e7eb'],
+                            backgroundColor: [coresAtividadesColaborador[idx % coresAtividadesColaborador.length], '#e5e7eb'],
                             borderColor: ['#fff', '#fff'],
                             borderWidth: 2
                         }]
@@ -1513,9 +1526,14 @@
             const totalAtividades = todosList.reduce((acc, [_, count]) => acc + count, 0);
             const totalColaboradores = Object.keys(contagem).length;
 
+            const containerTop = document.getElementById('topColaboradores');
+            containerTop.style.display = 'grid';
+            containerTop.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
+            containerTop.style.gap = '12px';
+
             let html = '';
             if (top3.length === 0) {
-                html = '<div class="empty-state">Nenhuma atividade registrada</div>';
+                html = '<div class="empty-state" style="grid-column: 1 / -1;">Nenhuma atividade registrada</div>';
             } else {
                 // Top 3 com detalhes
                 top3.forEach((item, idx) => {
@@ -1552,7 +1570,7 @@
                 // Mostrar outros colaboradores se houver mais de 3
                 if (todosList.length > 3) {
                     html += `
-                        <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <div style="grid-column: 1 / -1; background: #f3f4f6; padding: 15px; border-radius: 8px; margin-top: 15px;">
                             <div style="font-size: 0.9em; font-weight: 600; color: #374151; margin-bottom: 10px;">Outros Colaboradores (${todosList.length - 3})</div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                     `;
