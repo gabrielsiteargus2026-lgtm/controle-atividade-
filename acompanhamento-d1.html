@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acompanhamento D-1 - Controle de Atividade</title>
+    <title>Acompanhamento de Atividades D -1 - Controle de Atividade</title>
     <script>
         (function() {
             function carregarChart(src, sucesso, falha) {
@@ -213,7 +213,7 @@
                 <li><a href="historico.html">Histórico</a></li>
                 <li><a href="insights.html">Insights</a></li>
                 <li><a href="atividades-usuarios.html">Atividades dos Usuários</a></li>
-                <li><a href="acompanhamento-d1.html" class="active">Acompanhamento D-1</a></li>
+                <li><a href="acompanhamento-d1.html" class="active">Acompanhamento de Atividades D -1</a></li>
                 <li><a href="database.html">Base de Dados 🔒</a></li>
                 <li><a href="admin.html">Administrador 🔒</a></li>
             </ul>
@@ -222,7 +222,7 @@
 
     <main class="container">
         <header class="header">
-            <h1>Acompanhamento D-1</h1>
+            <h1>Acompanhamento de Atividades D -1</h1>
             <button type="button" id="btnCapturarGraficos" class="btn-captura" title="Baixar imagem completa dos gráficos">Capturar</button>
         </header>
 
@@ -235,12 +235,11 @@
         </section>
 
         <section class="card chart-section">
-            <h2 class="chart-title">Atividades Criadas por Dia - Comparativo Diário</h2>
+            <h2 class="chart-title">Comparativo Diário</h2>
             <div class="chart-filter">
                 <label for="selectMesAtividades">Visualizar por mês:</label>
                 <select id="selectMesAtividades"><option value="all">Todos os meses</option></select>
             </div>
-            <div class="chart-caption">Total de Atividades Criadas</div>
             <div class="chart-container"><canvas id="chartAtividadesCriadasPorDia"></canvas></div>
         </section>
 
@@ -529,7 +528,7 @@
             if (graficoDiario) graficoDiario.destroy();
             graficoDiario = new Chart(canvas.getContext('2d'), {
                 type: 'line',
-                data: { labels, datasets: [{ label: 'Total de Atividades Criadas', data: datas.map(data => porDia[data]), borderColor: PALETA_GRAFICOS[1], backgroundColor: 'rgba(96, 165, 250, 0.18)', borderWidth: 3, fill: true, tension: 0.4, pointBackgroundColor: PALETA_GRAFICOS[1], pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 6, pointHoverRadius: 8 }] },
+                data: { labels, datasets: [{ label: '', data: datas.map(data => porDia[data]), borderColor: PALETA_GRAFICOS[1], backgroundColor: 'rgba(96, 165, 250, 0.18)', borderWidth: 3, fill: true, tension: 0.4, pointBackgroundColor: PALETA_GRAFICOS[1], pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 6, pointHoverRadius: 8 }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 30, ticks: { precision: 0, stepSize: 1 } } } },
                 plugins: [{
                     id: 'valoresNosPontos',
