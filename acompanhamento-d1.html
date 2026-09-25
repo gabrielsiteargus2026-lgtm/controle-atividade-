@@ -81,6 +81,10 @@
         .modo-captura .charts-grid .card:nth-child(-n+3) { grid-column: span 2; }
         .modo-captura .charts-grid .card:nth-child(n+4) { grid-column: span 3; }
         .modo-captura .chart-container canvas { width: 100% !important; }
+        .status-chart-wrap { position: relative; }
+        .status-legenda { display: flex; justify-content: center; gap: 12px; margin-top: 8px; color: #4b5563; font-size: .72em; }
+        .status-legenda-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+        .status-legenda-cor { width: 12px; height: 8px; border-radius: 1px; display: inline-block; }
 
         .card {
             background: white;
@@ -248,7 +252,14 @@
             </div>
             <div class="card">
                 <h2 class="chart-title">Status por Colaborador</h2>
-                <div class="chart-container small"><canvas id="chartStatusPorColaborador"></canvas></div>
+                <div class="chart-container small status-chart-wrap">
+                    <canvas id="chartStatusPorColaborador"></canvas>
+                </div>
+                <div class="status-legenda" aria-label="Legenda do gráfico de status">
+                    <span class="status-legenda-item"><span class="status-legenda-cor" style="background: #6b7280;"></span>Em andamento</span>
+                    <span class="status-legenda-item"><span class="status-legenda-cor" style="background: #60a5fa;"></span>Pausada</span>
+                    <span class="status-legenda-item"><span class="status-legenda-cor" style="background: #1e3a5f;"></span>Finalizada</span>
+                </div>
             </div>
             <div class="card">
                 <h2 class="chart-title">Tempo Médio por Atividade</h2>
@@ -293,7 +304,8 @@
                         const valor = dataset.data[indice];
                         if (Number(valor) !== 0 && valor !== null && valor !== undefined) {
                             contexto.textAlign = 'center';
-                                contexto.fillText(valor, barra.x, Math.max(barra.y - 18, 18));
+                            const deslocamento = chart.canvas.id === 'chartStatusPorColaborador' ? 10 : 18;
+                            contexto.fillText(valor, barra.x, Math.max(barra.y - deslocamento, 18));
                         }
                     });
                 });
@@ -599,7 +611,7 @@
                         { label: 'Finalizada', data: nomes.map(nome => contagens[nome].finalizada), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[1], borderWidth: 1, borderRadius: 4 }
                     ]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom' } }, scales: { x: { position: 'top' }, y: { beginAtZero: true, ticks: { precision: 0, stepSize: 1 } } } },
+                options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 28 } }, plugins: { legend: { display: false } }, scales: { x: { position: 'top', ticks: { padding: 8 } }, y: { beginAtZero: true, ticks: { precision: 0, stepSize: 1 } } } },
                 plugins: [PLUGIN_VALORES_COLUNAS]
             });
         }
