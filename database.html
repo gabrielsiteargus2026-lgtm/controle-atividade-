@@ -510,6 +510,28 @@
                 </table>
             </div>
         </div>
+
+        <div class="card">
+            <h2>Chamados Geotab</h2>
+            <div class="table-scroll-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Número</th>
+                            <th>Descrição</th>
+                            <th>Colaborador</th>
+                            <th>Status</th>
+                            <th>Abertura</th>
+                            <th>Fechamento</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBodyChamadosGeotab">
+                        <tr><td colspan="7" class="empty-state">Carregando chamados Geotab...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <!-- Modal de Edição/Criação -->
@@ -607,6 +629,52 @@
         </div>
     </div>
 
+    <div class="modal" id="modalChamadoGeotab">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Editar Chamado Geotab</h2>
+                <button type="button" class="close-btn" id="btnCloseModalChamadoGeotab">&times;</button>
+            </div>
+            <form id="formChamadoGeotab">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="numeroChamadoGeotab">Número:</label>
+                        <input type="number" id="numeroChamadoGeotab" min="1" step="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="colaboradorChamadoGeotab">Colaborador:</label>
+                        <input type="text" id="colaboradorChamadoGeotab" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="descricaoChamadoGeotab">Descrição:</label>
+                    <textarea id="descricaoChamadoGeotab" maxlength="2000" required></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="statusChamadoGeotab">Status:</label>
+                        <select id="statusChamadoGeotab" required>
+                            <option value="aberto">Aberto</option>
+                            <option value="fechado">Fechado</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="criadoEmChamadoGeotab">Data de abertura:</label>
+                        <input type="datetime-local" id="criadoEmChamadoGeotab" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="fechadoEmChamadoGeotab">Data de fechamento:</label>
+                    <input type="datetime-local" id="fechadoEmChamadoGeotab">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" id="btnCancelarChamadoGeotab">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Salvar chamado</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal de Autenticação -->
     <div id="modalAutenticacao" class="modal">
         <div class="modal-content">
@@ -668,6 +736,8 @@
         let atividadesGlobais = [];
         let atividadeAtualEmEdicao = null;
         let kanbanStateGlobal = {};
+        let chamadosGeotabGlobais = [];
+        let chamadoGeotabAtualEmEdicao = null;
 
         // Inicializar Firebase
         function inicializarFirebase() {
@@ -745,6 +815,136 @@
 
             renderizarTabela();
         }
+
+        function normalizarChamadosGeotab(dados) {
+            if (!dados) return [];
+            if (Array.isArray(dados)) return dados.filter(chamado => chamado && chamado.id);
+            return Object.entries(dados)
+                .filter(([, chamado]) => chamado)
+                .map(([id, chamado]) => ({ ...chamado, id: chamado.id || id }));
+        }
+
+        function carregarChamadosGeotab() {
+            if (window.FIREBASE_OK && window.db) {
+                window.db.ref('chamadosGeotab').once('value').then(snapshot => {
+                    chamadosGeotabGlobais = normalizarChamadosGeotab(snapshot.val());
+                    renderizarTabelaChamadosGeotab();
+                }).catch(() => carregarChamadosGeotabLocalmente());
+                return;
+            }
+            carregarChamadosGeotabLocalmente();
+        }
+
+        function carregarChamadosGeotabLocalmente() {
+            try {
+                chamadosGeotabGlobais = normalizarChamadosGeotab(JSON.parse(localStorage.getItem('chamadosGeotab') || '[]'));
+            } catch (erro) {
+                chamadosGeotabGlobais = [];
+            }
+            renderizarTabelaChamadosGeotab();
+        }
+
+        function formatarDataChamadoGeotab(timestamp) {
+            if (timestamp === null || timestamp === undefined || timestamp === '') return '-';
+            const data = new Date(Number(timestamp));
+            return Number.isNaN(data.getTime()) ? '-' : data.toLocaleString('pt-BR');
+        }
+
+        function valorDataChamadoGeotab(timestamp) {
+            if (timestamp === null || timestamp === undefined || timestamp === '') return '';
+            const data = new Date(Number(timestamp));
+            if (Number.isNaN(data.getTime())) return '';
+            return new Date(data.getTime() - data.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        }
+
+        function renderizarTabelaChamadosGeotab() {
+            const tbody = document.getElementById('tableBodyChamadosGeotab');
+            tbody.replaceChildren();
+            if (chamadosGeotabGlobais.length === 0) {
+                const linha = document.createElement('tr');
+                const celula = document.createElement('td');
+                celula.colSpan = 7;
+                celula.className = 'empty-state';
+                celula.textContent = 'Nenhum chamado Geotab encontrado';
+                linha.appendChild(celula);
+                tbody.appendChild(linha);
+                return;
+            }
+
+            [...chamadosGeotabGlobais]
+                .sort((a, b) => Number(b.criadoEm) - Number(a.criadoEm))
+                .forEach(chamado => {
+                    const linha = document.createElement('tr');
+                    [String(chamado.numero || '-'), chamado.descricao || '-', chamado.colaborador || '-', chamado.status === 'fechado' ? 'Fechado' : 'Aberto', formatarDataChamadoGeotab(chamado.criadoEm), formatarDataChamadoGeotab(chamado.fechadoEm)].forEach((valor, indice) => {
+                        const celula = document.createElement('td');
+                        celula.textContent = valor;
+                        if (indice === 1) celula.style.whiteSpace = 'pre-wrap';
+                        linha.appendChild(celula);
+                    });
+                    const celulaAcoes = document.createElement('td');
+                    const botaoEditar = document.createElement('button');
+                    botaoEditar.type = 'button';
+                    botaoEditar.className = 'btn btn-primary';
+                    botaoEditar.textContent = 'Editar';
+                    botaoEditar.addEventListener('click', () => editarChamadoGeotab(chamado.id));
+                    celulaAcoes.appendChild(botaoEditar);
+                    linha.appendChild(celulaAcoes);
+                    tbody.appendChild(linha);
+                });
+        }
+
+        function editarChamadoGeotab(id) {
+            const chamado = chamadosGeotabGlobais.find(item => String(item.id) === String(id));
+            if (!chamado) return;
+            chamadoGeotabAtualEmEdicao = chamado.id;
+            document.getElementById('numeroChamadoGeotab').value = chamado.numero || '';
+            document.getElementById('colaboradorChamadoGeotab').value = chamado.colaborador || '';
+            document.getElementById('descricaoChamadoGeotab').value = chamado.descricao || '';
+            document.getElementById('statusChamadoGeotab').value = chamado.status === 'fechado' ? 'fechado' : 'aberto';
+            document.getElementById('criadoEmChamadoGeotab').value = valorDataChamadoGeotab(chamado.criadoEm);
+            document.getElementById('fechadoEmChamadoGeotab').value = valorDataChamadoGeotab(chamado.fechadoEm);
+            document.getElementById('modalChamadoGeotab').classList.add('active');
+        }
+
+        function fecharModalChamadoGeotab() {
+            document.getElementById('modalChamadoGeotab').classList.remove('active');
+            document.getElementById('formChamadoGeotab').reset();
+            chamadoGeotabAtualEmEdicao = null;
+        }
+
+        document.getElementById('btnCloseModalChamadoGeotab').addEventListener('click', fecharModalChamadoGeotab);
+        document.getElementById('btnCancelarChamadoGeotab').addEventListener('click', fecharModalChamadoGeotab);
+        document.getElementById('formChamadoGeotab').addEventListener('submit', async evento => {
+            evento.preventDefault();
+            if (!chamadoGeotabAtualEmEdicao) return;
+            const status = document.getElementById('statusChamadoGeotab').value;
+            const valorFechamento = document.getElementById('fechadoEmChamadoGeotab').value;
+            const atualizado = {
+                numero: document.getElementById('numeroChamadoGeotab').value,
+                colaborador: document.getElementById('colaboradorChamadoGeotab').value.trim(),
+                descricao: document.getElementById('descricaoChamadoGeotab').value.trim(),
+                status,
+                criadoEm: new Date(document.getElementById('criadoEmChamadoGeotab').value).getTime(),
+                fechadoEm: status === 'fechado' ? (valorFechamento ? new Date(valorFechamento).getTime() : Date.now()) : null
+            };
+
+            try {
+                if (window.FIREBASE_OK && window.db) {
+                    await window.db.ref(`chamadosGeotab/${chamadoGeotabAtualEmEdicao}`).update(atualizado);
+                } else {
+                    const dadosAtuais = JSON.parse(localStorage.getItem('chamadosGeotab') || '[]');
+                    const listaLocal = normalizarChamadosGeotab(dadosAtuais).map(item => String(item.id) === String(chamadoGeotabAtualEmEdicao) ? { ...item, ...atualizado } : item);
+                    localStorage.setItem('chamadosGeotab', JSON.stringify(listaLocal));
+                }
+                chamadosGeotabGlobais = chamadosGeotabGlobais.map(item => String(item.id) === String(chamadoGeotabAtualEmEdicao) ? { ...item, ...atualizado } : item);
+                renderizarTabelaChamadosGeotab();
+                fecharModalChamadoGeotab();
+                alert('Chamado Geotab atualizado com sucesso.');
+            } catch (erro) {
+                console.error('Erro ao atualizar chamado Geotab:', erro);
+                alert('Não foi possível atualizar o chamado Geotab.');
+            }
+        });
 
         // Renderizar tabela
         function renderizarTabela() {
@@ -928,6 +1128,7 @@
         document.getElementById('btnRecarregar').addEventListener('click', () => {
             console.log('Recarregando dados...');
             carregarAtividades();
+            carregarChamadosGeotab();
         });
 
         // Exportar para CSV
@@ -961,6 +1162,7 @@
             inicializarFirebase();
             setTimeout(() => {
                 carregarAtividades();
+                carregarChamadosGeotab();
             }, 500);
         });
 

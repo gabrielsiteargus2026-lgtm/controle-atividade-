@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chamados Abertos para Geotab - Controle de Atividade</title>
+    <script>
+        (function carregarChart() {
+            function carregar(src, sucesso, falha) {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = sucesso;
+                script.onerror = falha;
+                document.head.appendChild(script);
+            }
+
+            carregar('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js', function() {
+                window.chartChamadosPronto = true;
+                if (typeof renderizarGraficoChamados === 'function') renderizarGraficoChamados();
+            }, function() {
+                carregar('./vendor/chart.min.js', function() {
+                    window.chartChamadosPronto = true;
+                    if (typeof renderizarGraficoChamados === 'function') renderizarGraficoChamados();
+                }, function() {
+                    const estado = document.getElementById('estadoGrafico');
+                    if (estado) estado.textContent = 'Não foi possível carregar o gráfico.';
+                });
+            });
+        })();
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="firebase-auth.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; padding: 20px; background: #f4f6f8; color: #263445; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 10; width: 260px; padding: 22px 18px; overflow-y: auto; background: #2c3e50; box-shadow: 2px 0 10px rgba(0, 0, 0, .12); }
+        .sidebar-logo { display: block; width: 100%; height: 76px; margin: 0 auto 28px; object-fit: contain; }
+        .sidebar-menu { margin: 0; padding: 0; list-style: none; }
+        .sidebar-menu li { margin-bottom: 7px; }
+        .sidebar-menu a { display: block; padding: 11px 13px; border-left: 3px solid transparent; border-radius: 4px; color: #e8edf2; font-size: .92rem; font-weight: 500; text-decoration: none; transition: background .15s ease; }
+        .sidebar-menu a:hover, .sidebar-menu a.active { border-left-color: #fff; background: #4f83b8; color: #fff; }
+        .container { width: calc(100% - 280px); max-width: none; margin: 0 0 0 280px; }
+        .header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin: 4px 0 22px; }
+        h1 { margin: 0; color: #25384d; font-size: 1.8rem; font-weight: 650; }
+        h2 { margin: 0; color: #2c3e50; font-size: 1.08rem; }
+        .user-widget { flex: 0 0 auto; }
+        .summary-grid { display: grid; grid-template-columns: repeat(2, minmax(170px, 220px)); gap: 12px; margin-bottom: 18px; }
+        .summary-card, .panel { border: 1px solid #e1e6eb; border-radius: 6px; background: #fff; box-shadow: 0 2px 7px rgba(32, 48, 65, .05); }
+        .summary-card { padding: 14px 17px; }
+        .summary-label { color: #667789; font-size: .82rem; }
+        .summary-value { margin-top: 3px; color: #243b55; font-size: 1.65rem; font-weight: 700; }
+        .content-grid { display: grid; grid-template-columns: minmax(290px, .82fr) minmax(420px, 1.6fr); gap: 16px; align-items: stretch; }
+        .panel { min-width: 0; padding: 20px; }
+        .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 17px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; color: #36495d; font-size: .88rem; font-weight: 600; }
+        input, select, textarea { width: 100%; min-height: 41px; padding: 9px 11px; border: 1px solid #cbd4de; border-radius: 4px; background: #fff; color: #25384d; font: inherit; }
+        textarea { min-height: 118px; resize: vertical; }
+        input:focus, select:focus, textarea:focus { outline: 2px solid rgba(79, 131, 184, .22); border-color: #4f83b8; }
+        .btn-primary, .btn-close { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 8px 13px; border: 0; border-radius: 4px; background: #416f9d; color: #fff; cursor: pointer; font: inherit; font-size: .88rem; font-weight: 600; }
+        .btn-primary { width: 100%; }
+        .btn-primary:hover, .btn-close:hover { background: #315b84; }
+        .btn-primary:disabled, .btn-close:disabled { opacity: .6; cursor: wait; }
+        .notice { min-height: 20px; margin: 10px 0 0; color: #356c4b; font-size: .86rem; }
+        .notice.error { color: #ad3535; }
+        .chart-panel { display: flex; flex-direction: column; }
+        .chart-wrap { position: relative; flex: 1; min-height: 285px; }
+        .chart-wrap canvas { width: 100% !important; height: 100% !important; }
+        .chart-empty { display: grid; min-height: 250px; place-items: center; color: #7b8793; font-size: .9rem; }
+        .history-panel { margin-top: 16px; }
+        .history-panel .panel-heading { justify-content: flex-start; gap: clamp(24px, 5vw, 72px); }
+        .history-tools { display: flex; flex: 0 1 580px; align-items: end; gap: 10px; min-width: 0; }
+        .history-tools .form-group { flex: 1 1 0; width: auto; min-width: 0; margin: 0; }
+        .history-tools .form-group:first-child { flex-grow: .75; }
+        .history-tools input { width: 100%; min-width: 0; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+        th, td { padding: 11px 10px; border-bottom: 1px solid #e8edf1; text-align: left; vertical-align: top; }
+        th { color: #5b6e80; font-size: .76rem; font-weight: 700; white-space: nowrap; }
+        td { color: #33485d; }
+        tbody tr:hover { background: #f8fafb; }
+        .ticket-number { color: #1e3a5f; font-weight: 700; white-space: nowrap; }
+        .description-cell { min-width: 220px; max-width: 440px; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .status { display: inline-block; padding: 4px 8px; border-radius: 3px; font-size: .75rem; font-weight: 700; white-space: nowrap; }
+        .status.open { background: #e8f1fa; color: #315d88; }
+        .status.closed { background: #e8f3ec; color: #38744e; }
+        .btn-close { min-height: 32px; padding: 5px 9px; white-space: nowrap; }
+        .empty-state { padding: 30px 12px; color: #768594; text-align: center; }
+        .hidden { display: none !important; }
+        @media (max-width: 1100px) {
+            .sidebar { position: relative; width: auto; height: auto; margin: -20px -20px 18px; }
+            .sidebar-logo { width: 190px; height: 60px; margin: 0 auto 12px 0; }
+            .sidebar-menu { display: flex; flex-wrap: wrap; gap: 5px; }
+            .sidebar-menu li { margin: 0; }
+            .container { width: 100%; margin: 0; }
+            .content-grid { grid-template-columns: minmax(260px, .8fr) minmax(350px, 1.2fr); }
+        }
+        @media (max-width: 1250px) {
+            .history-panel .panel-heading { align-items: stretch; flex-direction: column; gap: 12px; }
+            .history-tools { flex: 1 1 auto; width: 100%; max-width: 640px; }
+        }
+        @media (max-width: 760px) {
+            .content-grid { grid-template-columns: 1fr; }
+            .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .chart-wrap { min-height: 280px; }
+            .header { align-items: flex-start; }
+            h1 { font-size: 1.5rem; }
+        }
+        @media (max-width: 520px) {
+            body { padding: 14px; }
+            .sidebar { margin: -14px -14px 16px; padding: 15px 12px; }
+            .header { flex-direction: column; }
+            .panel { padding: 15px; }
+            .panel-heading { align-items: flex-start; flex-direction: column; }
+            .history-tools { align-items: stretch; flex-direction: column; width: 100%; }
+            .history-tools .form-group, .history-tools input { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <img src="argus-logo 1.png" alt="Argus" class="sidebar-logo">
+        <nav aria-label="Navegação principal">
+            <ul class="sidebar-menu">
+                <li><a href="index.html">Controle de Atividade</a></li>
+                <li><a href="historico.html">Histórico</a></li>
+                <li><a href="insights.html">Insights</a></li>
+                <li><a href="chamados-geotab.html" class="active" aria-current="page">Chamados Geotab</a></li>
+                <li><a href="atividades-usuarios.html">Atividades dos Usuários</a></li>
+                <li><a href="acompanhamento-d1.html">Acompanhamento D-1</a></li>
+                <li><a href="database.html">Base de Dados 🔒</a></li>
+                <li><a href="admin.html">Administrador 🔒</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main class="container">
+        <header class="header">
+            <div>
+                <h1>Chamados Abertos para Geotab</h1>
+            </div>
+            <div id="usuarioWidget" class="user-widget"></div>
+        </header>
+
+        <section class="summary-grid" aria-label="Resumo de chamados">
+            <article class="summary-card">
+                <div class="summary-label">Chamados abertos</div>
+                <div class="summary-value" id="totalAbertos">0</div>
+            </article>
+            <article class="summary-card">
+                <div class="summary-label">Chamados fechados</div>
+                <div class="summary-value" id="totalFechados">0</div>
+            </article>
+        </section>
+
+        <section class="content-grid">
+            <section class="panel" aria-labelledby="tituloFormulario">
+                <div class="panel-heading"><h2 id="tituloFormulario">Registrar Chamado</h2></div>
+                <form id="formChamado">
+                    <div class="form-group">
+                        <label for="colaborador">Nome do colaborador</label>
+                        <select id="colaborador" name="colaborador" required>
+                            <option value="">Selecione o colaborador</option>
+                            <option>Gabriel Oliveira</option>
+                            <option>Julia Barros</option>
+                            <option>Nome (Teste)</option>
+                            <option>Angelica Luz</option>
+                            <option>Ellen Ferreira</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="numeroChamado">Número do chamado</label>
+                        <input id="numeroChamado" name="numeroChamado" type="number" min="1" step="1" inputmode="numeric" placeholder="Ex.: 123456" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="descricao">Descrição</label>
+                        <textarea id="descricao" name="descricao" maxlength="2000" placeholder="Descreva o chamado" required></textarea>
+                    </div>
+                    <button class="btn-primary" id="btnAbrirChamado" type="submit">Registrar Chamado</button>
+                    <p id="mensagemFormulario" class="notice" role="status" aria-live="polite"></p>
+                </form>
+            </section>
+
+            <section class="panel chart-panel" aria-labelledby="tituloGrafico">
+                <div class="panel-heading"><h2 id="tituloGrafico">Chamados abertos por dia</h2></div>
+                <div class="chart-wrap" id="areaGrafico">
+                    <canvas id="graficoChamados" aria-label="Quantidade de chamados abertos por dia" role="img"></canvas>
+                    <div id="estadoGrafico" class="chart-empty hidden">Nenhum chamado registrado</div>
+                </div>
+            </section>
+        </section>
+
+        <section class="panel history-panel" aria-labelledby="tituloHistorico">
+            <div class="panel-heading">
+                <h2 id="tituloHistorico">Histórico de chamados</h2>
+                <div class="history-tools">
+                    <div class="form-group">
+                        <label for="filtroStatus">Status</label>
+                        <select id="filtroStatus">
+                            <option value="todos">Todos</option>
+                            <option value="aberto">Abertos</option>
+                            <option value="fechado">Fechados</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="buscaHistorico">Pesquisar</label>
+                        <input id="buscaHistorico" type="search" placeholder="Número, descrição ou colaborador">
+                    </div>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Número</th>
+                            <th>Descrição</th>
+                            <th>Colaborador</th>
+                            <th>Abertura</th>
+                            <th>Status</th>
+                            <th>Fechamento</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listaChamados"></tbody>
+                </table>
+                <div id="estadoHistorico" class="empty-state hidden">Nenhum chamado encontrado</div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const CAMINHO_CHAMADOS = 'chamadosGeotab';
+        const CHAVE_LOCAL_CHAMADOS = 'chamadosGeotab';
+        let chamados = [];
+        let graficoChamados = null;
+        let listenerChamadosAtivo = false;
+        let usarFirebase = false;
+
+        function lerChamadosLocais() {
+            try {
+                const dados = JSON.parse(localStorage.getItem(CHAVE_LOCAL_CHAMADOS) || '[]');
+                return Array.isArray(dados) ? dados.filter(item => item && item.id) : [];
+            } catch (erro) {
+                return [];
+            }
+        }
+
+        function salvarChamadosLocais() {
+            localStorage.setItem(CHAVE_LOCAL_CHAMADOS, JSON.stringify(chamados));
+        }
+
+        function carregarChamados() {
+            if (window.FIREBASE_OK && window.db && window.auth && window.auth.currentUser) {
+                if (listenerChamadosAtivo) return;
+                listenerChamadosAtivo = true;
+                usarFirebase = true;
+                window.db.ref(CAMINHO_CHAMADOS).on('value', snapshot => {
+                    const dados = snapshot.val() || {};
+                    chamados = Object.entries(dados).map(([id, item]) => ({ ...item, id }));
+                    renderizarPagina();
+                }, () => {
+                    usarFirebase = false;
+                    listenerChamadosAtivo = false;
+                    chamados = lerChamadosLocais();
+                    renderizarPagina();
+                });
+                return;
+            }
+            if (!window.FIREBASE_OK) {
+                usarFirebase = false;
+                chamados = lerChamadosLocais();
+                renderizarPagina();
+            }
+        }
+
+        function gerarIdLocal() {
+            return `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+        }
+
+        function formatarDataHora(timestamp) {
+            if (!timestamp) return '-';
+            const data = new Date(Number(timestamp));
+            return Number.isNaN(data.getTime()) ? '-' : data.toLocaleString('pt-BR');
+        }
+
+        function criarCelula(texto, classe) {
+            const celula = document.createElement('td');
+            celula.textContent = texto || '-';
+            if (classe) celula.className = classe;
+            return celula;
+        }
+
+        function renderizarHistorico() {
+            const corpo = document.getElementById('listaChamados');
+            const estado = document.getElementById('estadoHistorico');
+            const statusSelecionado = document.getElementById('filtroStatus').value;
+            const busca = document.getElementById('buscaHistorico').value.trim().toLocaleLowerCase('pt-BR');
+            const filtrados = [...chamados]
+                .sort((a, b) => Number(b.criadoEm) - Number(a.criadoEm))
+                .filter(item => statusSelecionado === 'todos' || item.status === statusSelecionado)
+                .filter(item => !busca || [item.numero, item.descricao, item.colaborador].some(valor => String(valor || '').toLocaleLowerCase('pt-BR').includes(busca)));
+
+            corpo.replaceChildren();
+            estado.classList.toggle('hidden', filtrados.length > 0);
+            filtrados.forEach(item => {
+                const linha = document.createElement('tr');
+                linha.append(
+                    criarCelula(String(item.numero), 'ticket-number'),
+                    criarCelula(item.descricao, 'description-cell'),
+                    criarCelula(item.colaborador),
+                    criarCelula(formatarDataHora(item.criadoEm))
+                );
+
+                const celulaStatus = document.createElement('td');
+                const badge = document.createElement('span');
+                const aberto = item.status === 'aberto';
+                badge.className = `status ${aberto ? 'open' : 'closed'}`;
+                badge.textContent = aberto ? 'Aberto' : 'Fechado';
+                celulaStatus.appendChild(badge);
+                linha.appendChild(celulaStatus);
+                linha.appendChild(criarCelula(formatarDataHora(item.fechadoEm)));
+
+                const celulaAcao = document.createElement('td');
+                if (aberto) {
+                    const botao = document.createElement('button');
+                    botao.type = 'button';
+                    botao.className = 'btn-close';
+                    botao.textContent = 'Fechar chamado';
+                    botao.setAttribute('aria-label', `Fechar chamado ${item.numero}`);
+                    botao.addEventListener('click', () => fecharChamado(item.id));
+                    celulaAcao.appendChild(botao);
+                } else {
+                    celulaAcao.textContent = '-';
+                }
+                linha.appendChild(celulaAcao);
+                corpo.appendChild(linha);
+            });
+        }
+
+        function renderizarResumo() {
+            document.getElementById('totalAbertos').textContent = chamados.filter(item => item.status === 'aberto').length;
+            document.getElementById('totalFechados').textContent = chamados.filter(item => item.status === 'fechado').length;
+        }
+
+        function diaISO(timestamp) {
+            const data = new Date(Number(timestamp));
+            if (Number.isNaN(data.getTime())) return '';
+            return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
+        }
+
+        function renderizarGraficoChamados() {
+            if (!window.chartChamadosPronto || typeof Chart === 'undefined') return;
+            const canvas = document.getElementById('graficoChamados');
+            const estado = document.getElementById('estadoGrafico');
+            if (graficoChamados) {
+                graficoChamados.destroy();
+                graficoChamados = null;
+            }
+            if (chamados.length === 0) {
+                canvas.classList.add('hidden');
+                estado.classList.remove('hidden');
+                estado.textContent = 'Nenhum chamado registrado';
+                return;
+            }
+
+            const porDia = {};
+            chamados.forEach(item => {
+                const dia = diaISO(item.criadoEm);
+                if (dia) porDia[dia] = (porDia[dia] || 0) + 1;
+            });
+            const diasComChamados = Object.keys(porDia).sort();
+            if (diasComChamados.length === 0) {
+                canvas.classList.add('hidden');
+                estado.classList.remove('hidden');
+                estado.textContent = 'Não há datas válidas para exibir';
+                return;
+            }
+
+            const dias = [];
+            const cursor = new Date(`${diasComChamados[0]}T00:00:00`);
+            const ultimoDia = new Date(`${diasComChamados[diasComChamados.length - 1]}T00:00:00`);
+            while (cursor <= ultimoDia) {
+                const dia = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
+                dias.push(dia);
+                cursor.setDate(cursor.getDate() + 1);
+            }
+
+            canvas.classList.remove('hidden');
+            estado.classList.add('hidden');
+            graficoChamados = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: dias.map(dia => {
+                        const [ano, mes, diaMes] = dia.split('-').map(Number);
+                        return new Date(ano, mes - 1, diaMes).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                    }),
+                    datasets: [{
+                        label: 'Chamados abertos',
+                        data: dias.map(dia => porDia[dia] || 0),
+                        borderColor: '#416f9d',
+                        backgroundColor: 'rgba(65, 111, 157, .14)',
+                        pointBackgroundColor: '#416f9d',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        borderWidth: 2,
+                        fill: true,
+                        tension: .25
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 14 } },
+                        y: { beginAtZero: true, ticks: { precision: 0, stepSize: 1 } }
+                    }
+                }
+            });
+        }
+
+        function renderizarPagina() {
+            renderizarResumo();
+            renderizarHistorico();
+            renderizarGraficoChamados();
+        }
+
+        async function abrirChamado(evento) {
+            evento.preventDefault();
+            const formulario = document.getElementById('formChamado');
+            if (!formulario.reportValidity()) return;
+            const botao = document.getElementById('btnAbrirChamado');
+            const mensagem = document.getElementById('mensagemFormulario');
+            botao.disabled = true;
+            mensagem.className = 'notice';
+            mensagem.textContent = '';
+
+            const chamado = {
+                numero: document.getElementById('numeroChamado').value,
+                colaborador: document.getElementById('colaborador').value,
+                descricao: document.getElementById('descricao').value.trim(),
+                status: 'aberto',
+                criadoEm: Date.now(),
+                fechadoEm: null
+            };
+
+            try {
+                if (usarFirebase && window.db) {
+                    const referencia = window.db.ref(CAMINHO_CHAMADOS).push();
+                    chamado.id = referencia.key;
+                    await referencia.set(chamado);
+                } else {
+                    chamado.id = gerarIdLocal();
+                    chamados.push(chamado);
+                    salvarChamadosLocais();
+                    renderizarPagina();
+                }
+                formulario.reset();
+                mensagem.textContent = 'Chamado aberto.';
+            } catch (erro) {
+                chamado.id = gerarIdLocal();
+                chamados.push(chamado);
+                usarFirebase = false;
+                salvarChamadosLocais();
+                renderizarPagina();
+                formulario.reset();
+                mensagem.classList.add('error');
+                mensagem.textContent = 'Chamado salvo neste navegador; sincronização indisponível.';
+            } finally {
+                botao.disabled = false;
+            }
+        }
+
+        async function fecharChamado(id) {
+            const chamado = chamados.find(item => item.id === id);
+            if (!chamado || chamado.status !== 'aberto') return;
+            if (!window.confirm(`Fechar o chamado ${chamado.numero}?`)) return;
+            const alteracao = { status: 'fechado', fechadoEm: Date.now() };
+            try {
+                if (usarFirebase && window.db) {
+                    await window.db.ref(`${CAMINHO_CHAMADOS}/${id}`).update(alteracao);
+                } else {
+                    chamados = chamados.map(item => item.id === id ? { ...item, ...alteracao } : item);
+                    salvarChamadosLocais();
+                    renderizarPagina();
+                }
+            } catch (erro) {
+                usarFirebase = false;
+                chamados = chamados.map(item => item.id === id ? { ...item, ...alteracao } : item);
+                salvarChamadosLocais();
+                renderizarPagina();
+            }
+        }
+
+        document.getElementById('formChamado').addEventListener('submit', abrirChamado);
+        document.getElementById('filtroStatus').addEventListener('change', renderizarHistorico);
+        document.getElementById('buscaHistorico').addEventListener('input', renderizarHistorico);
+
+        window.onUsuarioAutenticado = function() {
+            if (typeof criarWidgetUsuario === 'function') criarWidgetUsuario('usuarioWidget');
+            carregarChamados();
+        };
+
+        if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('COLE_AQUI')) {
+            if (firebase.apps.length === 0) firebase.initializeApp(FIREBASE_CONFIG);
+            window.auth = firebase.auth();
+            window.db = firebase.database();
+            window.FIREBASE_OK = true;
+            inicializarAutenticacao();
+        } else {
+            window.FIREBASE_OK = false;
+            carregarChamados();
+        }
+    </script>
+</body>
+</html>

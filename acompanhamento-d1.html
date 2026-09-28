@@ -140,11 +140,15 @@
         .charts-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 20px; }
         .charts-grid .card:nth-child(-n+3) { grid-column: span 2; }
         .charts-grid .card:nth-child(n+4) { grid-column: span 3; }
+        .charts-grid .card.linha-adaptavel { display: flex; flex-direction: column; }
+        .charts-grid .card.linha-adaptavel .chart-container.small { flex: 1; height: auto; min-height: 300px; }
+        .charts-grid .card.linha-adaptavel .tempo-lista { flex: 1; }
         .chart-container { position: relative; height: 360px; }
         .chart-container.small { height: 300px; }
         .tempo-lista { display: flex; flex-direction: column; gap: 10px; min-height: 250px; }
-        .tempo-lista-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border-left: 4px solid #1e3a5f; background: #f3f4f6; border-radius: 5px; color: #2c3e50; }
-        .tempo-lista-colaborador { font-weight: 600; }
+        .tempo-lista-item { display: flex; flex-direction: column; gap: 5px; padding: 12px 14px; border-left: 4px solid #1e3a5f; background: #f3f4f6; border-radius: 5px; color: #2c3e50; }
+        .tempo-lista-cabecalho { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        .tempo-lista-colaborador { color: #4b5563; font-size: .85em; }
         .tempo-lista-valor { color: #1e3a5f; font-size: 1.15em; font-weight: 700; white-space: nowrap; }
         .pausas-lista { display: flex; flex-direction: column; gap: 12px; min-height: 250px; }
         .pausas-lista-item { padding: 12px 14px; border-left: 4px solid #1e3a5f; background: #f3f4f6; border-radius: 5px; color: #2c3e50; }
@@ -244,12 +248,12 @@
         </section>
 
         <section class="charts-grid chart-section">
-            <div class="card">
+            <div class="card linha-adaptavel">
                 <h2 class="chart-title">Atividades Criadas por Colaborador</h2>
                 <div id="legendaAtividadesPorColaborador" class="chart-caption"></div>
                 <div class="chart-container small"><canvas id="chartAtividadesPorColaborador"></canvas></div>
             </div>
-            <div class="card">
+            <div class="card linha-adaptavel">
                 <h2 class="chart-title">Status por Colaborador</h2>
                 <div class="chart-container small status-chart-wrap">
                     <canvas id="chartStatusPorColaborador"></canvas>
@@ -260,8 +264,8 @@
                     <span class="status-legenda-item"><span class="status-legenda-cor" style="background: #1e3a5f;"></span>Finalizada</span>
                 </div>
             </div>
-            <div class="card">
-                <h2 class="chart-title">Tempo Médio por Atividade</h2>
+            <div class="card linha-adaptavel">
+                <h2 class="chart-title">Tempo Total por Atividade</h2>
                 <div id="listaTempoMedioAtividade" class="tempo-lista"></div>
             </div>
             <div class="card">
@@ -289,6 +293,7 @@
         let graficoTempoMedio;
         let graficoPausasSetor;
         let filtroMesInicializado = false;
+        let listenersAtividadesIniciados = false;
         const PALETA_GRAFICOS = ['#6b7280', '#1e3a5f', '#60a5fa'];
         const PLUGIN_VALORES_COLUNAS = {
             id: 'valoresNasColunas',
@@ -311,7 +316,6 @@
                 contexto.restore();
             }
         };
-
         function dataD1() {
             const data = new Date();
             data.setDate(data.getDate() - 1);
@@ -369,24 +373,23 @@
 
         function carregarAtividades() {
             if (window.FIREBASE_OK && window.db) {
-                Promise.all([
-                    window.db.ref('atividades').once('value'),
-                    window.db.ref('atividadesEmAndamento').once('value'),
-                    window.db.ref('historicoPausas').once('value'),
-                    window.db.ref('registrosAtividades').once('value')
-                ]).then(([atividadesSnapshot, andamentoSnapshot, pausasSnapshot, registrosSnapshot]) => {
-                    atividades = normalizarLista(atividadesSnapshot.val());
-                    atividadesEmAndamento = normalizarLista(andamentoSnapshot.val());
-                    historicoPausas = normalizarPausas(pausasSnapshot.val());
-                    registrosAtividades = normalizarRegistros(registrosSnapshot.val());
-                    renderizar();
-                }).catch(() => {
-                    const dados = lerLocalStorage();
-                    atividades = dados.atividades;
-                    atividadesEmAndamento = dados.emAndamento;
-                    historicoPausas = dados.pausas;
-                    registrosAtividades = dados.registros;
-                    renderizar();
+                if (window.auth && !window.auth.currentUser) return;
+                if (listenersAtividadesIniciados) return;
+                listenersAtividadesIniciados = true;
+                const listeners = [
+                    { caminho: 'atividades', normalizar: normalizarLista, aplicar: dados => { atividades = dados; }, chaveLocal: 'atividades' },
+                    { caminho: 'atividadesEmAndamento', normalizar: normalizarLista, aplicar: dados => { atividadesEmAndamento = dados; }, chaveLocal: 'emAndamento' },
+                    { caminho: 'historicoPausas', normalizar: normalizarPausas, aplicar: dados => { historicoPausas = dados; }, chaveLocal: 'pausas' },
+                    { caminho: 'registrosAtividades', normalizar: normalizarRegistros, aplicar: dados => { registrosAtividades = dados; }, chaveLocal: 'registros' }
+                ];
+                listeners.forEach(({ caminho, normalizar, aplicar, chaveLocal }) => {
+                    window.db.ref(caminho).on('value', snapshot => {
+                        aplicar(normalizar(snapshot.val()));
+                        renderizar();
+                    }, () => {
+                        aplicar(lerLocalStorage()[chaveLocal]);
+                        renderizar();
+                    });
                 });
             } else {
                 const dados = lerLocalStorage();
@@ -463,14 +466,28 @@
             return pausasPorTicket;
         }
 
+        function obterPausasAtivasParaResumo() {
+            const pausasPorAtividade = {};
+            historicoPausas.forEach(pausa => {
+                if (!pausa) return;
+                const chave = pausa.id || pausa.chaveAtividade || pausa.ticket;
+                if (chave) pausasPorAtividade[String(chave)] = pausa;
+            });
+            return Object.values(pausasPorAtividade).filter(pausa => {
+                const finalizada = atividades.some(item =>
+                    (pausa.id && item.id === pausa.id) ||
+                    (pausa.chaveAtividade && item.chaveAtividade === pausa.chaveAtividade)
+                );
+                return pausa.status === 'Pausado' && !pausa.horaRetomada && !finalizada;
+            });
+        }
+
         function contarStatus(data) {
             const pausasAtivas = obterPausasAtivasPorTicket();
             const ticketsPausados = new Set(Object.keys(pausasAtivas));
             const concluidas = atividades.filter(item => dataAtividadeParaISO(item.dataInicio) === data).length;
             const emAndamento = atividadesEmAndamento.filter(item => dataAtividadeParaISO(item.dataInicio) === data && (!item.ticket || !ticketsPausados.has(String(item.ticket)))).length;
-            const pausasNoDia = historicoPausas.filter(item => dataAtividadeParaISO(item.dataPausa || item.dataInicio) === data);
-            const ticketsPausadosNoDia = new Set(pausasNoDia.map(item => item.ticket || item.id || item.chaveAtividade).filter(Boolean));
-            const pausadas = ticketsPausadosNoDia.size || pausasNoDia.length;
+            const pausadas = obterPausasAtivasParaResumo().filter(item => dataAtividadeParaISO(item.dataPausa || item.dataInicio) === data).length;
             const criadas = new Set();
             [...atividades, ...atividadesEmAndamento, ...historicoPausas].forEach(item => {
                 if (dataAtividadeParaISO(item.dataInicio) !== data) return;
@@ -656,25 +673,30 @@
 
         function renderizarGraficoTempoMedio() {
             const data = obterDiaGrafico();
-            const tempos = {};
-            atividades.filter(item => dataAtividadeParaISO(item.dataInicio) === data && item.duracao).forEach(item => {
-                const colaborador = item.nome || item.colaborador || 'Não informado';
-                if (!tempos[colaborador]) tempos[colaborador] = [];
-                tempos[colaborador].push(minutosDaDuracao(item.duracao));
-            });
-            const nomes = Object.keys(tempos).sort();
-            const medias = nomes.map(nome => tempos[nome].reduce((total, valor) => total + valor, 0) / tempos[nome].length);
+            const atividadesConcluidas = atividades.filter(item => dataAtividadeParaISO(item.dataInicio) === data && item.duracao);
             const lista = document.getElementById('listaTempoMedioAtividade');
-            if (nomes.length === 0) {
+            if (atividadesConcluidas.length === 0) {
                 lista.innerHTML = '<div class="empty-state">Nenhuma atividade concluída</div>';
                 return;
             }
-            lista.innerHTML = nomes.map((nome, indice) => {
-                const minutos = Math.round(medias[indice]);
-                const horas = Math.floor(minutos / 60);
-                const minutosRestantes = minutos % 60;
-                return `<div class="tempo-lista-item"><span class="tempo-lista-colaborador">${nome}</span><span class="tempo-lista-valor">${horas}h ${String(minutosRestantes).padStart(2, '0')}min</span></div>`;
-            }).join('');
+            lista.replaceChildren(...atividadesConcluidas.map(item => {
+                const card = document.createElement('div');
+                card.className = 'tempo-lista-item';
+                const cabecalho = document.createElement('div');
+                cabecalho.className = 'tempo-lista-cabecalho';
+                const titulo = document.createElement('span');
+                titulo.className = 'tempo-lista-titulo';
+                titulo.textContent = item.titulo || item.descricao || (item.ticket ? `Ticket ${item.ticket}` : 'Atividade');
+                const valor = document.createElement('span');
+                valor.className = 'tempo-lista-valor';
+                valor.textContent = formatarHoras(minutosDaDuracao(item.duracao));
+                const colaborador = document.createElement('span');
+                colaborador.className = 'tempo-lista-colaborador';
+                colaborador.textContent = item.nome || item.colaborador || 'Não informado';
+                cabecalho.append(titulo, valor);
+                card.append(cabecalho, colaborador);
+                return card;
+            }));
         }
 
         function renderizarGraficoPausasSetor() {

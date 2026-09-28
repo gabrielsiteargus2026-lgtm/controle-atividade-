@@ -555,10 +555,10 @@
 
             <!-- Card: Deletar Ticket Específico -->
             <div class="admin-card delete">
-                <h3>Deletar Ticket Específico</h3>
-                <p>Remova um ticket específico e todos os seus registros de atividades. Útil para limpar atividades de teste.</p>
+                <h3>Deletar Ticket ou Chamado Específico</h3>
+                <p>Remova um ticket específico, uma atividade ou um chamado Geotab.</p>
                 <div class="info-box">
-                    <strong>Info:</strong> Será deletado de todas as localizações (atividades, histórico, auditoria).
+                    <strong>Info:</strong> Tickets de atividade são removidos de suas localizações; chamados Geotab são excluídos somente do cadastro Geotab.
                 </div>
                 <button class="btn-danger" id="btnDeletarTicket" style="padding: 10px; width: 100%;">Deletar Ticket</button>
             </div>
@@ -636,16 +636,19 @@
     <div id="modalDeletarTicket" class="modal">
         <div class="modal-content">
             <button class="close-btn" id="btnFecharDeletarTicket">&times;</button>
-            <div class="modal-header">Deletar Ticket ou Atividade</div>
+            <div class="modal-header">Deletar Ticket, Atividade ou Chamado Geotab</div>
             <div class="modal-body">
                 <p><strong>Opção 1 - Por Ticket:</strong></p>
                 <input type="text" id="inputNumeroTicket" placeholder="Ex: 001, 002, etc">
                 
                 <p style="margin-top: 15px; margin-bottom: 5px;"><strong>Opção 2 - Por Chave (🔑):</strong></p>
                 <input type="text" id="inputNumeroChave" placeholder="Ex: ATIV-20260528-143052-ABC123" style="margin-bottom: 15px;">
+
+                <p style="margin-bottom: 5px;"><strong>Opção 3 - Por Chamado Geotab:</strong></p>
+                <input type="text" id="inputNumeroChamadoGeotab" placeholder="Número do chamado Geotab" style="margin-bottom: 15px;">
                 
                 <div id="infoTicketEncontrado" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;">
-                    <p><strong>Atividade encontrada:</strong></p>
+                    <p><strong id="rotuloResultadoTicket">Atividade encontrada:</strong></p>
                     <p id="textoInfoTicket"></p>
                 </div>
             </div>
@@ -1187,12 +1190,14 @@
             const modalDeletarTicket = document.getElementById('modalDeletarTicket');
             const inputNumeroTicket = document.getElementById('inputNumeroTicket');
             const inputNumeroChave = document.getElementById('inputNumeroChave');
+            const inputNumeroChamadoGeotab = document.getElementById('inputNumeroChamadoGeotab');
             const btnPesquisarTicket = document.getElementById('btnPesquisarTicket');
             const btnConfirmarDeletarTicket = document.getElementById('btnConfirmarDeletarTicket');
             const btnCancelarDeletarTicket = document.getElementById('btnCancelarDeletarTicket');
             const btnFecharDeletarTicket = document.getElementById('btnFecharDeletarTicket');
             const infoTicketEncontrado = document.getElementById('infoTicketEncontrado');
             const textoInfoTicket = document.getElementById('textoInfoTicket');
+            const rotuloResultadoTicket = document.getElementById('rotuloResultadoTicket');
 
             const inputPesquisaAtividade = document.getElementById('inputPesquisaAtividade');
             const selectCampoPesquisa = document.getElementById('selectCampoPesquisa');
@@ -1200,13 +1205,18 @@
             const resultadoPesquisaAtividade = document.getElementById('resultadoPesquisaAtividade');
 
             let ticketSelecionado = null;
+            let chamadoGeotabSelecionado = null;
 
             btnDeletarTicket.addEventListener('click', () => {
                 modalDeletarTicket.style.display = 'flex';
                 inputNumeroTicket.value = '';
                 inputNumeroChave.value = '';
+                inputNumeroChamadoGeotab.value = '';
                 infoTicketEncontrado.style.display = 'none';
                 btnConfirmarDeletarTicket.style.display = 'none';
+                btnConfirmarDeletarTicket.textContent = 'Deletar';
+                ticketSelecionado = null;
+                chamadoGeotabSelecionado = null;
                 inputNumeroTicket.focus();
             });
 
@@ -1214,24 +1224,83 @@
                 modalDeletarTicket.style.display = 'none';
                 inputNumeroTicket.value = '';
                 inputNumeroChave.value = '';
+                inputNumeroChamadoGeotab.value = '';
                 ticketSelecionado = null;
+                chamadoGeotabSelecionado = null;
             });
 
             btnFecharDeletarTicket.addEventListener('click', () => {
                 modalDeletarTicket.style.display = 'none';
                 inputNumeroTicket.value = '';
                 inputNumeroChave.value = '';
+                inputNumeroChamadoGeotab.value = '';
                 ticketSelecionado = null;
+                chamadoGeotabSelecionado = null;
             });
 
-            btnPesquisarTicket.addEventListener('click', () => {
+            async function buscarChamadoGeotab(numero) {
+                if (window.FIREBASE_OK && window.db) {
+                    try {
+                        const snapshot = await window.db.ref('chamadosGeotab').once('value');
+                        const dados = snapshot.val() || {};
+                        const encontrado = Object.entries(dados).find(([, chamado]) => chamado && String(chamado.numero) === numero);
+                        if (encontrado) return { ...encontrado[1], id: encontrado[0], firebase: true };
+                    } catch (erro) {
+                        console.error('Erro ao pesquisar chamado Geotab no Firebase:', erro);
+                    }
+                }
+                try {
+                    const dadosLocais = JSON.parse(localStorage.getItem('chamadosGeotab') || '[]');
+                    const encontrado = (Array.isArray(dadosLocais) ? dadosLocais : Object.values(dadosLocais || {})).find(chamado => chamado && String(chamado.numero) === numero);
+                    return encontrado ? { ...encontrado, firebase: false } : null;
+                } catch (erro) {
+                    return null;
+                }
+            }
+
+            btnPesquisarTicket.addEventListener('click', async () => {
                 const numeroTicket = inputNumeroTicket.value.trim();
                 const numeroChave = inputNumeroChave.value.trim().toUpperCase();
-                
-                if (!numeroTicket && !numeroChave) {
-                    alert('Digite um número de ticket ou uma chave de atividade!');
+                const numeroChamadoGeotab = inputNumeroChamadoGeotab.value.trim();
+
+                if (numeroChamadoGeotab && (numeroTicket || numeroChave)) {
+                    alert('Pesquise um chamado Geotab ou um ticket/chave por vez.');
                     return;
                 }
+
+                ticketSelecionado = null;
+                chamadoGeotabSelecionado = null;
+                btnConfirmarDeletarTicket.textContent = 'Deletar';
+
+                if (numeroChamadoGeotab) {
+                    chamadoGeotabSelecionado = await buscarChamadoGeotab(numeroChamadoGeotab);
+                    if (chamadoGeotabSelecionado) {
+                        const chamado = chamadoGeotabSelecionado;
+                        rotuloResultadoTicket.textContent = 'Chamado Geotab encontrado:';
+                        textoInfoTicket.style.whiteSpace = 'pre-line';
+                        textoInfoTicket.textContent = [
+                            `Número: #${chamado.numero}`,
+                            `Colaborador: ${chamado.colaborador || 'N/A'}`,
+                            `Descrição: ${chamado.descricao || 'N/A'}`,
+                            `Status: ${chamado.status || 'aberto'}`
+                        ].join('\n');
+                        infoTicketEncontrado.style.display = 'block';
+                        btnConfirmarDeletarTicket.textContent = 'Deletar Chamado Geotab';
+                        btnConfirmarDeletarTicket.style.display = 'block';
+                    } else {
+                        alert(`Chamado Geotab #${numeroChamadoGeotab} não encontrado.`);
+                        infoTicketEncontrado.style.display = 'none';
+                        btnConfirmarDeletarTicket.style.display = 'none';
+                    }
+                    return;
+                }
+                
+                if (!numeroTicket && !numeroChave) {
+                    alert('Digite um ticket, uma chave de atividade ou um chamado Geotab!');
+                    return;
+                }
+
+                rotuloResultadoTicket.textContent = 'Atividade encontrada:';
 
                 // Pesquisar em atividades
                 const atividadesList = Array.isArray(atividades) ? atividades : Object.values(atividades || {});
@@ -1491,7 +1560,31 @@
                 console.log('');
             }
 
-            btnConfirmarDeletarTicket.addEventListener('click', () => {
+            btnConfirmarDeletarTicket.addEventListener('click', async () => {
+                if (chamadoGeotabSelecionado) {
+                    const chamado = chamadoGeotabSelecionado;
+                    if (!confirm(`Tem certeza que deseja excluir o chamado Geotab #${chamado.numero}?`)) return;
+                    btnConfirmarDeletarTicket.disabled = true;
+                    try {
+                        if (chamado.firebase && window.FIREBASE_OK && window.db) {
+                            await window.db.ref(`chamadosGeotab/${chamado.id}`).remove();
+                        }
+                        const dadosLocais = JSON.parse(localStorage.getItem('chamadosGeotab') || '[]');
+                        const chamadosLocais = Array.isArray(dadosLocais) ? dadosLocais : Object.values(dadosLocais || {});
+                        localStorage.setItem('chamadosGeotab', JSON.stringify(chamadosLocais.filter(item => String(item.id) !== String(chamado.id))));
+                        alert(`Chamado Geotab #${chamado.numero} excluído com sucesso.`);
+                        modalDeletarTicket.style.display = 'none';
+                        inputNumeroChamadoGeotab.value = '';
+                        chamadoGeotabSelecionado = null;
+                    } catch (erro) {
+                        console.error('Erro ao excluir chamado Geotab:', erro);
+                        alert('Não foi possível excluir o chamado Geotab.');
+                    } finally {
+                        btnConfirmarDeletarTicket.disabled = false;
+                    }
+                    return;
+                }
+
                 if (!ticketSelecionado) return;
 
                 if (!confirm(`Tem certeza que deseja deletar o ticket #${ticketSelecionado} e todos os seus registros permanentemente?\n\nEsta ação é IRREVERSÍVEL!`)) {
@@ -1673,6 +1766,9 @@
                 if (e.key === 'Enter') {
                     btnPesquisarTicket.click();
                 }
+            });
+            inputNumeroChamadoGeotab.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') btnPesquisarTicket.click();
             });
 
             // Carregar dados
