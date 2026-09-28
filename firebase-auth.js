@@ -258,7 +258,7 @@ function adicionarRastreamentoUsuario(atividade) {
  * Adicionar widget de usuário no topo da página
  * Use após inicializarAutenticacao()
  */
-function criarWidgetUsuario(containerId = 'usuarioWidget') {
+function criarWidgetUsuario(containerId = 'usuarioWidget', fixo = true) {
     if (!usuarioAtual) {
         console.warn('⚠️ Usuário não autenticado');
         return;
@@ -274,7 +274,7 @@ function criarWidgetUsuario(containerId = 'usuarioWidget') {
     widget.innerHTML = `
         <style>
             .usuario-widget {
-                position: fixed;
+                position: ${fixo ? 'fixed' : 'absolute'};
                 top: 15px;
                 right: 20px;
                 background: transparent;
