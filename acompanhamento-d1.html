@@ -122,7 +122,7 @@
         .btn-secondary:hover { background: #7f8c8d; }
 
         .summary-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
-        .summary-card { color: #1f2937; background: #fff; border: 1px solid #e5edf5; border-left: 4px solid #5b8ec6; padding: 14px 12px; border-radius: 8px; text-align: left; box-shadow: 0 2px 8px rgba(31, 41, 55, .08); }
+        .summary-card { min-height: 96px; display: flex; flex-direction: column; justify-content: center; color: #1f2937; background: #fff; border: 1px solid #e5edf5; border-left: 4px solid #5b8ec6; padding: 14px 12px; border-radius: 8px; text-align: left; box-shadow: 0 2px 8px rgba(31, 41, 55, .08); }
         .summary-label { color: #64748b; font-size: .82em; opacity: 1; }
         .summary-value { color: #1f2937; font-size: 1.55em; font-weight: 700; margin-bottom: 4px; }
         .summary-heading { display: flex; align-items: center; gap: 10px; color: #2c3e50; font-size: 1.35em; margin: 20px 0 14px; }
@@ -151,6 +151,7 @@
         .charts-grid .card.linha-adaptavel .chart-container.small { flex: 1; height: auto; min-height: 300px; }
         .charts-grid .card.linha-adaptavel .tempo-lista { flex: 1; }
         .chart-container { position: relative; height: 360px; }
+        .comparativo-diario-chart { height: 280px; }
         .chart-container.small { height: 300px; }
         .tempo-lista { display: flex; flex-direction: column; gap: 10px; min-height: 250px; }
         .tempo-lista-item { display: flex; flex-direction: column; gap: 5px; padding: 12px 14px; border-left: 4px solid #1e3a5f; background: #f3f4f6; border-radius: 5px; color: #2c3e50; }
@@ -198,7 +199,7 @@
             .summary-layout { grid-template-columns: 1fr; }
               .summary-layout .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
-        @media (max-width: 520px) { .summary-grid { grid-template-columns: 1fr; } .summary-layout .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .summary-card { padding: 14px 8px; } .summary-value { font-size: 1.45em; } .filters { display: block; } .form-group, .filters button { width: 100%; margin-bottom: 12px; } .pausas-lista-ticket { grid-template-columns: 1fr; gap: 4px; } }
+        @media (max-width: 520px) { .summary-grid { grid-template-columns: 1fr; } .summary-layout .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .summary-card { min-height: 92px; padding: 14px 8px; } .summary-value { font-size: 1.45em; } .comparativo-diario-chart { height: 240px; } .filters { display: block; } .form-group, .filters button { width: 100%; margin-bottom: 12px; } .pausas-lista-ticket { grid-template-columns: 1fr; gap: 4px; } }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -276,7 +277,7 @@
                 <label for="selectMesAtividades">Visualizar por mês:</label>
                 <select id="selectMesAtividades"><option value="all">Todos os meses</option></select>
             </div>
-            <div class="chart-container"><canvas id="chartAtividadesCriadasPorDia"></canvas></div>
+            <div class="chart-container comparativo-diario-chart"><canvas id="chartAtividadesCriadasPorDia"></canvas></div>
         </section>
 
         <section class="charts-grid chart-section">
@@ -298,7 +299,8 @@
             </div>
             <div class="card linha-adaptavel">
                 <h2 class="chart-title">Tempo Médio Total por Colaborador</h2>
-                <div id="listaTempoMedioAtividade" class="tempo-lista"></div>
+                <div id="containerGraficoTempoMedioAtividade" class="chart-container small"><canvas id="chartTempoMedioAtividade"></canvas></div>
+                <div id="estadoTempoMedioAtividade" class="empty-state" hidden>Nenhuma atividade finalizada nesta data</div>
             </div>
             <div class="card">
                 <h2 class="chart-title">Pausas por Setor</h2>
@@ -368,6 +370,30 @@
                             const deslocamento = chart.canvas.id === 'chartStatusPorColaborador' ? 10 : 18;
                             contexto.fillText(valor, barra.x, Math.max(barra.y - deslocamento, 18));
                         }
+                    });
+                });
+                contexto.restore();
+            }
+        };
+        const PLUGIN_VALORES_TEMPO_MEDIO = {
+            id: 'valoresTempoMedio',
+            afterDatasetsDraw(chart) {
+                const contexto = chart.ctx;
+                contexto.save();
+                contexto.font = '700 11px Segoe UI';
+                contexto.textAlign = 'center';
+                contexto.textBaseline = 'bottom';
+                contexto.fillStyle = '#1f2937';
+                contexto.strokeStyle = '#fff';
+                contexto.lineWidth = 3;
+                chart.data.datasets.forEach((dataset, indiceDataset) => {
+                    chart.getDatasetMeta(indiceDataset).data.forEach((ponto, indice) => {
+                        const valor = dataset.data[indice];
+                        if (valor === null || valor === undefined) return;
+                        const rotulo = formatarHoras(Number(valor));
+                        const posicaoY = Math.max(ponto.y - 10, 14);
+                        contexto.strokeText(rotulo, ponto.x, posicaoY);
+                        contexto.fillText(rotulo, ponto.x, posicaoY);
                     });
                 });
                 contexto.restore();
@@ -571,6 +597,20 @@
             return Math.max(0, minutosDaDuracao(atividade.duracao) - minutosPausados);
         }
 
+        function calcularMinutosPausaNoDia(pausa, data) {
+            if (dataAtividadeParaISO(pausa.dataPausa || pausa.dataInicio) !== data) return 0;
+            const inicio = converterDataHoraPausa(pausa.dataPausa || pausa.dataInicio, pausa.horaPausa);
+            if (!inicio) return calcularMinutosPausa(pausa);
+            const fim = pausa.horaRetomada
+                ? converterDataHoraPausa(pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio, pausa.horaRetomada)
+                : new Date();
+            if (!fim) return calcularMinutosPausa(pausa);
+            const [ano, mes, dia] = data.split('-').map(Number);
+            const inicioDia = new Date(ano, mes - 1, dia).getTime();
+            const fimDia = new Date(ano, mes - 1, dia + 1).getTime();
+            return Math.max(0, (Math.min(fim.getTime(), fimDia) - Math.max(inicio.getTime(), inicioDia)) / 60000);
+        }
+
         function contarStatus(data) {
             const pausasAtivas = obterPausasAtivasPorTicket();
             const ticketsPausados = new Set(Object.keys(pausasAtivas));
@@ -583,7 +623,8 @@
                 if (dataAtividadeParaISO(item.dataInicio) !== data) return;
                 criadas.add(item.id || item.ticket || item.chaveAtividade || JSON.stringify(item));
             });
-            const duracoesFinalizadas = atividadesConcluidasNoDia
+            const atividadesFinalizadasCriadasNoDia = atividades.filter(item => dataAtividadeParaISO(item.dataInicio) === data && item.duracao);
+            const duracoesFinalizadas = atividadesFinalizadasCriadasNoDia
                 .filter(item => item.duracao)
                 .map(calcularMinutosAtivos);
             const tempoTotalAtividades = duracoesFinalizadas.reduce((total, minutos) => total + minutos, 0);
@@ -591,9 +632,9 @@
                 ? tempoTotalAtividades / duracoesFinalizadas.length
                 : null;
             const pausasDoDia = historicoPausas.filter(item => dataAtividadeParaISO(item.dataPausa || item.dataInicio) === data);
-            const tempoTotalPausas = pausasDoDia.reduce((total, item) => total + calcularMinutosPausa(item), 0);
+            const tempoTotalPausas = pausasDoDia.reduce((total, item) => total + calcularMinutosPausaNoDia(item, data), 0);
             const tempoMedioPausa = pausasDoDia.length ? tempoTotalPausas / pausasDoDia.length : null;
-            const colaboradoresDoDia = new Set(atividadesConcluidasNoDia.map(item => item.nome || item.colaborador || 'Não informado'));
+            const colaboradoresDoDia = new Set(atividadesFinalizadasCriadasNoDia.map(item => item.nome || item.colaborador || 'Não informado'));
             const mediaPorColaboradorDia = colaboradoresDoDia.size ? tempoTotalAtividades / colaboradoresDoDia.size : null;
             const concluidasDasCriadasNoDia = new Set(atividades
                 .filter(item => dataAtividadeParaISO(item.dataInicio) === data)
@@ -899,29 +940,53 @@
                     temposPorColaborador.set(colaborador, resumo);
                 });
             const colaboradores = [...temposPorColaborador.entries()].sort(([nomeA], [nomeB]) => nomeA.localeCompare(nomeB, 'pt-BR'));
-            const lista = document.getElementById('listaTempoMedioAtividade');
+            const container = document.getElementById('containerGraficoTempoMedioAtividade');
+            const estadoVazio = document.getElementById('estadoTempoMedioAtividade');
+            if (graficoTempoMedio) {
+                graficoTempoMedio.destroy();
+                graficoTempoMedio = null;
+            }
             if (colaboradores.length === 0) {
-                lista.innerHTML = '<div class="empty-state">Nenhuma atividade finalizada nesta data</div>';
+                container.hidden = true;
+                estadoVazio.hidden = false;
                 return;
             }
-            lista.replaceChildren(...colaboradores.map(([nome, resumo]) => {
-                const card = document.createElement('div');
-                card.className = 'tempo-lista-item';
-                const cabecalho = document.createElement('div');
-                cabecalho.className = 'tempo-lista-cabecalho';
-                const titulo = document.createElement('span');
-                titulo.className = 'tempo-lista-titulo';
-                titulo.textContent = nome;
-                const valor = document.createElement('span');
-                valor.className = 'tempo-lista-valor';
-                valor.textContent = formatarHoras(resumo.totalMinutos / resumo.quantidade);
-                const colaborador = document.createElement('span');
-                colaborador.className = 'tempo-lista-colaborador';
-                colaborador.textContent = `Média ativa de ${resumo.quantidade} ${resumo.quantidade === 1 ? 'atividade finalizada' : 'atividades finalizadas'}`;
-                cabecalho.append(titulo, valor);
-                card.append(cabecalho, colaborador);
-                return card;
-            }));
+            container.hidden = false;
+            estadoVazio.hidden = true;
+            const canvas = document.getElementById('chartTempoMedioAtividade');
+            graficoTempoMedio = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: colaboradores.map(([nome]) => nome),
+                    datasets: [{
+                        label: 'Média ativa',
+                        data: colaboradores.map(([, resumo]) => resumo.totalMinutos / resumo.quantidade),
+                        borderColor: '#1e3a5f',
+                        backgroundColor: 'rgba(91, 142, 198, 0.14)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#5b8ec6',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 1.5,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: contexto => `Média ativa: ${formatarHoras(contexto.parsed.y)}` } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { callback: valor => formatarHoras(Number(valor)) } },
+                        x: { ticks: { autoSkip: true, maxRotation: 35, minRotation: 0 } }
+                    }
+                },
+                plugins: [PLUGIN_VALORES_TEMPO_MEDIO]
+            });
         }
 
         function renderizarGraficoPausasSetor() {
@@ -982,7 +1047,7 @@
             area.classList.add('modo-captura');
             try {
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-                [graficoDiario, graficoColaboradores, graficoStatusColaboradores, graficoPausasSetor, graficoTaxaFinalizacao].forEach(grafico => {
+                [graficoDiario, graficoColaboradores, graficoStatusColaboradores, graficoTempoMedio, graficoPausasSetor, graficoTaxaFinalizacao].forEach(grafico => {
                     if (grafico) grafico.resize();
                 });
                 await new Promise(resolve => requestAnimationFrame(resolve));

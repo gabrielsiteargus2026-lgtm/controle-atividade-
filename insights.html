@@ -156,6 +156,13 @@
             border-left: 4px solid #5b8ec6;
         }
 
+        .summary-quick-grid > div {
+            min-height: 118px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
         .kpi-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
@@ -220,6 +227,38 @@
             padding: 15px;
             margin-bottom: 20px;
             position: relative;
+        }
+
+        .summary-graficos-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            align-items: stretch;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card-resumo-grafico {
+            display: flex;
+            flex-direction: column;
+            min-height: 420px;
+        }
+
+        .chart-resumo-wrapper {
+            position: relative;
+            flex: 1;
+            min-height: 300px;
+        }
+
+        .chart-resumo-wrapper canvas {
+            position: absolute;
+            inset: 0;
+            width: 100% !important;
+            height: 100% !important;
+            max-height: none !important;
+        }
+
+        @media (max-width: 768px) {
+            .summary-graficos-grid { grid-template-columns: minmax(0, 1fr); }
         }
 
         canvas {
@@ -486,7 +525,7 @@
         </div>
         
         <!-- CARDS DE RESUMO RÁPIDO -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+        <div class="summary-quick-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
             <div style="background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <div style="font-size: 2em; font-weight: bold;" id="totalEmAndamento">0</div>
                 <div style="font-size: 0.9em; opacity: 0.9;">Em Andamento</div>
@@ -505,10 +544,12 @@
             </div>
         </div>
         
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+        <div class="summary-graficos-grid">
             <!-- Gráfico de Barras Simples -->
-            <div class="chart-card">
-                <canvas id="chartResumoAtividades"></canvas>
+            <div class="chart-card chart-card-resumo-grafico">
+                <div class="chart-resumo-wrapper">
+                    <canvas id="chartResumoAtividades"></canvas>
+                </div>
             </div>
             <!-- Lista de Atividades Criadas -->
             <div class="chart-card">
@@ -1301,48 +1342,23 @@
         function popularSelectMesAtividades() {
             const select = document.getElementById('selectMesAtividades');
             if (!select) return;
-            // coletar meses disponíveis a partir de atividadesGlobais
-            const mesesSet = new Set();
-            const pegarMesChave = (dataBR) => {
-                if (!dataBR) return null;
-                const parts = dataBR.split('/');
-                if (parts.length !== 3) return null;
-                const mes = parts[1].padStart(2, '0');
-                const ano = parts[2];
-                return `${ano}-${mes}`;
-            };
-
-            (Array.isArray(atividadesGlobais) ? atividadesGlobais : []).forEach(a => {
-                const chave = pegarMesChave(a && a.dataInicio);
-                if (chave) mesesSet.add(chave);
-            });
-            (Array.isArray(atividadesEmAndamento) ? atividadesEmAndamento : []).forEach(a => {
-                const chave = pegarMesChave(a && a.dataInicio);
-                if (chave) mesesSet.add(chave);
-            });
-
-            // ordenar meses desc
-            const meses = Array.from(mesesSet).sort().reverse();
-
-            // limpar e adicionar opções
-            select.innerHTML = '';
-            const optAll = document.createElement('option');
-            optAll.value = 'all';
-            optAll.textContent = 'Todos os meses';
-            select.appendChild(optAll);
-
             const nomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-            meses.forEach(m => {
-                const [ano, mes] = m.split('-');
-                const opt = document.createElement('option');
-                opt.value = m;
-                const mesIdx = parseInt(mes, 10) - 1;
-                const nome = nomes[mesIdx] || mes;
-                opt.textContent = `${nome}/${ano}`;
-                select.appendChild(opt);
-            });
+            const agora = new Date();
+            const mesAtual = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
+            const mesesSet = new Set([mesAtual]);
+            const coletarMes = item => {
+                const partes = String(item?.dataInicio || '').split('/');
+                if (partes.length === 3) mesesSet.add(`${partes[2]}-${partes[1].padStart(2, '0')}`);
+            };
+            (Array.isArray(atividadesGlobais) ? atividadesGlobais : []).forEach(coletarMes);
+            (Array.isArray(atividadesEmAndamento) ? atividadesEmAndamento : []).forEach(coletarMes);
 
-            // evento de mudança
+            select.innerHTML = '<option value="all">Todos os meses</option>' + [...mesesSet].sort().reverse().map(chave => {
+                const [ano, mes] = chave.split('-');
+                return `<option value="${chave}">${nomes[Number(mes) - 1]}/${ano}</option>`;
+            }).join('');
+            select.value = mesAtual;
+            select.disabled = false;
             select.removeEventListener('change', handleChangeMesAtividades);
             select.addEventListener('change', handleChangeMesAtividades);
         }
@@ -1682,7 +1698,7 @@
                 options: {
                     indexAxis: 'x',
                     responsive: true,
-                    maintainAspectRatio: true,
+                    maintainAspectRatio: false,
                     plugins: {
                         legend: { display: true, position: 'top' }
                     },
