@@ -81,7 +81,7 @@
         .modo-captura { width: 100% !important; max-width: none !important; margin-left: 0 !important; margin-right: 0 !important; }
         .modo-captura .charts-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
         .modo-captura .charts-grid .card:nth-child(-n+3) { grid-column: span 2; }
-        .modo-captura .charts-grid .card:nth-child(n+4) { grid-column: span 3; }
+        .modo-captura .charts-grid .card:nth-child(n+4) { grid-column: span 2; }
         .modo-captura .chart-container canvas { width: 100% !important; }
         .status-chart-wrap { position: relative; }
         .status-legenda { display: flex; justify-content: center; gap: 12px; margin-top: 8px; color: #4b5563; font-size: .72em; }
@@ -122,20 +122,20 @@
         .btn-secondary:hover { background: #7f8c8d; }
 
         .summary-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
-        .summary-card { min-height: 96px; display: flex; flex-direction: column; justify-content: center; color: #1f2937; background: #fff; border: 1px solid #e5edf5; border-left: 4px solid #5b8ec6; padding: 14px 12px; border-radius: 8px; text-align: left; box-shadow: 0 2px 8px rgba(31, 41, 55, .08); }
+        .summary-card { min-height: 128px; display: flex; flex-direction: column; justify-content: center; color: #1f2937; background: #fff; border: 1px solid #e5edf5; border-left: 4px solid #5b8ec6; padding: 14px 12px; border-radius: 8px; text-align: left; box-shadow: 0 2px 8px rgba(31, 41, 55, .08); }
         .summary-label { color: #64748b; font-size: .82em; opacity: 1; }
         .summary-value { color: #1f2937; font-size: 1.55em; font-weight: 700; margin-bottom: 4px; }
         .summary-heading { display: flex; align-items: center; gap: 10px; color: #2c3e50; font-size: 1.35em; margin: 20px 0 14px; }
         .summary-heading input { width: auto; padding: 6px 9px; font-size: .75em; }
-        .summary-layout { display: grid; grid-template-columns: minmax(220px, .8fr) minmax(0, 1.7fr); gap: 12px; margin-bottom: 12px; }
-        .summary-taxa { display: flex; flex-direction: column; justify-content: center; }
+        .summary-layout { display: grid; grid-template-columns: minmax(220px, .8fr) minmax(0, 1.7fr); align-items: stretch; gap: 12px; margin-bottom: 12px; }
+        .summary-taxa { display: flex; flex-direction: column; justify-content: center; margin-bottom: 0; }
         .summary-taxa h3 { color: #2c3e50; text-align: center; font-size: 1em; margin-bottom: 4px; }
-        .summary-taxa-grafico { position: relative; width: 100%; height: 175px; max-width: 230px; margin: 0 auto; }
+        .summary-taxa-grafico { position: relative; width: 100%; height: 160px; max-width: 210px; margin: 0 auto; }
         .summary-taxa-grafico canvas { width: 100% !important; height: 100% !important; }
         .summary-taxa-centro { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; pointer-events: none; }
-        .summary-taxa-centro strong { color: #1e3a5f; font-size: 1.8em; }
+        .summary-taxa-centro strong { color: #1e3a5f; font-size: 1.7em; }
         .summary-taxa-centro span { color: #667085; font-size: .78em; }
-        .summary-layout .summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); align-content: center; }
+        .summary-layout .summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(128px, 1fr)); align-content: stretch; align-self: stretch; }
 
         .chart-section { margin-top: 20px; }
         .chart-title { color: #2c3e50; font-size: 1.25em; margin-bottom: 14px; }
@@ -146,7 +146,7 @@
         .chart-filter input { width: auto; padding: 7px 10px; }
         .charts-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 20px; }
         .charts-grid .card:nth-child(-n+3) { grid-column: span 2; }
-        .charts-grid .card:nth-child(n+4) { grid-column: span 3; }
+        .charts-grid .card:nth-child(n+4) { grid-column: span 2; }
         .charts-grid .card.linha-adaptavel { display: flex; flex-direction: column; }
         .charts-grid .card.linha-adaptavel .chart-container.small { flex: 1; height: auto; min-height: 300px; }
         .charts-grid .card.linha-adaptavel .tempo-lista { flex: 1; }
@@ -197,9 +197,9 @@
         }
         @media (max-width: 700px) {
             .summary-layout { grid-template-columns: 1fr; }
-              .summary-layout .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                        .summary-layout .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; align-self: auto; }
         }
-        @media (max-width: 520px) { .summary-grid { grid-template-columns: 1fr; } .summary-layout .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .summary-card { min-height: 92px; padding: 14px 8px; } .summary-value { font-size: 1.45em; } .comparativo-diario-chart { height: 240px; } .filters { display: block; } .form-group, .filters button { width: 100%; margin-bottom: 12px; } .pausas-lista-ticket { grid-template-columns: 1fr; gap: 4px; } }
+        @media (max-width: 520px) { .summary-grid { grid-template-columns: 1fr; } .summary-layout .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .summary-card { min-height: 112px; padding: 14px 8px; } .summary-value { font-size: 1.45em; } .comparativo-diario-chart { height: 240px; } .filters { display: block; } .form-group, .filters button { width: 100%; margin-bottom: 12px; } .pausas-lista-ticket { grid-template-columns: 1fr; gap: 4px; } }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -283,7 +283,6 @@
         <section class="charts-grid chart-section">
             <div class="card linha-adaptavel">
                 <h2 class="chart-title">Atividades Criadas por Colaborador</h2>
-                <div id="legendaAtividadesPorColaborador" class="chart-caption"></div>
                 <div class="chart-container small"><canvas id="chartAtividadesPorColaborador"></canvas></div>
             </div>
             <div class="card linha-adaptavel">
@@ -381,10 +380,62 @@
                 contexto.restore();
             }
         };
+        const PLUGIN_VALORES_RETROATIVAS = {
+            id: 'valoresAtividadesRetroativas',
+            afterDatasetsDraw(chart) {
+                const contexto = chart.ctx;
+                contexto.save();
+                contexto.fillStyle = '#1f2937';
+                contexto.font = '700 12px Segoe UI';
+                contexto.textAlign = 'center';
+                contexto.textBaseline = 'bottom';
+                chart.getDatasetMeta(0).data.forEach((barra, indice) => {
+                    const valor = Number(chart.data.datasets[0].data[indice]);
+                    if (!Number.isFinite(valor) || valor === 0) return;
+                    contexto.fillText(valor.toLocaleString('pt-BR'), barra.x, Math.max(barra.y - 8, chart.chartArea.top + 14));
+                });
+                contexto.restore();
+            }
+        };
         const PLUGIN_ROTULOS_ATIVIDADES_COLABORADOR = {
             id: 'rotulosAtividadesPorColaborador',
             afterDatasetsDraw(chart) {
                 const contexto = chart.ctx;
+                const indiceLinha = chart.data.datasets.findIndex(dataset => dataset.type === 'line');
+                if (indiceLinha >= 0) {
+                    const linha = chart.data.datasets[indiceLinha];
+                    const pontos = chart.getDatasetMeta(indiceLinha).data;
+                    if (pontos.length > 1) {
+                        contexto.save();
+                        contexto.beginPath();
+                        contexto.rect(chart.chartArea.left, chart.chartArea.top, chart.chartArea.width, chart.chartArea.height);
+                        contexto.clip();
+                        contexto.beginPath();
+                        contexto.moveTo(pontos[0].x, pontos[0].y);
+                        for (let indice = 0; indice < pontos.length - 1; indice++) {
+                            const atual = pontos[indice];
+                            const proximo = pontos[indice + 1];
+                            const distanciaX = proximo.x - atual.x;
+                            const curvatura = distanciaX * 0.32;
+                            contexto.bezierCurveTo(atual.x + curvatura, atual.y, proximo.x - curvatura, proximo.y, proximo.x, proximo.y);
+                        }
+                        contexto.strokeStyle = linha.borderColor;
+                        contexto.lineWidth = 3;
+                        contexto.lineCap = 'round';
+                        contexto.lineJoin = 'round';
+                        contexto.stroke();
+                        pontos.forEach(ponto => {
+                            contexto.beginPath();
+                            contexto.arc(ponto.x, ponto.y, 4, 0, Math.PI * 2);
+                            contexto.fillStyle = linha.borderColor;
+                            contexto.fill();
+                            contexto.strokeStyle = '#fff';
+                            contexto.lineWidth = 1.5;
+                            contexto.stroke();
+                        });
+                        contexto.restore();
+                    }
+                }
                 contexto.save();
                 contexto.textAlign = 'center';
                 chart.data.datasets.forEach((dataset, indiceDataset) => {
@@ -437,6 +488,34 @@
                         contexto.fillText(rotulo, ponto.x, posicaoY);
                     });
                 });
+                contexto.restore();
+            }
+        };
+        const PLUGIN_CURVA_TEMPO_MEDIO = {
+            id: 'curvaTempoMedio',
+            beforeDatasetsDraw(chart) {
+                const pontos = chart.getDatasetMeta(0).data;
+                if (pontos.length < 2) return;
+                const contexto = chart.ctx;
+                const dataset = chart.data.datasets[0];
+                contexto.save();
+                contexto.beginPath();
+                contexto.rect(chart.chartArea.left, chart.chartArea.top, chart.chartArea.width, chart.chartArea.height);
+                contexto.clip();
+                contexto.beginPath();
+                contexto.moveTo(pontos[0].x, pontos[0].y);
+                for (let indice = 0; indice < pontos.length - 1; indice++) {
+                    const atual = pontos[indice];
+                    const proximo = pontos[indice + 1];
+                    const distanciaX = proximo.x - atual.x;
+                    const curvatura = distanciaX * 0.32;
+                    contexto.bezierCurveTo(atual.x + curvatura, atual.y, proximo.x - curvatura, proximo.y, proximo.x, proximo.y);
+                }
+                contexto.strokeStyle = dataset.borderColor;
+                contexto.lineWidth = dataset.borderWidth || 2;
+                contexto.lineCap = 'round';
+                contexto.lineJoin = 'round';
+                contexto.stroke();
                 contexto.restore();
             }
         };
@@ -763,7 +842,10 @@
             Object.values(pausasAtivas).forEach(item => adicionar(porDiaCriadas, item, item.dataInicio));
 
             const datas = [...new Set([...Object.keys(porDiaCriadas), ...Object.keys(porDiaFinalizadas)])].sort();
-            const labels = datas.map(data => data.split('-').reverse().join('/'));
+            const labels = datas.map(data => {
+                const [, mes, dia] = data.split('-');
+                return `${dia}/${mes}`;
+            });
             const canvas = document.getElementById('chartAtividadesCriadasPorDia');
             if (graficoDiario) graficoDiario.destroy();
             graficoDiario = new Chart(canvas.getContext('2d'), {
@@ -771,8 +853,8 @@
                 data: {
                     labels,
                     datasets: [
-                        { label: 'Atividades criadas', data: datas.map(data => porDiaCriadas[data] || 0), borderColor: PALETA_GRAFICOS[1], backgroundColor: 'rgba(30, 58, 95, 0.12)', borderWidth: 2, fill: true, tension: 0.4, pointBackgroundColor: PALETA_GRAFICOS[1], pointBorderColor: '#fff', pointBorderWidth: 1.5, pointRadius: 3, pointHoverRadius: 5 },
-                        { label: 'Atividades finalizadas', data: datas.map(data => porDiaFinalizadas[data] || 0), borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', borderWidth: 2, fill: false, tension: 0.4, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 1.5, pointRadius: 3, pointHoverRadius: 5 }
+                        { label: 'Atividades criadas', data: datas.map(data => porDiaCriadas[data] || 0), borderColor: PALETA_GRAFICOS[1], backgroundColor: 'rgba(30, 58, 95, 0.12)', borderWidth: 1.5, fill: true, tension: 0.4, pointBackgroundColor: PALETA_GRAFICOS[1], pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5 },
+                        { label: 'Atividades finalizadas', data: datas.map(data => porDiaFinalizadas[data] || 0), borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', borderWidth: 1.5, fill: false, tension: 0.4, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5 }
                     ]
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom' } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0, stepSize: 1 } } } },
@@ -825,16 +907,14 @@
 
             const nomes = Object.keys(porColaborador).sort((a, b) => porColaborador[b] - porColaborador[a]);
             const canvas = document.getElementById('chartAtividadesPorColaborador');
-            const dataFormatada = data.split('-').reverse().join('/');
-            document.getElementById('legendaAtividadesPorColaborador').textContent = `Atividades Criadas em ${dataFormatada}`;
             if (graficoColaboradores) graficoColaboradores.destroy();
             graficoColaboradores = new Chart(canvas.getContext('2d'), {
                 type: 'bar',
                 data: { labels: nomes, datasets: [
-                    { label: 'Atividades criadas', data: nomes.map(nome => porColaborador[nome]), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[1], borderWidth: 1, borderRadius: 5 },
-                    { type: 'line', label: 'Taxa de finalização', data: nomes.map(nome => porColaborador[nome] ? Math.min(100, finalizadasPorColaborador[nome] / porColaborador[nome] * 100) : 0), yAxisID: 'yTaxa', borderColor: '#f97316', backgroundColor: '#f97316', borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 1.5, pointRadius: 4, pointHoverRadius: 6 }
+                    { label: 'Atividades criadas', data: nomes.map(nome => porColaborador[nome]), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[1], borderWidth: 1, borderRadius: 5, order: 1 },
+                    { type: 'line', label: 'Taxa de finalização', data: nomes.map(nome => porColaborador[nome] ? Math.min(100, finalizadasPorColaborador[nome] / porColaborador[nome] * 100) : 0), yAxisID: 'yTaxa', borderColor: '#f97316', backgroundColor: '#f97316', borderWidth: 3, tension: 0.3, fill: false, showLine: false, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 1.5, pointRadius: 4, pointHoverRadius: 6, order: 0 }
                 ] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top', align: 'center' } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, max: 10, grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' }, ticks: { precision: 0, stepSize: 1 } }, yTaxa: { beginAtZero: true, max: 200, position: 'right', grid: { display: false }, ticks: { display: false } } } },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top', align: 'center' } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' }, ticks: { precision: 0 } }, yTaxa: { beginAtZero: true, position: 'right', grid: { display: false }, border: { display: true, color: '#f97316' }, ticks: { color: '#f97316', callback: valor => `${Math.round(valor)}%` } } } },
                 plugins: [PLUGIN_ROTULOS_ATIVIDADES_COLABORADOR]
             });
         }
@@ -856,7 +936,7 @@
                 type: 'bar',
                 data: { labels: nomes, datasets: [{ label: 'Atividades retroativas finalizadas', data: nomes.map(nome => porColaborador[nome]), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[1], borderWidth: 1, borderRadius: 5 }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0, stepSize: 1 } } } },
-                plugins: [PLUGIN_VALORES_COLUNAS]
+                plugins: [PLUGIN_VALORES_RETROATIVAS]
             });
         }
 
@@ -1037,8 +1117,8 @@
                         borderColor: '#1e3a5f',
                         backgroundColor: 'rgba(91, 142, 198, 0.14)',
                         borderWidth: 2,
-                        fill: true,
-                        tension: 0.3,
+                        fill: false,
+                        showLine: false,
                         pointBackgroundColor: '#5b8ec6',
                         pointBorderColor: '#fff',
                         pointBorderWidth: 1.5,
@@ -1058,7 +1138,7 @@
                         x: { ticks: { autoSkip: true, maxRotation: 35, minRotation: 0 } }
                     }
                 },
-                plugins: [PLUGIN_VALORES_TEMPO_MEDIO]
+                plugins: [PLUGIN_CURVA_TEMPO_MEDIO, PLUGIN_VALORES_TEMPO_MEDIO]
             });
         }
 
