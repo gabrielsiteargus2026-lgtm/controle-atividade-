@@ -366,12 +366,12 @@
 
         @media (max-width: 1200px) {
             .container {
-                max-width: 100%;
-                margin-left: 0;
+                max-width: calc(100% - 280px);
+                margin-left: 280px;
             }
 
             .sidebar {
-                width: 200px;
+                width: 280px;
             }
 
             .chart-container {
@@ -384,6 +384,11 @@
                 width: 100%;
                 height: auto;
                 position: relative;
+            }
+
+            .container {
+                max-width: 100%;
+                margin-left: 0;
             }
 
             .kpi-container {
@@ -454,11 +459,12 @@
         <img src="argus-logo 1.png" alt="Argus" class="sidebar-logo">
         <nav>
             <ul class="sidebar-menu">
-                <li><a href="index.html">Controle de Atividade</a></li>
-                <li><a href="historico.html">Histórico</a></li>
+                <li><a href="index.html">Controle de Atividades</a></li>
                 <li><a href="insights.html" class="active">Insights</a></li>
+                <li><a href="acompanhamento-d1.html">Acompanhamento D -1</a></li>
+                <li><a href="chamados-geotab.html">Chamados Geotab</a></li>
+                <li><a href="historico.html">Histórico</a></li>
                 <li><a href="atividades-usuarios.html">Atividades dos Usuários</a></li>
-                <li><a href="acompanhamento-d1.html">Acompanhamento D-1</a></li>
                 <li><a href="database.html">Base de Dados 🔒</a></li>
                 <li><a href="admin.html">Administrador 🔒</a></li>
             </ul>
