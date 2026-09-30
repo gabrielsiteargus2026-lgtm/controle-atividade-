@@ -2910,6 +2910,7 @@
                                 ` : `
                                 <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.nome || atividade.colaborador || 'Desconhecido'}</div>
                                 `}
+                                <div class="kanban-card-subtitle"><strong>Setor da pausa:</strong> ${kanbanState[atividade.id]?.grupoPausa || 'Não definido'}</div>
                                 <div class="kanban-pause-reason">💬 ${kanbanState[atividade.id]?.motivoPausa || ''}</div>
                             </div>
                             <div class="kanban-card-actions">
@@ -3014,7 +3015,8 @@
                     hora: atividade.horaInicio,
                     status: status,
                     observacao: atividade.observacao,
-                    motivoPausa: kanbanState[atividade.id]?.motivoPausa || ''
+                    motivoPausa: kanbanState[atividade.id]?.motivoPausa || '',
+                    grupoPausa: kanbanState[atividade.id]?.grupoPausa || 'Não definido'
                 });
             });
 
@@ -3152,6 +3154,7 @@
                                 </div>
                                 <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.observacao || 'Sem descrição'}</div>
                                 <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.colaborador}</div>
+                                <div class="kanban-card-subtitle"><strong>Setor da pausa:</strong> ${atividade.grupoPausa || 'Não definido'}</div>
                                 <div class="kanban-pause-reason">💬 ${atividade.motivoPausa || ''}</div>
                             </div>
                         </div>
