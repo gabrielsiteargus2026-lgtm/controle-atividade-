@@ -1146,7 +1146,8 @@
                         <option value="">-- Selecione o grupo --</option>
                         <option value="Engenharia">Engenharia</option>
                         <option value="Customer">Customer</option>
-                        <option value="Atualização de Sistema - CCO">Atualização de Sistema - CCO</option>
+                        <option value="CCO">CCO</option>
+                        <option value="Atualização de Sistema - DMPeople">Atualização de Sistema - DMPeople</option>
                         <option value="Inteligência">Inteligência</option>
                         <option value="Pós-Vendas">Pós-Vendas</option>
                         <option value="Suporte Técnico">Suporte Técnico</option>
@@ -1323,6 +1324,7 @@
                     'Engenharia': 0,
                     'Customer': 0,
                     'CCO': 0,
+                    'Atualização de Sistema - DMPeople': 0,
                     'Inteligência': 0,
                     'Pós-Vendas': 0,
                     'Suporte Técnico': 0,
@@ -1331,6 +1333,7 @@
             }
             const dados = JSON.parse(contadores);
             if (dados.CCO === undefined) dados.CCO = 0;
+            if (dados['Atualização de Sistema - DMPeople'] === undefined) dados['Atualização de Sistema - DMPeople'] = 0;
             if (dados['Suporte Técnico'] === undefined) dados['Suporte Técnico'] = 0;
             return dados;
         }
@@ -1353,6 +1356,7 @@
                 'Engenharia': 0,
                 'Customer': 0,
                 'CCO': 0,
+                'Atualização de Sistema - DMPeople': 0,
                 'Inteligência': 0,
                 'Pós-Vendas': 0,
                 'Suporte Técnico': 0,
@@ -2563,7 +2567,7 @@
 
             // Incrementar contador acumulado de pausas
             const grupoNormalizado = grupo || 'Não definido';
-            if (['Engenharia', 'Customer', 'CCO', 'Inteligência', 'Pós-Vendas', 'Suporte Técnico'].includes(grupoNormalizado)) {
+            if (['Engenharia', 'Customer', 'CCO', 'Atualização de Sistema - DMPeople', 'Inteligência', 'Pós-Vendas', 'Suporte Técnico'].includes(grupoNormalizado)) {
                 incrementarContadorPausa(grupoNormalizado);
             }
 
