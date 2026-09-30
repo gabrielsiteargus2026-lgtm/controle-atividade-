@@ -303,6 +303,10 @@
                 <div id="estadoTempoMedioAtividade" class="empty-state" hidden>Nenhuma atividade finalizada nesta data</div>
             </div>
             <div class="card">
+                <h2 class="chart-title">Atividades Retroativas Finalizadas por Colaborador</h2>
+                <div class="chart-container small"><canvas id="chartAtividadesRetroativas"></canvas></div>
+            </div>
+            <div class="card">
                 <h2 class="chart-title">Pausas por Setor</h2>
                 <div class="chart-caption">Quantidade de pausas</div>
                 <div class="chart-container small"><canvas id="chartPausasPorSetor"></canvas></div>
@@ -346,6 +350,7 @@
         let registrosAtividades = [];
         let graficoDiario;
         let graficoColaboradores;
+        let graficoAtividadesRetroativas;
         let graficoStatusColaboradores;
         let graficoPausasColaboradores;
         let graficoTempoMedio;
@@ -367,8 +372,44 @@
                         const valor = dataset.data[indice];
                         if (Number(valor) !== 0 && valor !== null && valor !== undefined) {
                             contexto.textAlign = 'center';
-                            const deslocamento = chart.canvas.id === 'chartStatusPorColaborador' ? 10 : 18;
-                            contexto.fillText(valor, barra.x, Math.max(barra.y - deslocamento, 18));
+                            const deslocamento = chart.canvas.id === 'chartStatusPorColaborador' ? 10 : (dataset.type === 'line' ? 14 : 18);
+                            const rotulo = chart.canvas.id === 'chartAtividadesPorColaborador' && dataset.type === 'line' ? `${Math.round(valor)}%` : valor;
+                            contexto.fillText(rotulo, barra.x, Math.max(barra.y - deslocamento, 18));
+                        }
+                    });
+                });
+                contexto.restore();
+            }
+        };
+        const PLUGIN_ROTULOS_ATIVIDADES_COLABORADOR = {
+            id: 'rotulosAtividadesPorColaborador',
+            afterDatasetsDraw(chart) {
+                const contexto = chart.ctx;
+                contexto.save();
+                contexto.textAlign = 'center';
+                chart.data.datasets.forEach((dataset, indiceDataset) => {
+                    chart.getDatasetMeta(indiceDataset).data.forEach((elemento, indice) => {
+                        const valor = Number(dataset.data[indice]);
+                        if (!Number.isFinite(valor)) return;
+                        if (dataset.type === 'line') {
+                            const rotulo = `${Math.round(valor)}%`;
+                            contexto.font = '600 11px Segoe UI';
+                            contexto.textBaseline = 'middle';
+                            const largura = contexto.measureText(rotulo).width + 12;
+                            const altura = 18;
+                            const esquerda = elemento.x - largura / 2;
+                            const topo = Math.max(elemento.y - 27, chart.chartArea.top + 2);
+                            contexto.beginPath();
+                            contexto.roundRect(esquerda, topo, largura, altura, 9);
+                            contexto.fillStyle = '#facc15';
+                            contexto.fill();
+                            contexto.fillStyle = '#1f2937';
+                            contexto.fillText(rotulo, elemento.x, topo + altura / 2);
+                        } else {
+                            contexto.font = '700 11px Segoe UI';
+                            contexto.textBaseline = 'middle';
+                            contexto.fillStyle = '#fff';
+                            contexto.fillText(valor.toLocaleString('pt-BR'), elemento.x, Math.min(elemento.y + 14, chart.chartArea.bottom - 8));
                         }
                     });
                 });
@@ -734,7 +775,7 @@
                         { label: 'Atividades finalizadas', data: datas.map(data => porDiaFinalizadas[data] || 0), borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', borderWidth: 2, fill: false, tension: 0.4, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 1.5, pointRadius: 3, pointHoverRadius: 5 }
                     ]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0, stepSize: 1 } } } },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom' } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0, stepSize: 1 } } } },
                 plugins: [{
                     id: 'valoresNosPontos',
                     afterDatasetsDraw(chart) {
@@ -774,6 +815,14 @@
                     porColaborador[colaborador] = (porColaborador[colaborador] || 0) + 1;
                 });
 
+            const finalizadasPorColaborador = {};
+            atividades
+                .filter(item => !item.ehAjudante && item.dataFim && dataAtividadeParaISO(item.dataInicio) === data)
+                .forEach(item => {
+                    const colaborador = item.colaborador || item.nome || item.finalizado_por || 'Não informado';
+                    finalizadasPorColaborador[colaborador] = (finalizadasPorColaborador[colaborador] || 0) + 1;
+                });
+
             const nomes = Object.keys(porColaborador).sort((a, b) => porColaborador[b] - porColaborador[a]);
             const canvas = document.getElementById('chartAtividadesPorColaborador');
             const dataFormatada = data.split('-').reverse().join('/');
@@ -781,8 +830,32 @@
             if (graficoColaboradores) graficoColaboradores.destroy();
             graficoColaboradores = new Chart(canvas.getContext('2d'), {
                 type: 'bar',
-                data: { labels: nomes, datasets: [{ label: '', data: nomes.map(nome => porColaborador[nome]), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[1], borderWidth: 1, borderRadius: 5 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 10, ticks: { precision: 0, stepSize: 1 } } } },
+                data: { labels: nomes, datasets: [
+                    { label: 'Atividades criadas', data: nomes.map(nome => porColaborador[nome]), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[1], borderWidth: 1, borderRadius: 5 },
+                    { type: 'line', label: 'Taxa de finalização', data: nomes.map(nome => porColaborador[nome] ? Math.min(100, finalizadasPorColaborador[nome] / porColaborador[nome] * 100) : 0), yAxisID: 'yTaxa', borderColor: '#f97316', backgroundColor: '#f97316', borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 1.5, pointRadius: 4, pointHoverRadius: 6 }
+                ] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top', align: 'center' } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, max: 10, grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' }, ticks: { precision: 0, stepSize: 1 } }, yTaxa: { beginAtZero: true, max: 200, position: 'right', grid: { display: false }, ticks: { display: false } } } },
+                plugins: [PLUGIN_ROTULOS_ATIVIDADES_COLABORADOR]
+            });
+        }
+
+        function renderizarGraficoAtividadesRetroativas() {
+            if (!window.chartPronto || typeof Chart === 'undefined') return;
+            const data = obterDiaGrafico();
+            const porColaborador = {};
+            atividades
+                .filter(item => !item.ehAjudante && item.dataFim && dataAtividadeParaISO(item.dataFim) === data && dataAtividadeParaISO(item.dataInicio) < data)
+                .forEach(item => {
+                    const colaborador = item.finalizado_por || item.colaborador || item.nome || 'Não informado';
+                    porColaborador[colaborador] = (porColaborador[colaborador] || 0) + 1;
+                });
+            const nomes = Object.keys(porColaborador).sort((a, b) => porColaborador[b] - porColaborador[a] || a.localeCompare(b, 'pt-BR'));
+            const canvas = document.getElementById('chartAtividadesRetroativas');
+            if (graficoAtividadesRetroativas) graficoAtividadesRetroativas.destroy();
+            graficoAtividadesRetroativas = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: { labels: nomes, datasets: [{ label: 'Atividades retroativas finalizadas', data: nomes.map(nome => porColaborador[nome]), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[1], borderWidth: 1, borderRadius: 5 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0, stepSize: 1 } } } },
                 plugins: [PLUGIN_VALORES_COLUNAS]
             });
         }
@@ -1003,7 +1076,7 @@
             graficoPausasSetor = new Chart(canvas.getContext('2d'), {
                 type: 'bar',
                 data: { labels: setores, datasets: [{ label: 'Quantidade de pausas', data: setores.map(setor => porSetor[setor]), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[2], borderWidth: 1, borderRadius: 5 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 10, ticks: { precision: 0, stepSize: 1 } } } },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, max: 10, grid: { display: false }, ticks: { precision: 0, stepSize: 1 } } } },
                 plugins: [PLUGIN_VALORES_COLUNAS]
             });
         }
@@ -1013,6 +1086,7 @@
             popularSelectMesAtividades();
             renderizarGraficoDiario();
             renderizarGraficoColaboradores();
+            renderizarGraficoAtividadesRetroativas();
             renderizarGraficoStatusColaboradores();
             renderizarGraficoPausasColaboradores();
             renderizarGraficoTempoMedio();
@@ -1025,6 +1099,7 @@
             const data = document.getElementById('dataResumoCards').value || dataD1();
             atualizarCards(data);
             renderizarGraficoColaboradores();
+            renderizarGraficoAtividadesRetroativas();
             renderizarGraficoStatusColaboradores();
             renderizarGraficoPausasColaboradores();
             renderizarGraficoTempoMedio();
@@ -1047,7 +1122,7 @@
             area.classList.add('modo-captura');
             try {
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-                [graficoDiario, graficoColaboradores, graficoStatusColaboradores, graficoTempoMedio, graficoPausasSetor, graficoTaxaFinalizacao].forEach(grafico => {
+                [graficoDiario, graficoColaboradores, graficoAtividadesRetroativas, graficoStatusColaboradores, graficoTempoMedio, graficoPausasSetor, graficoTaxaFinalizacao].forEach(grafico => {
                     if (grafico) grafico.resize();
                 });
                 await new Promise(resolve => requestAnimationFrame(resolve));
