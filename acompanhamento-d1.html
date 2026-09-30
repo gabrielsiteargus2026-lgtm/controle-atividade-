@@ -17,10 +17,12 @@
             carregarChart('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js', function() {
                 window.chartPronto = true;
                 if (typeof renderizarGraficoDiario === 'function') renderizarGraficoDiario();
+                if (typeof renderizarGraficoResumo === 'function') renderizarGraficoResumo();
             }, function() {
                 carregarChart('./vendor/chart.min.js', function() {
                     window.chartPronto = true;
                     if (typeof renderizarGraficoDiario === 'function') renderizarGraficoDiario();
+                    if (typeof renderizarGraficoResumo === 'function') renderizarGraficoResumo();
                 }, function() { console.warn('Chart.js não disponível.'); });
             });
         })();
@@ -120,17 +122,20 @@
         .btn-secondary:hover { background: #7f8c8d; }
 
         .summary-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
-        .summary-card { color: white; padding: 16px 10px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,.1); }
-        .summary-card:nth-child(1) { background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%); }
-        .summary-card:nth-child(2) { background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); }
-        .summary-card:nth-child(3) { background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%); }
-        .summary-card:nth-child(4) { background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); }
-        .summary-card:nth-child(5) { background: linear-gradient(135deg, #1e3a5f 0%, #334155 100%); }
-        .summary-card:nth-child(6) { background: linear-gradient(135deg, #0f766e 0%, #115e59 100%); }
-        .summary-label { font-size: .9em; opacity: .9; }
-        .summary-value { font-size: 1.7em; font-weight: 700; margin-bottom: 4px; }
+        .summary-card { color: #1f2937; background: #fff; border: 1px solid #e5edf5; border-left: 4px solid #5b8ec6; padding: 14px 12px; border-radius: 8px; text-align: left; box-shadow: 0 2px 8px rgba(31, 41, 55, .08); }
+        .summary-label { color: #64748b; font-size: .82em; opacity: 1; }
+        .summary-value { color: #1f2937; font-size: 1.55em; font-weight: 700; margin-bottom: 4px; }
         .summary-heading { display: flex; align-items: center; gap: 10px; color: #2c3e50; font-size: 1.35em; margin: 20px 0 14px; }
         .summary-heading input { width: auto; padding: 6px 9px; font-size: .75em; }
+        .summary-layout { display: grid; grid-template-columns: minmax(220px, .8fr) minmax(0, 1.7fr); gap: 12px; margin-bottom: 12px; }
+        .summary-taxa { display: flex; flex-direction: column; justify-content: center; }
+        .summary-taxa h3 { color: #2c3e50; text-align: center; font-size: 1em; margin-bottom: 4px; }
+        .summary-taxa-grafico { position: relative; width: 100%; height: 175px; max-width: 230px; margin: 0 auto; }
+        .summary-taxa-grafico canvas { width: 100% !important; height: 100% !important; }
+        .summary-taxa-centro { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; pointer-events: none; }
+        .summary-taxa-centro strong { color: #1e3a5f; font-size: 1.8em; }
+        .summary-taxa-centro span { color: #667085; font-size: .78em; }
+        .summary-layout .summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); align-content: center; }
 
         .chart-section { margin-top: 20px; }
         .chart-title { color: #2c3e50; font-size: 1.25em; margin-bottom: 14px; }
@@ -184,11 +189,16 @@
             .container { width: 100%; margin-left: 0; }
             .user-widget { position: static; text-align: right; margin-bottom: 10px; }
             .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            .summary-layout { grid-template-columns: minmax(220px, .8fr) minmax(0, 1.7fr); }
             .charts-grid { grid-template-columns: 1fr; }
             .charts-grid .card { grid-column: span 1; }
             .btn-captura { position: static; margin-top: 10px; }
         }
-        @media (max-width: 520px) { .summary-grid { grid-template-columns: 1fr; } .filters { display: block; } .form-group, .filters button { width: 100%; margin-bottom: 12px; } .pausas-lista-ticket { grid-template-columns: 1fr; gap: 4px; } }
+        @media (max-width: 700px) {
+            .summary-layout { grid-template-columns: 1fr; }
+              .summary-layout .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 520px) { .summary-grid { grid-template-columns: 1fr; } .summary-layout .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .summary-card { padding: 14px 8px; } .summary-value { font-size: 1.45em; } .filters { display: block; } .form-group, .filters button { width: 100%; margin-bottom: 12px; } .pausas-lista-ticket { grid-template-columns: 1fr; gap: 4px; } }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -240,13 +250,24 @@
         </header>
 
         <h2 class="summary-heading">Resumo de atividades - <input type="date" id="dataResumoCards" aria-label="Data do resumo"></h2>
-        <section class="summary-grid" aria-label="Resumo do dia">
-            <div class="summary-card"><div class="summary-value" id="totalEmAndamento">0</div><div class="summary-label">Em Andamento</div></div>
-            <div class="summary-card"><div class="summary-value" id="totalPausadas">0</div><div class="summary-label">Pausadas</div></div>
-            <div class="summary-card"><div class="summary-value" id="totalConcluidas">0</div><div class="summary-label">Atividades Concluídas</div></div>
-            <div class="summary-card"><div class="summary-value" id="totalAtividadesCriadas">0</div><div class="summary-label">Total Criadas</div></div>
-            <div class="summary-card"><div class="summary-value" id="taxaFinalizacao">0%</div><div class="summary-label">Taxa de Finalização</div></div>
-            <div class="summary-card"><div class="summary-value" id="tempoMedioFinalizacao">--</div><div class="summary-label">Tempo Médio de Finalização</div></div>
+        <section class="summary-layout" aria-label="Resumo do dia">
+            <div class="card summary-taxa">
+                <h3>Taxa de Finalização</h3>
+                <div class="summary-taxa-grafico">
+                    <canvas id="chartTaxaFinalizacao" role="img" aria-label="Gráfico da taxa de finalização"></canvas>
+                    <div class="summary-taxa-centro"><strong id="taxaFinalizacao">0%</strong><span>finalizadas</span></div>
+                </div>
+            </div>
+            <div class="summary-grid">
+                <div class="summary-card"><div class="summary-value" id="totalAtividadesCriadas">0</div><div class="summary-label">Total Criadas</div></div>
+                <div class="summary-card"><div class="summary-value" id="totalEmAndamento">0</div><div class="summary-label">Em Andamento</div></div>
+                <div class="summary-card"><div class="summary-value" id="totalPausadas">0</div><div class="summary-label">Pausadas</div></div>
+                <div class="summary-card"><div class="summary-value" id="totalConcluidas">0</div><div class="summary-label">Total Concluídas no Dia</div></div>
+                <div class="summary-card"><div class="summary-value" id="tempoTotalAtividades">--</div><div class="summary-label">Total de Tempo Gasto</div></div>
+                <div class="summary-card"><div class="summary-value" id="tempoMedioFinalizacao">--</div><div class="summary-label">Média de Finalização</div></div>
+                <div class="summary-card"><div class="summary-value" id="tempoMedioPausa">--</div><div class="summary-label">Média de Pausa</div></div>
+                <div class="summary-card"><div class="summary-value" id="mediaPorColaboradorDia">--</div><div class="summary-label">Média por Colaborador por Dia</div></div>
+            </div>
         </section>
 
         <section class="card chart-section">
@@ -327,6 +348,7 @@
         let graficoPausasColaboradores;
         let graficoTempoMedio;
         let graficoPausasSetor;
+        let graficoTaxaFinalizacao;
         let filtroMesInicializado = false;
         let listenersAtividadesIniciados = false;
         const PALETA_GRAFICOS = ['#6b7280', '#1e3a5f', '#60a5fa'];
@@ -534,10 +556,26 @@
             });
         }
 
+        function calcularMinutosAtivos(atividade) {
+            const minutosPausados = historicoPausas.reduce((total, pausa) => {
+                if (!pausa || (!pausa.horaRetomada && pausa.status !== 'Retomado')) return total;
+                const mesmaAtividade = (atividade.id && pausa.id && String(atividade.id) === String(pausa.id)) ||
+                    (atividade.chaveAtividade && pausa.chaveAtividade && atividade.chaveAtividade === pausa.chaveAtividade) ||
+                    (!atividade.id && !atividade.chaveAtividade && !pausa.id && !pausa.chaveAtividade && atividade.ticket && String(atividade.ticket) === String(pausa.ticket));
+                if (!mesmaAtividade) return total;
+                const duracaoPausa = pausa.tempoPausaMs !== null && pausa.tempoPausaMs !== undefined
+                    ? Number(pausa.tempoPausaMs) / 60000
+                    : minutosDaDuracao(pausa.tempoPausaFormatado || pausa.tempoPausa);
+                return total + (Number.isFinite(duracaoPausa) ? duracaoPausa : 0);
+            }, 0);
+            return Math.max(0, minutosDaDuracao(atividade.duracao) - minutosPausados);
+        }
+
         function contarStatus(data) {
             const pausasAtivas = obterPausasAtivasPorTicket();
             const ticketsPausados = new Set(Object.keys(pausasAtivas));
-            const concluidas = atividades.filter(item => dataAtividadeParaISO(item.dataInicio) === data).length;
+            const atividadesConcluidasNoDia = atividades.filter(item => dataAtividadeParaISO(item.dataFim || item.dataInicio) === data);
+            const concluidas = atividadesConcluidasNoDia.length;
             const emAndamento = atividadesEmAndamento.filter(item => dataAtividadeParaISO(item.dataInicio) === data && (!item.ticket || !ticketsPausados.has(String(item.ticket)))).length;
             const pausadas = obterPausasAtivasParaResumo().filter(item => dataAtividadeParaISO(item.dataPausa || item.dataInicio) === data).length;
             const criadas = new Set();
@@ -545,14 +583,23 @@
                 if (dataAtividadeParaISO(item.dataInicio) !== data) return;
                 criadas.add(item.id || item.ticket || item.chaveAtividade || JSON.stringify(item));
             });
-            const duracoesFinalizadas = atividades
-                .filter(item => dataAtividadeParaISO(item.dataInicio) === data && item.duracao)
-                .map(item => minutosDaDuracao(item.duracao));
+            const duracoesFinalizadas = atividadesConcluidasNoDia
+                .filter(item => item.duracao)
+                .map(calcularMinutosAtivos);
+            const tempoTotalAtividades = duracoesFinalizadas.reduce((total, minutos) => total + minutos, 0);
             const tempoMedioFinalizacao = duracoesFinalizadas.length
-                ? duracoesFinalizadas.reduce((total, minutos) => total + minutos, 0) / duracoesFinalizadas.length
+                ? tempoTotalAtividades / duracoesFinalizadas.length
                 : null;
-            const taxaFinalizacao = criadas.size ? concluidas / criadas.size * 100 : 0;
-            return { emAndamento, pausadas, concluidas, criadas: criadas.size, taxaFinalizacao, tempoMedioFinalizacao };
+            const pausasDoDia = historicoPausas.filter(item => dataAtividadeParaISO(item.dataPausa || item.dataInicio) === data);
+            const tempoTotalPausas = pausasDoDia.reduce((total, item) => total + calcularMinutosPausa(item), 0);
+            const tempoMedioPausa = pausasDoDia.length ? tempoTotalPausas / pausasDoDia.length : null;
+            const colaboradoresDoDia = new Set(atividadesConcluidasNoDia.map(item => item.nome || item.colaborador || 'Não informado'));
+            const mediaPorColaboradorDia = colaboradoresDoDia.size ? tempoTotalAtividades / colaboradoresDoDia.size : null;
+            const concluidasDasCriadasNoDia = new Set(atividades
+                .filter(item => dataAtividadeParaISO(item.dataInicio) === data)
+                .map(item => item.id || item.ticket || item.chaveAtividade || JSON.stringify(item))).size;
+            const taxaFinalizacao = criadas.size ? Math.min(100, concluidasDasCriadasNoDia / criadas.size * 100) : 0;
+            return { emAndamento, pausadas, concluidas, criadas: criadas.size, taxaFinalizacao, tempoTotalAtividades, tempoMedioFinalizacao, tempoMedioPausa, mediaPorColaboradorDia };
         }
 
         function atualizarCards(data) {
@@ -563,6 +610,31 @@
             document.getElementById('totalAtividadesCriadas').textContent = totais.criadas;
             document.getElementById('taxaFinalizacao').textContent = `${Math.round(totais.taxaFinalizacao)}%`;
             document.getElementById('tempoMedioFinalizacao').textContent = totais.tempoMedioFinalizacao === null ? '--' : formatarHoras(totais.tempoMedioFinalizacao);
+            document.getElementById('tempoTotalAtividades').textContent = formatarHoras(totais.tempoTotalAtividades);
+            document.getElementById('tempoMedioPausa').textContent = totais.tempoMedioPausa === null ? '--' : formatarHoras(totais.tempoMedioPausa);
+            document.getElementById('mediaPorColaboradorDia').textContent = totais.mediaPorColaboradorDia === null ? '--' : formatarHoras(totais.mediaPorColaboradorDia);
+            renderizarGraficoResumo(totais.taxaFinalizacao);
+        }
+
+        function renderizarGraficoResumo(taxa) {
+            if (!window.chartPronto || typeof Chart === 'undefined') return;
+            const percentual = Number.isFinite(taxa) ? Math.max(0, Math.min(100, taxa)) : contarStatus(obterDiaGrafico()).taxaFinalizacao;
+            const canvas = document.getElementById('chartTaxaFinalizacao');
+            if (!canvas) return;
+            if (graficoTaxaFinalizacao) graficoTaxaFinalizacao.destroy();
+            graficoTaxaFinalizacao = new Chart(canvas.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Finalizadas', 'Pendentes'],
+                    datasets: [{ data: [percentual, 100 - percentual], backgroundColor: ['#5b8ec6', '#e5e7eb'], borderWidth: 0, hoverOffset: 4 }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '74%',
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: contexto => `${contexto.label}: ${Math.round(contexto.raw)}%` } } }
+                }
+            });
         }
 
         function popularSelectMesAtividades() {
@@ -601,7 +673,7 @@
             };
             atividades.forEach(item => {
                 adicionar(porDiaCriadas, item, item.dataInicio);
-                adicionar(porDiaFinalizadas, item, item.dataFim);
+                adicionar(porDiaFinalizadas, item, item.dataInicio);
             });
             atividadesEmAndamento.forEach(item => {
                 if (!item.ticket || !ticketsPausados.has(String(item.ticket))) adicionar(porDiaCriadas, item, item.dataInicio);
@@ -617,26 +689,30 @@
                 data: {
                     labels,
                     datasets: [
-                        { label: 'Atividades criadas', data: datas.map(data => porDiaCriadas[data] || 0), borderColor: PALETA_GRAFICOS[1], backgroundColor: 'rgba(30, 58, 95, 0.12)', borderWidth: 3, fill: true, tension: 0.4, pointBackgroundColor: PALETA_GRAFICOS[1], pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 6, pointHoverRadius: 8 },
-                        { label: 'Atividades finalizadas', data: datas.map(data => porDiaFinalizadas[data] || 0), borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', borderWidth: 3, fill: false, tension: 0.4, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 6, pointHoverRadius: 8 }
+                        { label: 'Atividades criadas', data: datas.map(data => porDiaCriadas[data] || 0), borderColor: PALETA_GRAFICOS[1], backgroundColor: 'rgba(30, 58, 95, 0.12)', borderWidth: 2, fill: true, tension: 0.4, pointBackgroundColor: PALETA_GRAFICOS[1], pointBorderColor: '#fff', pointBorderWidth: 1.5, pointRadius: 3, pointHoverRadius: 5 },
+                        { label: 'Atividades finalizadas', data: datas.map(data => porDiaFinalizadas[data] || 0), borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', borderWidth: 2, fill: false, tension: 0.4, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 1.5, pointRadius: 3, pointHoverRadius: 5 }
                     ]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0, stepSize: 1 } } } },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0, stepSize: 1 } } } },
                 plugins: [{
                     id: 'valoresNosPontos',
                     afterDatasetsDraw(chart) {
                         const contexto = chart.ctx;
                         contexto.save();
-                        contexto.font = '600 12px Segoe UI';
+                        contexto.font = '700 14px Segoe UI';
                         contexto.textAlign = 'center';
+                        contexto.textBaseline = 'middle';
                         chart.data.datasets.forEach((dataset, indiceDataset) => {
-                            contexto.fillStyle = dataset.borderColor;
+                            contexto.fillStyle = '#1f2937';
+                            contexto.strokeStyle = '#fff';
+                            contexto.lineWidth = 4;
                             chart.getDatasetMeta(indiceDataset).data.forEach((ponto, indice) => {
                                 const valor = dataset.data[indice];
                                 if (!valor) return;
                                 const posicaoY = indiceDataset === 1
-                                    ? Math.min(ponto.y + 20, chart.height - 8)
-                                    : Math.max(ponto.y - 22, 16);
+                                    ? Math.min(ponto.y + 18, chart.height - 10)
+                                    : Math.max(ponto.y - 18, 10);
+                                contexto.strokeText(valor, ponto.x, posicaoY);
                                 contexto.fillText(valor, ponto.x, posicaoY);
                             });
                         });
@@ -812,20 +888,6 @@
         function renderizarGraficoTempoMedio() {
             const data = obterDiaGrafico();
             const temposPorColaborador = new Map();
-            const calcularMinutosAtivos = atividade => {
-                const minutosPausados = historicoPausas.reduce((total, pausa) => {
-                    if (!pausa || (!pausa.horaRetomada && pausa.status !== 'Retomado')) return total;
-                    const mesmaAtividade = (atividade.id && pausa.id && String(atividade.id) === String(pausa.id)) ||
-                        (atividade.chaveAtividade && pausa.chaveAtividade && atividade.chaveAtividade === pausa.chaveAtividade) ||
-                        (!atividade.id && !atividade.chaveAtividade && !pausa.id && !pausa.chaveAtividade && atividade.ticket && String(atividade.ticket) === String(pausa.ticket));
-                    if (!mesmaAtividade) return total;
-                    const duracaoPausa = pausa.tempoPausaMs !== null && pausa.tempoPausaMs !== undefined
-                        ? Number(pausa.tempoPausaMs) / 60000
-                        : minutosDaDuracao(pausa.tempoPausaFormatado || pausa.tempoPausa);
-                    return total + (Number.isFinite(duracaoPausa) ? duracaoPausa : 0);
-                }, 0);
-                return Math.max(0, minutosDaDuracao(atividade.duracao) - minutosPausados);
-            };
             atividades
                 .filter(item => dataAtividadeParaISO(item.dataFim) === data && item.duracao)
                 .forEach(item => {
@@ -920,7 +982,7 @@
             area.classList.add('modo-captura');
             try {
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-                [graficoDiario, graficoColaboradores, graficoStatusColaboradores, graficoPausasSetor].forEach(grafico => {
+                [graficoDiario, graficoColaboradores, graficoStatusColaboradores, graficoPausasSetor, graficoTaxaFinalizacao].forEach(grafico => {
                     if (grafico) grafico.resize();
                 });
                 await new Promise(resolve => requestAnimationFrame(resolve));
