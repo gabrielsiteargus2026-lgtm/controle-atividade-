@@ -335,11 +335,12 @@
                             <th>Descrição</th>
                             <th>Observação</th>
                             <th>Justificativa</th>
+                            <th>Reaberta por</th>
                         </tr>
                     </thead>
                     <tbody id="bodyTabela">
                         <tr>
-                            <td colspan="11" class="empty-state">Nenhuma atividade registrada ainda</td>
+                            <td colspan="12" class="empty-state">Nenhuma atividade registrada ainda</td>
                         </tr>
                     </tbody>
                 </table>
@@ -455,7 +456,7 @@
         // Renderizar tabela
         function renderizarTabela() {
             if (atividades.length === 0) {
-                bodyTabela.innerHTML = '<tr><td colspan="11" class="empty-state">Nenhuma atividade registrada ainda</td></tr>';
+                bodyTabela.innerHTML = '<tr><td colspan="12" class="empty-state">Nenhuma atividade registrada ainda</td></tr>';
                 return;
             }
 
@@ -472,6 +473,7 @@
                     <td>${atividade.descricao || '-'}</td>
                     <td>${atividade.observacao || '-'}</td>
                     <td>${atividade.justificativa || '-'}</td>
+                    <td>${atividade.isReabertura || atividade.reaberto_por || atividade.data_reaberta ? atividade.reaberto_por || 'Não informado' : '-'}</td>
                 </tr>
             `).join('');
         }
@@ -483,7 +485,7 @@
                 return;
             }
 
-            const headers = ['Chave', 'Colaborador', 'Ticket', 'Data de Início', 'Hora de Início', 'Data de Fim', 'Hora de Fim', 'Duração', 'Descrição', 'Observação', 'Justificativa'];
+            const headers = ['Chave', 'Colaborador', 'Ticket', 'Data de Início', 'Hora de Início', 'Data de Fim', 'Hora de Fim', 'Duração', 'Descrição', 'Observação', 'Justificativa', 'Reaberta por'];
             const csv = [
                 headers.join(','),
                 ...atividades.map(a => [
@@ -497,7 +499,8 @@
                     a.duracao || '', 
                     a.descricao || '', 
                     a.observacao || '', 
-                    a.justificativa || ''
+                    a.justificativa || '',
+                    a.isReabertura || a.reaberto_por || a.data_reaberta ? a.reaberto_por || 'Não informado' : ''
                 ].join(','))
             ].join('\n');
 

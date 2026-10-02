@@ -3173,21 +3173,25 @@
             
             // ✅ Garantir que atividades é um array antes de filtrar
             const atividadesArray = Array.isArray(atividades) ? atividades : normalizarAtividades(atividades);
-            const atividadesConcluídasHoje = atividadesArray.filter(a => a.dataInicio === hoje);
+            const atividadesConcluídasHoje = atividadesArray.filter(a =>
+                !a.ehAjudante && (
+                    a.dataInicio === hoje ||
+                    ((a.isReabertura || a.reaberto_por || a.data_reaberta) && a.dataFim === hoje)
+                )
+            );
             const todasConcluídas = [...atividadesGrupadasPorStatus.concluido];
             
-            // Adicionar atividades finalizadas hoje que não estão em atividadesEmAndamento
+            // Adicionar todas as atividades finalizadas hoje, inclusive as reabertas.
             atividadesConcluídasHoje.forEach(atividadeHoje => {
-                const jaExiste = todasConcluídas.some(a => a.id === atividadeHoje.id);
+                const identificador = atividadeHoje.id || atividadeHoje.chaveAtividade || atividadeHoje.ticket;
+                const jaExiste = todasConcluídas.some(a =>
+                    String(a.id || a.chaveAtividade || a.ticket) === String(identificador)
+                );
                 if (!jaExiste) {
                     todasConcluídas.push({
-                        id: atividadeHoje.id || Math.random(),
-                        ticket: atividadeHoje.ticket,
+                        ...atividadeHoje,
                         nome: obterNomeColaborador(atividadeHoje),
                         colaborador: obterNomeColaborador(atividadeHoje),
-                        descricao: atividadeHoje.descricao,
-                        horaFim: atividadeHoje.horaFim,
-                        duracao: atividadeHoje.duracao
                     });
                 }
             });
@@ -3208,7 +3212,7 @@
                                 ${atividade.chaveAtividade ? `<div class="kanban-card-subtitle" style="color: #9c27b0; font-weight: 600; font-size: 0.8em; margin-bottom: 3px; padding: 3px 6px; background: #f3e5f5; border-radius: 3px; display: inline-block;">🔑 ${atividade.chaveAtividade}</div>` : ''}
                                 ${atividade.titulo ? `<div class="kanban-card-subtitle" style="color: #51cf66; font-weight: 600; margin-bottom: 3px;">📌 ${atividade.titulo}</div>` : ''}
                                 <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
-                                ${atividade.isReabertura ? `
+                                ${atividade.isReabertura || atividade.reaberto_por || atividade.data_reaberta ? `
                                 <div class="kanban-card-subtitle"><strong>Ticket criado por:</strong> ${obterNomeColaborador(atividade)}</div>
                                 <div class="kanban-card-subtitle"><strong>Reaberto por:</strong> ${obterNomeColaborador({ nome: atividade.reaberto_por }, obterNomeColaborador(atividade))}</div>
                                 ` : atividade.finalizado_por ? `
@@ -3272,8 +3276,9 @@
             // Adicionar atividades concluídas
             // ✅ Garantir que atividades é um array
             const atividadesParaIterar = Array.isArray(atividades) ? atividades : normalizarAtividades(atividades);
-            atividadesParaIterar.forEach(atividade => {
+            atividadesParaIterar.filter(atividade => !atividade.ehAjudante).forEach(atividade => {
                 todasAsAtividades.push({
+                    ...atividade,
                     id: Math.random(),
                     colaborador: obterNomeColaborador(atividade),
                     ticket: atividade.ticket,
@@ -3421,10 +3426,12 @@
                         <div class="kanban-card" style="opacity: 0.7;">
                             <div class="kanban-card-content">
                                 <div class="kanban-card-header">
-                                    <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
+                                    <span class="kanban-card-title">${atividade.isReabertura ? `Ticket: ${atividade.ticket} Reaberto` : `🎟️ Ticket: ${atividade.ticket}`}</span>
                                 </div>
                                 <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.observacao || 'Sem descrição'}</div>
-                                <div class="kanban-card-subtitle"><strong>Por:</strong> ${atividade.colaborador}</div>
+                                ${atividade.isReabertura || atividade.reaberto_por || atividade.data_reaberta
+                                    ? `<div class="kanban-card-subtitle"><strong>Reaberto por:</strong> ${obterNomeColaborador({ nome: atividade.reaberto_por }, 'Não informado')}</div>`
+                                    : `<div class="kanban-card-subtitle"><strong>Por:</strong> ${atividade.colaborador}</div>`}
                                 <div style="text-align: center; color: #51cf66; font-weight: bold; margin-top: 2px;">✓ Concluído</div>
                             </div>
                         </div>

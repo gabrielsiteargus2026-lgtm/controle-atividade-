@@ -911,10 +911,25 @@
 
         function renderizarKanbanDia(data) {
             const atividadesPorStatus = obterAtividadesPorStatus(data);
+            const concluidasKanban = [...atividadesPorStatus.concluidas];
+            const idsConcluidasKanban = new Set(concluidasKanban.map(item =>
+                String(item.id || item.chaveAtividade || item.ticket)
+            ));
+            atividades.filter(item =>
+                item && !item.ehAjudante &&
+                (item.isReabertura || item.reaberto_por || item.data_reaberta) &&
+                dataAtividadeParaISO(item.dataFim) === data
+            ).forEach(atividade => {
+                const identificador = String(atividade.id || atividade.chaveAtividade || atividade.ticket);
+                if (!idsConcluidasKanban.has(identificador)) {
+                    idsConcluidasKanban.add(identificador);
+                    concluidasKanban.push(atividade);
+                }
+            });
             const estados = [
                 { chave: 'andamento', atividades: atividadesPorStatus.emAndamento },
                 { chave: 'pausadas', atividades: atividadesPorStatus.pausadas },
-                { chave: 'concluidas', atividades: atividadesPorStatus.concluidas }
+                { chave: 'concluidas', atividades: concluidasKanban }
             ];
 
             estados.forEach(({ chave, atividades: listaAtividades }) => {
@@ -940,7 +955,9 @@
                     ));
                     cartao.appendChild(criarTextoKanban(
                         'kanban-live-colaborador',
-                        `Colaborador: ${atividade.nome || atividade.colaborador || 'Não informado'}`
+                        chave === 'concluidas' && (atividade.isReabertura || atividade.reaberto_por || atividade.data_reaberta)
+                            ? `Reaberta por: ${atividade.reaberto_por || 'Não informado'}`
+                            : `Colaborador: ${atividade.nome || atividade.colaborador || 'Não informado'}`
                     ));
                     lista.appendChild(cartao);
                 });
