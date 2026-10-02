@@ -76,7 +76,11 @@
         .btn-captura { position: absolute; right: 0; top: 44px; padding: 7px 10px; font-size: .78em; background: #eef2f7; color: #1e3a5f; border: 1px solid #cbd5e1; box-shadow: none; }
         .btn-captura:hover { background: #dbeafe; box-shadow: none; }
         .btn-captura:disabled { opacity: .65; cursor: wait; }
-        .modo-captura .btn-captura { display: none; }
+        .header-actions { position: absolute; right: 0; top: 44px; display: flex; gap: 8px; }
+        .header-actions .btn-captura { position: static; }
+        .btn-relatorio { background: #1e3a5f; }
+        .btn-relatorio:hover { background: #162d4b; }
+        .modo-captura .header-actions { display: none; }
         body.captura-ativa { padding: 0 !important; }
         .modo-captura { width: 100% !important; max-width: none !important; margin-left: 0 !important; margin-right: 0 !important; }
         .modo-captura .charts-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
@@ -144,6 +148,23 @@
         .chart-filter label { margin: 0; }
         .chart-filter select { width: auto; padding: 7px 10px; }
         .chart-filter input { width: auto; padding: 7px 10px; }
+        .comparativo-kanban-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
+        .comparativo-kanban-layout > .card { min-width: 0; }
+        .kanban-live-header { margin: -4px 0 14px; }
+        .kanban-live-lanes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+        .kanban-live-lane { min-width: 0; padding: 9px; background: #f8fafc; border: 1px solid #e2e8f0; border-top: 3px solid #64748b; border-radius: 7px; }
+        .kanban-live-lane[data-status="pausadas"] { border-top-color: #60a5fa; }
+        .kanban-live-lane[data-status="concluidas"] { border-top-color: #1e3a5f; }
+        .kanban-live-lane-header { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 9px; color: #334155; font-size: .78em; font-weight: 700; }
+        .kanban-live-count { display: inline-grid; min-width: 22px; height: 22px; place-items: center; padding: 0 5px; color: #334155; background: #e2e8f0; border-radius: 12px; }
+        .kanban-live-lane[data-status="pausadas"] .kanban-live-count { color: #1d4ed8; background: #dbeafe; }
+        .kanban-live-lane[data-status="concluidas"] .kanban-live-count { color: #1e3a5f; background: #dbeafe; }
+        .kanban-live-lista { display: flex; flex-direction: column; gap: 7px; max-height: 320px; overflow-y: auto; }
+        .kanban-live-card { min-width: 0; padding: 8px; background: #fff; border: 1px solid #e2e8f0; border-radius: 5px; box-shadow: 0 1px 3px rgba(15, 23, 42, .05); }
+        .kanban-live-ticket { overflow-wrap: anywhere; color: #1e3a5f; font-size: .75em; font-weight: 700; }
+        .kanban-live-titulo { display: -webkit-box; overflow: hidden; margin-top: 4px; color: #475569; font-size: .72em; line-height: 1.35; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+        .kanban-live-colaborador { overflow: hidden; margin-top: 5px; color: #64748b; font-size: .68em; text-overflow: ellipsis; white-space: nowrap; }
+        .kanban-live-vazio { padding: 14px 4px; color: #94a3b8; font-size: .72em; text-align: center; }
         .charts-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 20px; }
         .charts-grid .card:nth-child(-n+3) { grid-column: span 2; }
         .charts-grid .card:nth-child(n+4) { grid-column: span 2; }
@@ -171,6 +192,15 @@
         .pausas-lista-ticket { display: grid; grid-template-columns: 1.15fr 1fr 1.35fr 1.35fr 1.45fr; gap: 12px; align-items: center; padding: 7px 10px; color: #4b5563; background: #fff; border-radius: 3px; }
         .pausas-lista-ticket span { min-width: 0; white-space: nowrap; }
         .pausas-lista-valor { color: #1e3a5f; font-weight: 700; }
+        .relatorio-modal { position: fixed; inset: 0; z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(15, 23, 42, .58); }
+        .relatorio-modal-content { width: min(760px, 100%); max-height: min(85vh, 900px); display: flex; flex-direction: column; overflow: hidden; background: #fff; border-radius: 12px; box-shadow: 0 20px 60px rgba(15, 23, 42, .3); }
+        .relatorio-modal-header, .relatorio-modal-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; }
+        .relatorio-modal-header { border-bottom: 1px solid #e5edf5; }
+        .relatorio-modal-header h2 { color: #1e3a5f; font-size: 1.2em; }
+        .relatorio-modal-body { overflow: auto; padding: 16px 20px; }
+        .relatorio-texto { margin: 0; color: #1f2937; font: 14px/1.6 'Segoe UI', Tahoma, sans-serif; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .relatorio-modal-footer { justify-content: flex-end; border-top: 1px solid #e5edf5; }
+        .relatorio-status { margin-right: auto; color: #2f855a; font-size: .9em; }
 
         .section-title { color: #2c3e50; margin-bottom: 16px; font-size: 1.25em; }
         .table-container { overflow-x: auto; }
@@ -193,11 +223,23 @@
             .summary-layout { grid-template-columns: minmax(220px, .8fr) minmax(0, 1.7fr); }
             .charts-grid { grid-template-columns: 1fr; }
             .charts-grid .card { grid-column: span 1; }
-            .btn-captura { position: static; margin-top: 10px; }
+            .header-actions { position: static; justify-content: center; margin-top: 10px; }
+        }
+        @media (max-width: 850px) {
+            .comparativo-kanban-layout { grid-template-columns: 1fr; }
         }
         @media (max-width: 700px) {
             .summary-layout { grid-template-columns: 1fr; }
                         .summary-layout .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; align-self: auto; }
+            .kanban-live-lane { padding: 8px 5px; }
+            .kanban-live-lane-header { font-size: .7em; }
+            .kanban-live-lane-header > span:first-child { overflow-wrap: anywhere; }
+            .kanban-live-card { padding: 6px; }
+            .kanban-live-titulo { font-size: .68em; }
+        }
+        @media (max-width: 520px) {
+            .kanban-live-lanes { grid-template-columns: 1fr; }
+            .kanban-live-lista { max-height: 180px; }
         }
         @media (max-width: 520px) { .summary-grid { grid-template-columns: 1fr; } .summary-layout .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .summary-card { min-height: 112px; padding: 14px 8px; } .summary-value { font-size: 1.45em; } .comparativo-diario-chart { height: 240px; } .filters { display: block; } .form-group, .filters button { width: 100%; margin-bottom: 12px; } .pausas-lista-ticket { grid-template-columns: 1fr; gap: 4px; } }
     </style>
@@ -247,7 +289,10 @@
     <main class="container">
         <header class="header">
             <h1>Acompanhamento de Atividades D -1</h1>
-            <button type="button" id="btnCapturarGraficos" class="btn-captura" title="Baixar imagem completa dos gráficos">Capturar</button>
+            <div class="header-actions">
+                <button type="button" id="btnGerarRelatorio" class="btn-relatorio">Gerar relatório</button>
+                <button type="button" id="btnCapturarGraficos" class="btn-captura" title="Baixar imagem completa dos gráficos">Capturar</button>
+            </div>
         </header>
 
         <h2 class="summary-heading">Resumo de atividades - <input type="date" id="dataResumoCards" aria-label="Data do resumo"></h2>
@@ -260,9 +305,9 @@
                 </div>
             </div>
             <div class="summary-grid">
-                <div class="summary-card"><div class="summary-value" id="totalAtividadesCriadas">0</div><div class="summary-label">Total Criadas</div></div>
-                <div class="summary-card"><div class="summary-value" id="totalEmAndamento">0</div><div class="summary-label">Em Andamento</div></div>
-                <div class="summary-card"><div class="summary-value" id="totalPausadas">0</div><div class="summary-label">Pausadas</div></div>
+                <div class="summary-card"><div class="summary-value" id="totalAtividadesCriadas">0</div><div class="summary-label">Total Criadas no Dia</div></div>
+                <div class="summary-card"><div class="summary-value" id="totalEmAndamento">0</div><div class="summary-label">Em Andamento ao fim do dia</div></div>
+                <div class="summary-card"><div class="summary-value" id="totalPausadas">0</div><div class="summary-label">Pausadas ao fim do dia</div></div>
                 <div class="summary-card"><div class="summary-value" id="totalConcluidas">0</div><div class="summary-label">Total Concluídas no Dia</div></div>
                 <div class="summary-card"><div class="summary-value" id="tempoTotalAtividades">--</div><div class="summary-label">Total de Tempo Gasto</div></div>
                 <div class="summary-card"><div class="summary-value" id="tempoMedioFinalizacao">--</div><div class="summary-label">Média de Finalização</div></div>
@@ -271,13 +316,32 @@
             </div>
         </section>
 
-        <section class="card chart-section">
-            <h2 class="chart-title">Comparativo Diário</h2>
-            <div class="chart-filter">
-                <label for="selectMesAtividades">Visualizar por mês:</label>
-                <select id="selectMesAtividades"><option value="all">Todos os meses</option></select>
+        <section class="comparativo-kanban-layout chart-section" aria-label="Comparativo diário e Kanban do dia">
+            <div class="card">
+                <h2 class="chart-title">Comparativo Diário</h2>
+                <div class="chart-filter">
+                    <label for="selectMesAtividades">Visualizar por mês:</label>
+                    <select id="selectMesAtividades"><option value="all">Todos os meses</option></select>
+                </div>
+                <div class="chart-container comparativo-diario-chart"><canvas id="chartAtividadesCriadasPorDia"></canvas></div>
             </div>
-            <div class="chart-container comparativo-diario-chart"><canvas id="chartAtividadesCriadasPorDia"></canvas></div>
+            <section class="card" aria-labelledby="kanbanLiveTitulo">
+                <h2 class="chart-title" id="kanbanLiveTitulo">Kanban</h2>
+                <div class="kanban-live-lanes" aria-live="polite">
+                    <section class="kanban-live-lane" data-status="andamento" aria-label="Atividades em andamento">
+                        <h3 class="kanban-live-lane-header"><span>Em andamento</span><span class="kanban-live-count" data-count="andamento">0</span></h3>
+                        <div class="kanban-live-lista" data-lista="andamento"><div class="kanban-live-vazio">Nenhuma atividade</div></div>
+                    </section>
+                    <section class="kanban-live-lane" data-status="pausadas" aria-label="Atividades pausadas">
+                        <h3 class="kanban-live-lane-header"><span>Pausadas</span><span class="kanban-live-count" data-count="pausadas">0</span></h3>
+                        <div class="kanban-live-lista" data-lista="pausadas"><div class="kanban-live-vazio">Nenhuma atividade</div></div>
+                    </section>
+                    <section class="kanban-live-lane" data-status="concluidas" aria-label="Atividades concluídas">
+                        <h3 class="kanban-live-lane-header"><span>Concluídas</span><span class="kanban-live-count" data-count="concluidas">0</span></h3>
+                        <div class="kanban-live-lista" data-lista="concluidas"><div class="kanban-live-vazio">Nenhuma atividade</div></div>
+                    </section>
+                </div>
+            </section>
         </section>
 
         <section class="charts-grid chart-section">
@@ -342,6 +406,22 @@
 
     </main>
 
+    <div id="modalRelatorio" class="relatorio-modal" role="dialog" aria-modal="true" aria-labelledby="tituloRelatorio">
+        <div class="relatorio-modal-content">
+            <div class="relatorio-modal-header">
+                <h2 id="tituloRelatorio">Relatório explicativo</h2>
+                <button type="button" id="btnFecharRelatorio" class="btn-secondary" aria-label="Fechar relatório">Fechar</button>
+            </div>
+            <div class="relatorio-modal-body">
+                <pre id="textoRelatorio" class="relatorio-texto"></pre>
+            </div>
+            <div class="relatorio-modal-footer">
+                <span id="statusCopiaRelatorio" class="relatorio-status" aria-live="polite"></span>
+                <button type="button" id="btnCopiarRelatorio">Copiar resumo</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let atividades = [];
         let atividadesEmAndamento = [];
@@ -392,7 +472,7 @@
                 chart.getDatasetMeta(0).data.forEach((barra, indice) => {
                     const valor = Number(chart.data.datasets[0].data[indice]);
                     if (!Number.isFinite(valor) || valor === 0) return;
-                    contexto.fillText(valor.toLocaleString('pt-BR'), barra.x, Math.max(barra.y - 8, chart.chartArea.top + 14));
+                    contexto.fillText(valor.toLocaleString('pt-BR'), barra.x, Math.max(barra.y - 8, 14));
                 });
                 contexto.restore();
             }
@@ -442,7 +522,18 @@
                     chart.getDatasetMeta(indiceDataset).data.forEach((elemento, indice) => {
                         const valor = Number(dataset.data[indice]);
                         if (!Number.isFinite(valor)) return;
-                        if (dataset.type === 'line') {
+                        if (indiceDataset === 0 && dataset.type !== 'line') {
+                            if (valor === 0) return;
+                            contexto.font = '700 12px Segoe UI';
+                            contexto.textBaseline = 'bottom';
+                            contexto.fillStyle = '#000';
+                            contexto.strokeStyle = '#fff';
+                            contexto.lineWidth = 3;
+                            const rotulo = valor.toLocaleString('pt-BR');
+                            const posicaoY = Math.max(elemento.y - 6, 14);
+                            contexto.strokeText(rotulo, elemento.x, posicaoY);
+                            contexto.fillText(rotulo, elemento.x, posicaoY);
+                        } else if (dataset.type === 'line') {
                             const rotulo = `${Math.round(valor)}%`;
                             contexto.font = '600 11px Segoe UI';
                             contexto.textBaseline = 'middle';
@@ -686,24 +777,8 @@
             return pausasPorTicket;
         }
 
-        function obterPausasAtivasParaResumo() {
-            const pausasPorAtividade = {};
-            historicoPausas.forEach(pausa => {
-                if (!pausa) return;
-                const chave = pausa.id || pausa.chaveAtividade || pausa.ticket;
-                if (chave) pausasPorAtividade[String(chave)] = pausa;
-            });
-            return Object.values(pausasPorAtividade).filter(pausa => {
-                const finalizada = atividades.some(item =>
-                    (pausa.id && item.id === pausa.id) ||
-                    (pausa.chaveAtividade && item.chaveAtividade === pausa.chaveAtividade)
-                );
-                return pausa.status === 'Pausado' && !pausa.horaRetomada && !finalizada;
-            });
-        }
-
-        function calcularMinutosAtivos(atividade) {
-            const minutosPausados = historicoPausas.reduce((total, pausa) => {
+        function calcularMinutosPausados(atividade) {
+            return historicoPausas.reduce((total, pausa) => {
                 if (!pausa || (!pausa.horaRetomada && pausa.status !== 'Retomado')) return total;
                 const mesmaAtividade = (atividade.id && pausa.id && String(atividade.id) === String(pausa.id)) ||
                     (atividade.chaveAtividade && pausa.chaveAtividade && atividade.chaveAtividade === pausa.chaveAtividade) ||
@@ -714,7 +789,10 @@
                     : minutosDaDuracao(pausa.tempoPausaFormatado || pausa.tempoPausa);
                 return total + (Number.isFinite(duracaoPausa) ? duracaoPausa : 0);
             }, 0);
-            return Math.max(0, minutosDaDuracao(atividade.duracao) - minutosPausados);
+        }
+
+        function calcularMinutosAtivos(atividade) {
+            return Math.max(0, minutosDaDuracao(atividade.duracao) - calcularMinutosPausados(atividade));
         }
 
         function calcularMinutosPausaNoDia(pausa, data) {
@@ -731,36 +809,168 @@
             return Math.max(0, (Math.min(fim.getTime(), fimDia) - Math.max(inicio.getTime(), inicioDia)) / 60000);
         }
 
-        function contarStatus(data) {
-            const pausasAtivas = obterPausasAtivasPorTicket();
-            const ticketsPausados = new Set(Object.keys(pausasAtivas));
-            const atividadesConcluidasNoDia = atividades.filter(item => dataAtividadeParaISO(item.dataFim || item.dataInicio) === data);
-            const concluidas = atividadesConcluidasNoDia.length;
-            const emAndamento = atividadesEmAndamento.filter(item => dataAtividadeParaISO(item.dataInicio) === data && (!item.ticket || !ticketsPausados.has(String(item.ticket)))).length;
-            const pausadas = obterPausasAtivasParaResumo().filter(item => dataAtividadeParaISO(item.dataPausa || item.dataInicio) === data).length;
-            const criadas = new Set();
-            [...atividades, ...atividadesEmAndamento, ...historicoPausas].forEach(item => {
-                if (dataAtividadeParaISO(item.dataInicio) !== data) return;
-                criadas.add(item.id || item.ticket || item.chaveAtividade || JSON.stringify(item));
+        function obterPausasNoFimDoDia(data) {
+            const [ano, mes, dia] = data.split('-').map(Number);
+            const fimDoDia = new Date(ano, mes - 1, dia + 1).getTime() - 1;
+            const pausasPorAtividade = new Map();
+
+            historicoPausas.forEach(pausa => {
+                if (!pausa) return;
+                const inicio = converterDataHoraPausa(pausa.dataPausa || pausa.dataInicio, pausa.horaPausa);
+                if (!inicio || inicio.getTime() > fimDoDia) return;
+
+                const chave = pausa.id || pausa.chaveAtividade || pausa.ticket;
+                if (!chave) return;
+                const chaveAtividade = String(chave);
+                const pausaAnterior = pausasPorAtividade.get(chaveAtividade);
+                if (!pausaAnterior || inicio.getTime() > pausaAnterior.inicio) {
+                    pausasPorAtividade.set(chaveAtividade, { pausa, inicio: inicio.getTime() });
+                }
             });
-            const atividadesFinalizadasCriadasNoDia = atividades.filter(item => dataAtividadeParaISO(item.dataInicio) === data && item.duracao);
-            const duracoesFinalizadas = atividadesFinalizadasCriadasNoDia
-                .filter(item => item.duracao)
-                .map(calcularMinutosAtivos);
+
+            return [...pausasPorAtividade.values()]
+                .map(item => item.pausa)
+                .filter(pausa => {
+                    const inicio = converterDataHoraPausa(pausa.dataPausa || pausa.dataInicio, pausa.horaPausa);
+                    const retomada = converterDataHoraPausa(
+                        pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio,
+                        pausa.horaRetomada
+                    );
+                    const duracaoMs = Number(pausa.tempoPausaMs);
+                    const fimCalculado = !retomada && pausa.status !== 'Pausado' &&
+                        Number.isFinite(duracaoMs) && duracaoMs >= 0
+                        ? inicio.getTime() + duracaoMs
+                        : null;
+                    const fimPausa = retomada ? retomada.getTime() : fimCalculado;
+                    if (fimPausa !== null) return fimPausa > fimDoDia;
+                    return pausa.status === 'Pausado' && !pausa.horaRetomada;
+                })
+                .filter(pausa => !atividades.some(atividade => {
+                    const mesmaAtividade = (pausa.id && atividade.id && String(pausa.id) === String(atividade.id)) ||
+                        (pausa.chaveAtividade && atividade.chaveAtividade && pausa.chaveAtividade === atividade.chaveAtividade) ||
+                        (!pausa.id && !pausa.chaveAtividade && pausa.ticket && String(pausa.ticket) === String(atividade.ticket));
+                    if (!mesmaAtividade || !atividade.dataFim) return false;
+
+                    const dataFim = dataAtividadeParaISO(atividade.dataFim);
+                    const dataPausa = dataAtividadeParaISO(pausa.dataPausa || pausa.dataInicio);
+                    if (!dataFim || dataFim > data || dataFim < dataPausa) return false;
+                    if (dataFim !== dataPausa) return true;
+
+                    const fimAtividade = converterDataHoraPausa(atividade.dataFim, atividade.horaFim);
+                    const inicioPausa = converterDataHoraPausa(pausa.dataPausa || pausa.dataInicio, pausa.horaPausa);
+                    return !fimAtividade || !inicioPausa || fimAtividade >= inicioPausa;
+                }));
+        }
+
+        function obterAtividadesCriadasNoDia(data) {
+            const atividadesPorId = new Map();
+            const adicionarAtividade = atividade => {
+                if (!atividade || atividade.ehAjudante) return;
+                const identificador = atividade.id || atividade.chaveAtividade || atividade.ticket;
+                if (!identificador || dataAtividadeParaISO(atividade.dataInicio) !== data) return;
+                const chave = String(identificador);
+                const existente = atividadesPorId.get(chave);
+                atividadesPorId.set(chave, existente ? { ...atividade, ...existente } : atividade);
+            };
+
+            atividades.forEach(adicionarAtividade);
+            atividadesEmAndamento.forEach(adicionarAtividade);
+            historicoPausas.forEach(adicionarAtividade);
+
+            return [...atividadesPorId.values()];
+        }
+
+        function obterAtividadesPorStatus(data) {
+            const criadas = obterAtividadesCriadasNoDia(data);
+            const pausadasIds = new Set(obterPausasNoFimDoDia(data).map(item =>
+                String(item.id || item.chaveAtividade || item.ticket)
+            ));
+            const concluidas = criadas.filter(item => dataAtividadeParaISO(item.dataFim) === data);
+            const pausadas = criadas.filter(item =>
+                pausadasIds.has(String(item.id || item.chaveAtividade || item.ticket))
+            );
+            const idsConcluidas = new Set(concluidas.map(item =>
+                String(item.id || item.chaveAtividade || item.ticket)
+            ));
+            const idsPausadas = new Set(pausadas.map(item =>
+                String(item.id || item.chaveAtividade || item.ticket)
+            ));
+            const emAndamento = criadas.filter(item => {
+                const identificador = String(item.id || item.chaveAtividade || item.ticket);
+                return !idsConcluidas.has(identificador) && !idsPausadas.has(identificador);
+            });
+            return { criadas, emAndamento, pausadas, concluidas };
+        }
+
+        function criarTextoKanban(classe, texto) {
+            const elemento = document.createElement('div');
+            elemento.className = classe;
+            elemento.textContent = texto;
+            return elemento;
+        }
+
+        function renderizarKanbanDia(data) {
+            const atividadesPorStatus = obterAtividadesPorStatus(data);
+            const estados = [
+                { chave: 'andamento', atividades: atividadesPorStatus.emAndamento },
+                { chave: 'pausadas', atividades: atividadesPorStatus.pausadas },
+                { chave: 'concluidas', atividades: atividadesPorStatus.concluidas }
+            ];
+
+            estados.forEach(({ chave, atividades: listaAtividades }) => {
+                document.querySelector(`[data-count="${chave}"]`).textContent = listaAtividades.length;
+                const lista = document.querySelector(`[data-lista="${chave}"]`);
+                lista.replaceChildren();
+                if (listaAtividades.length === 0) {
+                    lista.appendChild(criarTextoKanban('kanban-live-vazio', 'Nenhuma atividade'));
+                    return;
+                }
+
+                listaAtividades.forEach(atividade => {
+                    const cartao = document.createElement('article');
+                    cartao.className = 'kanban-live-card';
+                    const ticket = atividade.ticket || atividade.chaveAtividade;
+                    cartao.appendChild(criarTextoKanban(
+                        'kanban-live-ticket',
+                        ticket ? `Ticket: ${ticket}` : 'Atividade sem ticket'
+                    ));
+                    cartao.appendChild(criarTextoKanban(
+                        'kanban-live-titulo',
+                        atividade.titulo || atividade.descricao || 'Sem descrição'
+                    ));
+                    cartao.appendChild(criarTextoKanban(
+                        'kanban-live-colaborador',
+                        `Colaborador: ${atividade.nome || atividade.colaborador || 'Não informado'}`
+                    ));
+                    lista.appendChild(cartao);
+                });
+            });
+
+        }
+
+        function contarStatus(data) {
+            const atividadesDoDia = obterAtividadesPorStatus(data);
+            const atividadesCriadasNoDia = atividadesDoDia.criadas;
+            const atividadesFinalizadasNoDia = atividadesDoDia.concluidas;
+            const concluidas = atividadesFinalizadasNoDia.length;
+            const pausadas = atividadesDoDia.pausadas.length;
+            const emAndamento = atividadesDoDia.emAndamento.length;
+            const criadas = atividadesCriadasNoDia.length;
+            const atividadesComDuracaoFinalizadas = atividadesFinalizadasNoDia.filter(item => item.duracao);
+            const duracoesFinalizadas = atividadesComDuracaoFinalizadas.map(item => minutosDaDuracao(item.duracao));
             const tempoTotalAtividades = duracoesFinalizadas.reduce((total, minutos) => total + minutos, 0);
             const tempoMedioFinalizacao = duracoesFinalizadas.length
                 ? tempoTotalAtividades / duracoesFinalizadas.length
                 : null;
-            const pausasDoDia = historicoPausas.filter(item => dataAtividadeParaISO(item.dataPausa || item.dataInicio) === data);
+            const pausasDoDia = historicoPausas.filter(item =>
+                dataAtividadeParaISO(item.dataPausa || item.dataInicio) === data
+            );
             const tempoTotalPausas = pausasDoDia.reduce((total, item) => total + calcularMinutosPausaNoDia(item, data), 0);
             const tempoMedioPausa = pausasDoDia.length ? tempoTotalPausas / pausasDoDia.length : null;
-            const colaboradoresDoDia = new Set(atividadesFinalizadasCriadasNoDia.map(item => item.nome || item.colaborador || 'Não informado'));
+            const colaboradoresDoDia = new Set(atividadesComDuracaoFinalizadas.map(item => item.nome || item.colaborador || 'Não informado'));
             const mediaPorColaboradorDia = colaboradoresDoDia.size ? tempoTotalAtividades / colaboradoresDoDia.size : null;
-            const concluidasDasCriadasNoDia = new Set(atividades
-                .filter(item => dataAtividadeParaISO(item.dataInicio) === data)
-                .map(item => item.id || item.ticket || item.chaveAtividade || JSON.stringify(item))).size;
-            const taxaFinalizacao = criadas.size ? Math.min(100, concluidasDasCriadasNoDia / criadas.size * 100) : 0;
-            return { emAndamento, pausadas, concluidas, criadas: criadas.size, taxaFinalizacao, tempoTotalAtividades, tempoMedioFinalizacao, tempoMedioPausa, mediaPorColaboradorDia };
+            const taxaFinalizacao = criadas ? Math.min(100, concluidas / criadas * 100) : 0;
+            return { emAndamento, pausadas, concluidas, criadas, taxaFinalizacao, tempoTotalAtividades, tempoMedioFinalizacao, tempoMedioPausa, mediaPorColaboradorDia };
         }
 
         function atualizarCards(data) {
@@ -775,6 +985,151 @@
             document.getElementById('tempoMedioPausa').textContent = totais.tempoMedioPausa === null ? '--' : formatarHoras(totais.tempoMedioPausa);
             document.getElementById('mediaPorColaboradorDia').textContent = totais.mediaPorColaboradorDia === null ? '--' : formatarHoras(totais.mediaPorColaboradorDia);
             renderizarGraficoResumo(totais.taxaFinalizacao);
+        }
+
+        function gerarTextoRelatorio(data) {
+            const totais = contarStatus(data);
+            const colaboradores = new Map();
+            const setores = new Map();
+            const pausasNoFimDoDia = obterPausasNoFimDoDia(data);
+            const obterResumoColaborador = nome => {
+                const nomeValido = String(nome || '').trim() || 'Não informado';
+                if (!colaboradores.has(nomeValido)) {
+                    colaboradores.set(nomeValido, { criadas: 0, pausas: 0, concluidas: 0, retroativas: 0, minutosAtivos: 0 });
+                }
+                return colaboradores.get(nomeValido);
+            };
+
+            const iniciosDoDia = registrosAtividades.filter(registro =>
+                registro.tipo === 'INICIO' && dataRegistroParaISO(registro.timestamp) === data
+            );
+            iniciosDoDia.forEach(registro => {
+                const nome = registro.colaborador || registro.nome_usuario || registro.email_usuario || 'Não informado';
+                obterResumoColaborador(nome).criadas++;
+            });
+
+            const pausasDoDia = historicoPausas.filter(pausa =>
+                dataAtividadeParaISO(pausa.dataPausa || pausa.dataInicio) === data
+            );
+            pausasDoDia.forEach(pausa => {
+                const setor = obterSetorPausa(pausa);
+                const resumoSetor = setores.get(setor) || { quantidade: 0, minutos: 0 };
+                resumoSetor.quantidade++;
+                resumoSetor.minutos += calcularMinutosPausa(pausa);
+                setores.set(setor, resumoSetor);
+            });
+            pausasNoFimDoDia.forEach(pausa => {
+                const nome = pausa.colaborador || pausa.nome || 'Não informado';
+                obterResumoColaborador(nome).pausas++;
+            });
+
+            const finalizadasDoDia = atividades.filter(atividade =>
+                !atividade.ehAjudante && dataAtividadeParaISO(atividade.dataFim || atividade.dataInicio) === data
+            );
+            finalizadasDoDia.forEach(atividade => {
+                const nome = atividade.finalizado_por || atividade.colaborador || atividade.nome || 'Não informado';
+                const resumo = obterResumoColaborador(nome);
+                resumo.concluidas++;
+                if (dataAtividadeParaISO(atividade.dataInicio) < data) resumo.retroativas++;
+                if (atividade.duracao) resumo.minutosAtivos += calcularMinutosAtivos(atividade);
+            });
+
+            const formatarData = valor => {
+                if (!valor) return data;
+                const [ano, mes, dia] = valor.split('-').map(Number);
+                return new Date(ano, mes - 1, dia).toLocaleDateString('pt-BR');
+            };
+            const formatarTempo = minutos => minutos === null || !Number.isFinite(minutos)
+                ? 'sem dados'
+                : formatarHoras(minutos);
+            const linhasColaboradores = [...colaboradores.entries()]
+                .sort(([nomeA], [nomeB]) => nomeA.localeCompare(nomeB, 'pt-BR'))
+                .map(([nome, resumo]) =>
+                    `- ${nome}: ${resumo.criadas} iniciada(s), ${resumo.pausas} pausa(s), ${resumo.concluidas} concluída(s), ${resumo.retroativas} retroativa(s)` +
+                    (resumo.concluidas ? `; tempo ativo total nas finalizadas: ${formatarHoras(resumo.minutosAtivos)}` : '')
+                );
+            const linhasSetores = [...setores.entries()]
+                .sort(([, resumoA], [, resumoB]) => resumoB.quantidade - resumoA.quantidade)
+                .map(([setor, resumo]) =>
+                    `- ${setor}: ${resumo.quantidade} pausa(s); média de ${formatarHoras(resumo.minutos / resumo.quantidade)}`
+                );
+            const pausasDoDiaMinutos = pausasDoDia.reduce(
+                (total, pausa) => total + calcularMinutosPausaNoDia(pausa, data),
+                0
+            );
+            const totalRetroativas = [...colaboradores.values()].reduce((total, resumo) => total + resumo.retroativas, 0);
+
+            return [
+                `RELATÓRIO DE ACOMPANHAMENTO DE ATIVIDADES — ${formatarData(data)}`,
+                '',
+                'RESUMO DO DIA',
+                `- Atividades criadas (card): ${totais.criadas}`,
+                `- Atividades iniciadas registradas: ${iniciosDoDia.length}`,
+                `- Em andamento: ${totais.emAndamento}`,
+                `- Pausadas ao fim do dia: ${pausasNoFimDoDia.length}`,
+                `- Concluídas no dia: ${totais.concluidas}`,
+                `- Concluídas retroativamente: ${totalRetroativas}`,
+                `- Taxa de finalização: ${Math.round(totais.taxaFinalizacao)}%`,
+                `- Tempo total gasto: ${formatarTempo(totais.tempoTotalAtividades)}`,
+                `- Média de finalização: ${formatarTempo(totais.tempoMedioFinalizacao)}`,
+                `- Média de pausa: ${formatarTempo(totais.tempoMedioPausa)}`,
+                `- Média por colaborador: ${formatarTempo(totais.mediaPorColaboradorDia)}`,
+                '',
+                'ATIVIDADES POR COLABORADOR',
+                ...(linhasColaboradores.length ? linhasColaboradores : ['- Nenhuma atividade ou pausa registrada nesta data.']),
+                '',
+                'PAUSAS POR SETOR',
+                ...(linhasSetores.length ? linhasSetores : ['- Nenhuma pausa registrada nesta data.']),
+                `- Total de pausas: ${pausasDoDia.length}; tempo somado no dia: ${formatarHoras(pausasDoDiaMinutos)}`,
+                '',
+                'CRITÉRIOS',
+                '- Inícios por colaborador são contados pelos registros do tipo INICIO na data selecionada.',
+                '- Os quatro cards de status usam as atividades criadas na data selecionada; em andamento e pausadas são estados observados no encerramento desse dia.',
+                '- As contagens de em andamento, pausadas e concluídas formam a divisão do total criado nesse dia.',
+                '- Conclusões por colaborador são contadas pela data de conclusão; atividades auxiliares não entram nessa contagem.',
+                '- Pausadas por colaborador e o total de pausadas consideram atividades que permaneciam pausadas no fim do dia selecionado.',
+                '- Pausas por setor continuam contando os registros de pausa iniciados na data selecionada.',
+                '- Total de tempo e média de finalização consideram a duração registrada das atividades finalizadas na data selecionada, sem descontar pausas.',
+                '- O total de atividades criadas do card usa a contagem distinta da página; por isso pode diferir dos registros individuais de INICIO.'
+            ].join('\n');
+        }
+
+        function abrirRelatorio() {
+            const data = obterDiaGrafico();
+            document.getElementById('textoRelatorio').textContent = gerarTextoRelatorio(data);
+            document.getElementById('statusCopiaRelatorio').textContent = '';
+            document.getElementById('modalRelatorio').style.display = 'flex';
+            document.getElementById('btnCopiarRelatorio').focus();
+        }
+
+        function fecharRelatorio() {
+            document.getElementById('modalRelatorio').style.display = 'none';
+        }
+
+        async function copiarRelatorio() {
+            const texto = document.getElementById('textoRelatorio').textContent;
+            const status = document.getElementById('statusCopiaRelatorio');
+            let campoTemporario;
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(texto);
+                } else {
+                    campoTemporario = document.createElement('textarea');
+                    campoTemporario.value = texto;
+                    campoTemporario.style.position = 'fixed';
+                    campoTemporario.style.opacity = '0';
+                    document.body.appendChild(campoTemporario);
+                    campoTemporario.select();
+                    const copiado = document.execCommand('copy');
+                    if (!copiado) throw new Error('O navegador não permitiu copiar o relatório.');
+                }
+                status.textContent = 'Resumo copiado para a área de transferência.';
+            } catch (erro) {
+                console.error('Erro ao copiar relatório:', erro);
+                status.textContent = 'Não foi possível copiar. Selecione e copie o texto manualmente.';
+            } finally {
+                if (campoTemporario) campoTemporario.remove();
+            }
         }
 
         function renderizarGraficoResumo(taxa) {
@@ -857,7 +1212,7 @@
                         { label: 'Atividades finalizadas', data: datas.map(data => porDiaFinalizadas[data] || 0), borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', borderWidth: 1.5, fill: false, tension: 0.4, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5 }
                     ]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom' } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0, stepSize: 1 } } } },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom' } }, scales: { x: { grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' } }, y: { beginAtZero: true, grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' }, ticks: { precision: 0, stepSize: 1 } } } },
                 plugins: [{
                     id: 'valoresNosPontos',
                     afterDatasetsDraw(chart) {
@@ -935,7 +1290,7 @@
             graficoAtividadesRetroativas = new Chart(canvas.getContext('2d'), {
                 type: 'bar',
                 data: { labels: nomes, datasets: [{ label: 'Atividades retroativas finalizadas', data: nomes.map(nome => porColaborador[nome]), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[1], borderWidth: 1, borderRadius: 5 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0, stepSize: 1 } } } },
+                options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 20 } }, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0, stepSize: 1 } } } },
                 plugins: [PLUGIN_VALORES_RETROATIVAS]
             });
         }
@@ -1162,7 +1517,9 @@
         }
 
         function renderizar() {
-            atualizarCards(document.getElementById('dataResumoCards').value || dataD1());
+            const data = document.getElementById('dataResumoCards').value || dataD1();
+            atualizarCards(data);
+            renderizarKanbanDia(data);
             popularSelectMesAtividades();
             renderizarGraficoDiario();
             renderizarGraficoColaboradores();
@@ -1178,6 +1535,7 @@
         document.getElementById('dataResumoCards').addEventListener('change', () => {
             const data = document.getElementById('dataResumoCards').value || dataD1();
             atualizarCards(data);
+            renderizarKanbanDia(data);
             renderizarGraficoColaboradores();
             renderizarGraficoAtividadesRetroativas();
             renderizarGraficoStatusColaboradores();
@@ -1234,6 +1592,17 @@
         }
 
         document.getElementById('btnCapturarGraficos').addEventListener('click', capturarGraficos);
+        document.getElementById('btnGerarRelatorio').addEventListener('click', abrirRelatorio);
+        document.getElementById('btnFecharRelatorio').addEventListener('click', fecharRelatorio);
+        document.getElementById('btnCopiarRelatorio').addEventListener('click', copiarRelatorio);
+        document.getElementById('modalRelatorio').addEventListener('click', event => {
+            if (event.target.id === 'modalRelatorio') fecharRelatorio();
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && document.getElementById('modalRelatorio').style.display === 'flex') {
+                fecharRelatorio();
+            }
+        });
         carregarAtividades();
     </script>
 </body>
