@@ -1179,18 +1179,16 @@
             return [
                 `RESUMO DIÁRIO DE ATIVIDADES — ${formatarData(data)}`,
                 '',
-                'OBJETIVO',
-                'Acompanhar as atividades iniciadas no dia, seu status ao fim do dia e os tempos registrados.',
-                '',
                 'RESULTADOS',
                 `- Iniciadas no dia: ${totais.criadas}`,
-                `- Status ao fim do dia: ${totais.emAndamento} em andamento, ${totais.pausadas} pausadas, ${totais.concluidas} concluídas`,
-                `- Taxa de conclusão: ${Math.round(totais.taxaFinalizacao)}% (${totais.concluidas} de ${totais.criadas})`,
-                `- Tempo líquido das concluídas: ${formatarTempo(totais.tempoTotalAtividades)}; média por atividade: ${formatarTempo(totais.tempoMedioFinalizacao)}`,
+                '- Status ao fim do dia:',
+                `  *  Em andamento: ${totais.emAndamento}`,
+                `  * Pausadas: ${totais.pausadas}`,
+                `  * Concluídas: ${totais.concluidas}`,
+                `- Taxa de conclusão: ${Math.round(totais.taxaFinalizacao)}%`,
+                `- Tempo medio total em atividades concluídas: ${formatarTempo(totais.tempoTotalAtividades)}`,
+                `- Média por atividade: ${formatarTempo(totais.tempoMedioFinalizacao)}`,
                 `- Média de pausa: ${formatarTempo(totais.tempoMedioPausa)}`,
-                '',
-                'CRITÉRIO',
-                'A taxa e o status consideram as atividades iniciadas na data selecionada; o tempo líquido desconta as pausas.'
             ].join('\n');
         }
 
