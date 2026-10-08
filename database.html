@@ -416,6 +416,62 @@
             color: #999;
         }
 
+        .movement-filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .movement-filters input {
+            padding: 9px 12px;
+            border: 1px solid #d5dce5;
+            border-radius: 5px;
+            font-size: 0.95em;
+        }
+
+        .movement-filters input {
+            min-width: 220px;
+        }
+
+        .movement-table-container {
+            max-height: 65vh;
+            overflow: auto;
+        }
+
+        .movement-table {
+            min-width: 1400px;
+        }
+
+        .movement-table td {
+            vertical-align: top;
+            white-space: pre-line;
+            line-height: 1.5;
+        }
+
+        .movement-timeline {
+            min-width: 240px;
+            white-space: normal !important;
+        }
+
+        .movement-timeline details summary {
+            color: #356da8;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .movement-timeline ol {
+            margin: 8px 0 0 20px;
+        }
+
+        .movement-timeline li {
+            margin: 5px 0;
+        }
+
+        .status-desconhecido {
+            background: #eceff1;
+            color: #455a64;
+        }
+
         @media (max-width: 768px) {
             .sidebar {
                 width: 100%;
@@ -479,6 +535,40 @@
             <button class="btn btn-success" id="btnNovaAtividade">Adicionar Nova Atividade</button>
             <button class="btn btn-primary" id="btnRecarregar">Recarregar Dados</button>
             <button class="btn btn-warning" id="btnExportarCSV">Exportar para CSV</button>
+            <button class="btn btn-warning" id="btnExportarMovimentacoes">Exportar movimentações</button>
+        </div>
+
+        <div class="card">
+            <h2>Rastreabilidade das Atividades</h2>
+            <p style="color: #666; margin: -5px 0 15px;">Criação, pausas, retomadas, finalizações e status atual de cada atividade.</p>
+            <div class="movement-filters">
+                <label for="filtroDataRastreabilidade" style="display: flex; align-items: center; gap: 10px; margin: 0;">
+                    Data das movimentações
+                    <input type="date" id="filtroDataRastreabilidade" aria-label="Filtrar movimentações por data">
+                </label>
+            </div>
+            <div class="table-scroll-container movement-table-container">
+                <table class="movement-table">
+                    <thead>
+                        <tr>
+                            <th>Chave / Ticket</th>
+                            <th>Quem criou</th>
+                            <th>Data de criação</th>
+                            <th>Hora de criação</th>
+                            <th>Foi pausada?</th>
+                            <th>Data / hora da pausa</th>
+                            <th>Data / hora da retomada</th>
+                            <th>Data de finalização</th>
+                            <th>Hora de finalização</th>
+                            <th>Status atual</th>
+                            <th>Movimentações / responsáveis</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBodyMovimentacoes">
+                        <tr><td colspan="11" class="empty-state">Carregando movimentações...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- Tabela de Atividades -->
@@ -737,6 +827,9 @@
         let atividadesGlobais = [];
         let atividadeAtualEmEdicao = null;
         let kanbanStateGlobal = {};
+        let atividadesEmAndamentoGlobal = [];
+        let historicoPausasGlobal = [];
+        let registrosMovimentacoesGlobal = [];
         let chamadosGeotabGlobais = [];
         let chamadoGeotabAtualEmEdicao = null;
 
@@ -761,27 +854,20 @@
             console.log('Carregando atividades...');
             
             if (window.FIREBASE_OK && window.db) {
-                // Tentar carregar do Firebase
-                const ref = window.db.ref('atividades');
-                ref.once('value', snapshot => {
-                    if (snapshot.exists()) {
-                        const dados = snapshot.val();
-                        atividadesGlobais = Array.isArray(dados) ? dados : Object.values(dados).filter(a => a);
-                        console.log('Atividades carregadas do Firebase:', atividadesGlobais.length);
-                    } else {
-                        carregarDoLocalStorage();
-                    }
-                    
-                    // Também carregar kanbanState
-                    const refKanban = window.db.ref('kanbanState');
-                    refKanban.once('value', snapshot => {
-                        if (snapshot.exists()) {
-                            kanbanStateGlobal = snapshot.val();
-                        }
-                        renderizarTabela();
-                    }).catch(() => {
-                        renderizarTabela();
-                    });
+                Promise.all([
+                    window.db.ref('atividades').once('value'),
+                    window.db.ref('atividadesEmAndamento').once('value'),
+                    window.db.ref('kanbanState').once('value'),
+                    window.db.ref('historicoPausas').once('value'),
+                    window.db.ref('registrosAtividades').once('value')
+                ]).then(([atividades, emAndamento, estados, pausas, movimentacoes]) => {
+                    atividadesGlobais = normalizarColecao(atividades.val());
+                    atividadesEmAndamentoGlobal = normalizarColecao(emAndamento.val());
+                    kanbanStateGlobal = estados.val() || {};
+                    historicoPausasGlobal = normalizarColecao(pausas.val());
+                    registrosMovimentacoesGlobal = normalizarColecao(movimentacoes.val());
+                    renderizarTabela();
+                    renderizarTabelaMovimentacoes();
                 }).catch(error => {
                     console.error('Erro ao carregar do Firebase:', error);
                     carregarDoLocalStorage();
@@ -791,30 +877,34 @@
             }
         }
 
+        function normalizarColecao(dados) {
+            if (Array.isArray(dados)) return dados.filter(item => item && typeof item === 'object');
+            if (dados && typeof dados === 'object') return Object.values(dados).filter(item => item && typeof item === 'object');
+            return [];
+        }
+
         function carregarDoLocalStorage() {
-            const dados = localStorage.getItem('atividades');
-            if (dados) {
-                try {
-                    const parsed = JSON.parse(dados);
-                    atividadesGlobais = Array.isArray(parsed) ? parsed : Object.values(parsed).filter(a => a);
-                    console.log('Atividades carregadas do localStorage:', atividadesGlobais.length);
-                } catch (e) {
-                    console.error('Erro ao parsear atividades:', e);
-                    atividadesGlobais = [];
-                }
+            atividadesGlobais = lerColecaoLocal('atividades');
+            atividadesEmAndamentoGlobal = lerColecaoLocal('atividadesEmAndamento');
+            historicoPausasGlobal = lerColecaoLocal('historicoPausas');
+            registrosMovimentacoesGlobal = lerColecaoLocal('registrosAtividades');
+            try {
+                kanbanStateGlobal = JSON.parse(localStorage.getItem('kanbanState') || '{}');
+            } catch (error) {
+                console.error('Erro ao parsear kanbanState:', error);
+                kanbanStateGlobal = {};
             }
-
-            const dadosKanban = localStorage.getItem('kanbanState');
-            if (dadosKanban) {
-                try {
-                    kanbanStateGlobal = JSON.parse(dadosKanban);
-                } catch (e) {
-                    console.error('Erro ao parsear kanbanState:', e);
-                    kanbanStateGlobal = {};
-                }
-            }
-
             renderizarTabela();
+            renderizarTabelaMovimentacoes();
+        }
+
+        function lerColecaoLocal(chave) {
+            try {
+                return normalizarColecao(JSON.parse(localStorage.getItem(chave) || '[]'));
+            } catch (error) {
+                console.error(`Erro ao carregar ${chave} do localStorage:`, error);
+                return [];
+            }
         }
 
         function normalizarChamadosGeotab(dados) {
@@ -947,6 +1037,225 @@
             }
         });
 
+        function formatarDataHoraRastreio(valor, dataFallback = '', horaFallback = '') {
+            if (valor) {
+                const data = new Date(valor);
+                if (!Number.isNaN(data.getTime())) {
+                    return `${data.toLocaleDateString('pt-BR')} ${data.toLocaleTimeString('pt-BR')}`;
+                }
+            }
+            if (dataFallback || horaFallback) return `${dataFallback || '-'} ${horaFallback || ''}`.trim();
+            return '-';
+        }
+
+        function formatarDataLocalISO(data) {
+            const ano = data.getFullYear();
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const dia = String(data.getDate()).padStart(2, '0');
+            return `${ano}-${mes}-${dia}`;
+        }
+
+        function obterDataLocalMovimentacao(valor) {
+            if (!valor) return '';
+            const texto = String(valor);
+            const dataBr = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(texto);
+            if (dataBr) {
+                return `${dataBr[3]}-${String(dataBr[2]).padStart(2, '0')}-${String(dataBr[1]).padStart(2, '0')}`;
+            }
+            const dataISO = /^(\d{4}-\d{2}-\d{2})/.exec(texto);
+            if (dataISO) {
+                if (texto.length === 10) return dataISO[1];
+                const data = new Date(texto);
+                return Number.isNaN(data.getTime()) ? dataISO[1] : formatarDataLocalISO(data);
+            }
+            const data = new Date(valor);
+            return Number.isNaN(data.getTime()) ? '' : formatarDataLocalISO(data);
+        }
+
+        function obterDatasDaRastreabilidade(registro) {
+            const atividade = registro.atividade;
+            const datas = [
+                obterDataLocalMovimentacao(atividade.data_criacao || registro.eventos.find(evento => evento.tipo === 'INICIO')?.timestamp),
+                obterDataLocalMovimentacao(atividade.dataInicio),
+                obterDataLocalMovimentacao(atividade.data_finalizacao || atividade.dataFim)
+            ];
+            registro.eventos.forEach(evento => datas.push(obterDataLocalMovimentacao(evento.timestamp)));
+            registro.pausas.forEach(pausa => {
+                datas.push(obterDataLocalMovimentacao(pausa.dataHoraPausa || pausa.dataPausa));
+                datas.push(obterDataLocalMovimentacao(pausa.dataHoraRetomada || pausa.dataRetomada));
+            });
+            return datas.filter(Boolean);
+        }
+
+        function obterRegistrosFiltradosPorData() {
+            const dataSelecionada = document.getElementById('filtroDataRastreabilidade').value;
+            const registros = obterRegistrosRastreabilidade();
+            if (!dataSelecionada) return registros;
+            return registros.filter(registro => obterDatasDaRastreabilidade(registro).includes(dataSelecionada));
+        }
+
+        function obterRegistrosRastreabilidade() {
+            const atividadesPorId = new Map();
+            const idsAbertos = new Set(atividadesEmAndamentoGlobal.map(atividade => String(atividade.id)));
+            [...atividadesGlobais, ...atividadesEmAndamentoGlobal].forEach(atividade => {
+                const identificador = atividade.id !== undefined && atividade.id !== null
+                    ? `id:${atividade.id}`
+                    : atividade.chaveAtividade ? `chave:${atividade.chaveAtividade}` : '';
+                if (!identificador) return;
+                const atual = atividadesPorId.get(identificador);
+                if (!atual || (atual.ehAjudante && !atividade.ehAjudante) || idsAbertos.has(String(atividade.id))) {
+                    atividadesPorId.set(identificador, { ...(atual || {}), ...atividade });
+                }
+            });
+
+            return [...atividadesPorId.values()].map(atividade => {
+                const chave = String(atividade.chaveAtividade || '');
+                const ticket = String(atividade.ticket || '');
+                const eventos = registrosMovimentacoesGlobal.filter(evento => {
+                    const mesmaId = evento.atividadeId !== undefined && evento.atividadeId !== null &&
+                        String(evento.atividadeId) === String(atividade.id);
+                    const mesmaChave = chave && evento.chaveAtividade && String(evento.chaveAtividade) === chave;
+                    const mesmoTicketLegado = !evento.atividadeId && !evento.chaveAtividade &&
+                        ticket && String(evento.ticket || '') === ticket;
+                    return mesmaId || mesmaChave || mesmoTicketLegado;
+                }).sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
+
+                const eventosCriacao = eventos.filter(evento => evento.tipo === 'INICIO');
+                const eventosPausa = eventos.filter(evento => evento.tipo === 'PAUSA');
+                const eventosRetomada = eventos.filter(evento => evento.tipo === 'RETOMOU');
+                const eventosFinalizacao = eventos.filter(evento => evento.tipo === 'FIM');
+                let pausas = historicoPausasGlobal.filter(pausa => {
+                    if (pausa.id !== undefined && pausa.id !== null && atividade.id !== undefined && atividade.id !== null) {
+                        return String(pausa.id) === String(atividade.id);
+                    }
+                    if (chave && pausa.chaveAtividade) return String(pausa.chaveAtividade) === chave;
+                    return ticket && String(pausa.ticket || '') === ticket;
+                }).sort((a, b) => new Date(a.dataHoraPausa || 0) - new Date(b.dataHoraPausa || 0));
+
+                if (pausas.length === 0) {
+                    pausas = eventosPausa.map((evento, indice) => {
+                        const retomada = eventosRetomada[indice];
+                        return {
+                            dataHoraPausa: evento.timestamp,
+                            pausadoPor: evento.nome_usuario || evento.usuario_logado || evento.email_usuario,
+                            dataHoraRetomada: retomada?.timestamp || '',
+                            retomadoPor: retomada?.nome_usuario || retomada?.usuario_logado || retomada?.email_usuario
+                        };
+                    });
+                }
+
+                const estado = kanbanStateGlobal[atividade.id] || kanbanStateGlobal[chave] || {};
+                const estaAberta = idsAbertos.has(String(atividade.id));
+                const status = estado.status || (estaAberta ? 'em_andamento' : atividade.dataFim ? 'concluido' : 'desconhecido');
+                const eventoCriacao = eventosCriacao[0];
+                const eventoFinalizacao = eventosFinalizacao[eventosFinalizacao.length - 1];
+                const dataCriacao = atividade.data_criacao || eventoCriacao?.timestamp;
+                const dataFinalizacao = estaAberta ? '' : (atividade.data_finalizacao || eventoFinalizacao?.timestamp);
+
+                return {
+                    atividade,
+                    chave,
+                    ticket,
+                    nomeCriador: atividade.criador_atividade || atividade.nome_usuario ||
+                        eventoCriacao?.nome_usuario || eventoCriacao?.email_usuario || atividade.email_usuario || '-',
+                    emailCriador: atividade.email_criador || atividade.email_usuario || eventoCriacao?.email_usuario || '',
+                    dataCriacao: dataCriacao
+                        ? formatarDataHoraRastreio(dataCriacao)
+                        : formatarDataHoraRastreio('', atividade.dataInicio, atividade.horaInicio),
+                    pausas,
+                    dataFinalizacao: dataFinalizacao
+                        ? formatarDataHoraRastreio(dataFinalizacao)
+                        : formatarDataHoraRastreio('', atividade.dataFim, atividade.horaFim),
+                    status,
+                    eventos
+                };
+            }).sort((a, b) => {
+                const dataA = new Date(a.atividade.data_criacao || 0).getTime();
+                const dataB = new Date(b.atividade.data_criacao || 0).getTime();
+                return dataB - dataA;
+            });
+        }
+
+        function rotuloTipoMovimentacao(tipo) {
+            const rotulos = {
+                INICIO: 'Atividade criada',
+                PAUSA: 'Atividade pausada',
+                RETOMOU: 'Atividade retomada',
+                FIM: 'Atividade finalizada',
+                REABRIU: 'Atividade reaberta',
+                REABRIU_DO_CONCLUIDO: 'Atividade reaberta após conclusão'
+            };
+            return rotulos[tipo] || String(tipo || 'Movimentação');
+        }
+
+        function renderizarTabelaMovimentacoes() {
+            const tbody = document.getElementById('tableBodyMovimentacoes');
+            const registros = obterRegistrosFiltradosPorData();
+
+            tbody.replaceChildren();
+            if (registros.length === 0) {
+                const linha = document.createElement('tr');
+                const celula = document.createElement('td');
+                celula.colSpan = 11;
+                celula.className = 'empty-state';
+                celula.textContent = 'Nenhuma movimentação encontrada para esta data.';
+                linha.appendChild(celula);
+                tbody.appendChild(linha);
+                return;
+            }
+
+            registros.forEach(registro => {
+                const linha = document.createElement('tr');
+                const pausas = registro.pausas;
+                const valores = [
+                    `${registro.chave || '-'}\nTicket: ${registro.ticket || '-'}`,
+                    `${registro.nomeCriador}${registro.emailCriador ? `\n${registro.emailCriador}` : ''}`,
+                    registro.dataCriacao.split(' ')[0] || '-',
+                    registro.dataCriacao.split(' ').slice(1).join(' ') || '-',
+                    pausas.length ? 'Sim' : 'Não',
+                    pausas.map(pausa => `${formatarDataHoraRastreio(pausa.dataHoraPausa, pausa.dataPausa, pausa.horaPausa)}${pausa.pausadoPor ? `\nPor: ${pausa.pausadoPor}` : ''}`).join('\n\n') || '-',
+                    pausas.map(pausa => `${formatarDataHoraRastreio(pausa.dataHoraRetomada, pausa.dataRetomada, pausa.horaRetomada)}${pausa.retomadoPor ? `\nPor: ${pausa.retomadoPor}` : ''}`).join('\n\n') || '-',
+                    registro.dataFinalizacao.split(' ')[0] || '-',
+                    registro.dataFinalizacao.split(' ').slice(1).join(' ') || '-'
+                ];
+                valores.forEach(valor => {
+                    const celula = document.createElement('td');
+                    celula.textContent = valor || '-';
+                    linha.appendChild(celula);
+                });
+
+                const celulaStatus = document.createElement('td');
+                const badge = document.createElement('span');
+                badge.className = `status-badge status-${registro.status}`;
+                badge.textContent = registro.status === 'em_andamento' ? 'Em andamento' :
+                    registro.status === 'pausado' ? 'Pausado' :
+                    registro.status === 'concluido' ? 'Concluído' : 'Desconhecido';
+                celulaStatus.appendChild(badge);
+                linha.appendChild(celulaStatus);
+
+                const celulaMovimentacoes = document.createElement('td');
+                celulaMovimentacoes.className = 'movement-timeline';
+                if (registro.eventos.length) {
+                    const detalhes = document.createElement('details');
+                    const resumo = document.createElement('summary');
+                    resumo.textContent = `${registro.eventos.length} movimentação(ões)`;
+                    const lista = document.createElement('ol');
+                    registro.eventos.forEach(evento => {
+                        const item = document.createElement('li');
+                        const responsavel = evento.nome_usuario || evento.usuario_logado || evento.email_usuario || 'Responsável não identificado';
+                        item.textContent = `${rotuloTipoMovimentacao(evento.tipo)} — ${formatarDataHoraRastreio(evento.timestamp)} — ${responsavel}`;
+                        lista.appendChild(item);
+                    });
+                    detalhes.append(resumo, lista);
+                    celulaMovimentacoes.appendChild(detalhes);
+                } else {
+                    celulaMovimentacoes.textContent = 'Sem movimentações detalhadas registradas';
+                }
+                linha.appendChild(celulaMovimentacoes);
+                tbody.appendChild(linha);
+            });
+        }
+
         // Renderizar tabela
         function renderizarTabela() {
             const tbody = document.getElementById('tableBody');
@@ -1055,6 +1364,21 @@
             document.getElementById('modalAtividade').classList.add('active');
         }
 
+        function converterDataHoraPtBrParaISO(dataValor, horaValor) {
+            const dataPartes = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(dataValor || '');
+            if (!dataPartes) return '';
+            const horaPartes = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(horaValor || '') || [];
+            const data = new Date(
+                Number(dataPartes[3]),
+                Number(dataPartes[2]) - 1,
+                Number(dataPartes[1]),
+                Number(horaPartes[1] || 0),
+                Number(horaPartes[2] || 0),
+                Number(horaPartes[3] || 0)
+            );
+            return Number.isNaN(data.getTime()) ? '' : data.toISOString();
+        }
+
         // Deletar atividade
         function deletarAtividade(index) {
             if (confirm('Tem certeza que deseja deletar esta atividade?')) {
@@ -1095,9 +1419,18 @@
                 const atividade = atividadesGlobais[atividadeAtualEmEdicao];
                 dadosAtividade.id = atividade.id;
                 dadosAtividade.chaveAtividade = atividade.chaveAtividade;
-                atividadesGlobais[atividadeAtualEmEdicao] = dadosAtividade;
+                const dataFinalizacao = converterDataHoraPtBrParaISO(dadosAtividade.dataFim, dadosAtividade.horaFim);
+                dadosAtividade.data_finalizacao = status === 'concluido' ? dataFinalizacao || null : null;
+                dadosAtividade.usuario_finalizacao = status === 'concluido' ? atividade.usuario_finalizacao || 'Administrador da Base de Dados' : null;
+                dadosAtividade.email_finalizacao = status === 'concluido' ? atividade.email_finalizacao || '' : '';
+                atividadesGlobais[atividadeAtualEmEdicao] = { ...atividade, ...dadosAtividade };
             } else {
                 // Nova atividade
+                dadosAtividade.data_criacao = new Date().toISOString();
+                dadosAtividade.criador_atividade = 'Administrador da Base de Dados';
+                dadosAtividade.email_criador = '';
+                dadosAtividade.data_finalizacao = converterDataHoraPtBrParaISO(dadosAtividade.dataFim, dadosAtividade.horaFim) || null;
+                dadosAtividade.usuario_finalizacao = status === 'concluido' ? 'Administrador da Base de Dados' : null;
                 atividadesGlobais.push(dadosAtividade);
             }
 
@@ -1157,9 +1490,67 @@
             document.body.removeChild(link);
         });
 
+        function escaparCampoCSV(valor) {
+            return `"${String(valor ?? '').replace(/"/g, '""')}"`;
+        }
+
+        document.getElementById('btnExportarMovimentacoes').addEventListener('click', () => {
+            const registros = obterRegistrosFiltradosPorData();
+            if (registros.length === 0) {
+                alert('Nenhuma movimentação para exportar na data selecionada.');
+                return;
+            }
+
+            const colunas = [
+                'Chave', 'Ticket', 'Quem criou', 'Data de criação', 'Hora de criação',
+                'Foi pausada?', 'Data/hora da pausa', 'Responsável pela pausa',
+                'Data/hora da retomada', 'Responsável pela retomada',
+                'Data de finalização', 'Hora de finalização', 'Status atual', 'Movimentações'
+            ];
+            const linhas = registros.map(registro => {
+                const pausas = registro.pausas.map(pausa => [
+                    formatarDataHoraRastreio(pausa.dataHoraPausa, pausa.dataPausa, pausa.horaPausa),
+                    pausa.pausadoPor || '-',
+                    formatarDataHoraRastreio(pausa.dataHoraRetomada, pausa.dataRetomada, pausa.horaRetomada),
+                    pausa.retomadoPor || '-'
+                ].join(' — ')).join(' | ');
+                const dataFinalizacao = registro.dataFinalizacao.split(' ');
+                const eventos = registro.eventos.map(evento =>
+                    `${rotuloTipoMovimentacao(evento.tipo)}: ${formatarDataHoraRastreio(evento.timestamp)} (${evento.nome_usuario || evento.email_usuario || 'Responsável não identificado'})`
+                ).join(' | ');
+                return [
+                    registro.chave, registro.ticket,
+                    `${registro.nomeCriador}${registro.emailCriador ? ` <${registro.emailCriador}>` : ''}`,
+                    registro.dataCriacao.split(' ')[0], registro.dataCriacao.split(' ').slice(1).join(' '),
+                    registro.pausas.length ? 'Sim' : 'Não', pausas,
+                    registro.pausas.map(pausa => pausa.pausadoPor || '-').join(' | '),
+                    registro.pausas.map(pausa => formatarDataHoraRastreio(pausa.dataHoraRetomada, pausa.dataRetomada, pausa.horaRetomada)).join(' | '),
+                    registro.pausas.map(pausa => pausa.retomadoPor || '-').join(' | '),
+                    dataFinalizacao[0], dataFinalizacao.slice(1).join(' '),
+                    registro.status, eventos
+                ].map(escaparCampoCSV).join(',');
+            });
+            const conteudo = [colunas.map(escaparCampoCSV).join(','), ...linhas].join('\r\n');
+            const blob = new Blob(['\ufeff' + conteudo], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = `rastreabilidade-atividades_${document.getElementById('filtroDataRastreabilidade').value}.csv`;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('filtroDataRastreabilidade').addEventListener('change', renderizarTabelaMovimentacoes);
+
         // Inicializar ao carregar
         document.addEventListener('DOMContentLoaded', () => {
             console.log('DOM carregado');
+            const ontem = new Date();
+            ontem.setDate(ontem.getDate() - 1);
+            document.getElementById('filtroDataRastreabilidade').value = formatarDataLocalISO(ontem);
             inicializarFirebase();
             setTimeout(() => {
                 carregarAtividades();

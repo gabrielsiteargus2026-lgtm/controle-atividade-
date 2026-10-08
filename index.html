@@ -1530,6 +1530,24 @@
                 }) || fallback;
         }
 
+        function obterDataCriacaoAtividade(atividade) {
+            if (atividade.data_criacao) return atividade.data_criacao;
+            const dataHora = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(atividade.dataInicio || '');
+            if (dataHora) {
+                const horario = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(atividade.horaInicio || '') || [];
+                const data = new Date(
+                    Number(dataHora[3]),
+                    Number(dataHora[2]) - 1,
+                    Number(dataHora[1]),
+                    Number(horario[1] || 0),
+                    Number(horario[2] || 0),
+                    Number(horario[3] || 0)
+                );
+                if (!Number.isNaN(data.getTime())) return data.toISOString();
+            }
+            return new Date().toISOString();
+        }
+
         // ✅ Carregar dados do Firebase (com fallback para localStorage)
         let firebaseTimeout = null;
         function carregarDados() {
@@ -1684,7 +1702,9 @@
                 usuario_id: a.usuario_id || usuarioAtual?.uid || 'anonimo',
                 email_usuario: a.email_usuario || usuarioAtual?.email || 'desconhecido',
                 nome_usuario: a.nome_usuario || usuarioAtual?.nome || 'Usuário',
-                data_criacao: a.data_criacao || new Date().toISOString(),
+                criador_atividade: a.criador_atividade || a.nome_usuario || usuarioAtual?.nome || 'Usuário',
+                email_criador: a.email_criador || a.email_usuario || usuarioAtual?.email || '',
+                data_criacao: obterDataCriacaoAtividade(a),
                 data_atualizacao: new Date().toISOString()
             }));
 
@@ -1807,6 +1827,7 @@
                 atividadeReaberta.criador_ticket = criadorTicket;
                 atividadeReaberta.reaberto_por = nome || usuarioAtual?.email || 'Desconhecido';
                 atividadeReaberta.reaberto_por_email = usuarioAtual?.email || atividadeReaberta.reaberto_por_email || '';
+                atividadeReaberta.data_reaberta = agora.toISOString();
                 atividadeReaberta.nome = criadorTicket;
                 atividadeReaberta.colaborador = criadorTicket;
                 
@@ -1847,6 +1868,7 @@
             try {
                 registrarRastreioAtividade('REABRIU', ticketEmReabertura, descricao, {
                     chaveAtividade: atividade.chaveAtividade,
+                    atividadeId: atividade.id,
                     colaborador: nome,
                     usuario_logado: usuarioAtual?.email
                 });
@@ -2208,6 +2230,7 @@
             try {
                 registrarRastreioAtividade('REABRIU_DO_CONCLUIDO', atividadeReaberta.ticket, atividadeReaberta.descricao, {
                     chaveAtividade: atividadeReaberta.chaveAtividade,
+                    atividadeId: atividadeReaberta.id,
                     colaborador: atividadeReaberta.criador_ticket,
                     criador_ticket: atividadeReaberta.criador_ticket,
                     reaberto_por: atividadeReaberta.reaberto_por,
@@ -2304,6 +2327,8 @@
                     usuario_id: usuarioAtual?.uid || 'anonimo',
                     email_usuario: usuarioAtual?.email || 'desconhecido',
                     nome_usuario: usuarioAtual?.nome || 'Usuário',
+                    criador_atividade: usuarioAtual?.nome || usuarioAtual?.email || 'Usuário',
+                    email_criador: usuarioAtual?.email || '',
                     criador_ticket: nome,
                     criador_ticket_email: usuarioAtual?.email || '',
                     data_criacao: agora.toISOString()
@@ -2346,6 +2371,7 @@
                 try {
                     registrarInicioAtividade(ticket, descricao, {
                         chaveAtividade: novaAtividade.chaveAtividade,
+                        atividadeId: novaAtividade.id,
                         colaborador: nome,
                         usuario_logado: usuarioAtual?.email
                     });
@@ -2386,18 +2412,19 @@
                     index: index,
                     duracao: duracao,
                     dataFim: agora.toLocaleDateString('pt-BR'),
-                    horaFim: agora.toLocaleTimeString('pt-BR')
+                    horaFim: agora.toLocaleTimeString('pt-BR'),
+                    dataFinalizacao: agora.toISOString()
                 };
                 modalJustificativa.style.display = 'block';
                 return;
             }
 
             // Se não passou 12 horas, finalizar normalmente
-            finalizarComDados(index, atividade, duracao, agora.toLocaleDateString('pt-BR'), agora.toLocaleTimeString('pt-BR'), '');
+            finalizarComDados(index, atividade, duracao, agora.toLocaleDateString('pt-BR'), agora.toLocaleTimeString('pt-BR'), '', [], agora.toISOString());
         }
 
         // Finalizar com dados completos
-        function finalizarComDados(index, atividade, duracao, dataFim, horaFim, justificativa, colaboradoresAuxiliares = []) {
+        function finalizarComDados(index, atividade, duracao, dataFim, horaFim, justificativa, colaboradoresAuxiliares = [], dataFinalizacao = new Date().toISOString()) {
             clearInterval(atividade.intervaloTimer);
 
             const criadorTicket = obterNomeColaborador(atividade);
@@ -2447,6 +2474,9 @@
                 horaInicio: atividade.horaInicio,
                 dataFim: dataFim,
                 horaFim: horaFim,
+                data_finalizacao: dataFinalizacao,
+                usuario_finalizacao: usuarioAtual?.nome || usuarioAtual?.email || 'Desconhecido',
+                email_finalizacao: usuarioAtual?.email || '',
                 duracao: formatarTempo(duracao),
                 descricao: atividade.descricao || '',
                 titulo: atividade.titulo || '', // ✅ Armazenar título
@@ -2457,7 +2487,9 @@
                 usuario_id: atividade.usuario_id || usuarioAtual?.uid || 'anonimo',
                 email_usuario: atividade.email_usuario || usuarioAtual?.email || 'desconhecido',
                 nome_usuario: atividade.nome_usuario || usuarioAtual?.nome || 'Usuário',
-                data_criacao: atividade.data_criacao || new Date().toISOString(),
+                data_criacao: obterDataCriacaoAtividade(atividade),
+                criador_atividade: atividade.criador_atividade || atividade.nome_usuario || usuarioAtual?.nome || 'Usuário',
+                email_criador: atividade.email_criador || atividade.email_usuario || usuarioAtual?.email || '',
                 data_atualizacao: new Date().toISOString()
             });
 
@@ -2485,6 +2517,9 @@
                         horaInicio: atividade.horaInicio,
                         dataFim: dataFim,
                         horaFim: horaFim,
+                        data_finalizacao: dataFinalizacao,
+                        usuario_finalizacao: usuarioAtual?.nome || usuarioAtual?.email || 'Desconhecido',
+                        email_finalizacao: usuarioAtual?.email || '',
                         duracao: formatarTempo(duracao),
                         descricao: atividade.descricao || '',
                         titulo: atividade.titulo || '', // ✅ Armazenar título
@@ -2496,7 +2531,9 @@
                         usuario_id: atividade.usuario_id || usuarioAtual?.uid || 'anonimo',
                         email_usuario: atividade.email_usuario || usuarioAtual?.email || 'desconhecido',
                         nome_usuario: atividade.nome_usuario || usuarioAtual?.nome || 'Usuário',
-                        data_criacao: atividade.data_criacao || new Date().toISOString(),
+                        data_criacao: obterDataCriacaoAtividade(atividade),
+                        criador_atividade: atividade.criador_atividade || atividade.nome_usuario || usuarioAtual?.nome || 'Usuário',
+                        email_criador: atividade.email_criador || atividade.email_usuario || usuarioAtual?.email || '',
                         data_atualizacao: new Date().toISOString()
                     });
                 });
@@ -2515,6 +2552,7 @@
             // Usa a nova função que registra como FIM em vez de FINALIZOU
             registrarFimAtividade(atividade.ticket, atividade.descricao, {
                 chaveAtividade: atividade.chaveAtividade,
+                atividadeId: atividade.id,
                 duracao: formatarTempo(duracao),
                 observacao: atividade.observacao,
                 colaboradores: colaboradoresParaContabilizar,
@@ -2720,8 +2758,8 @@
                 return;
             }
 
-            const { atividade, index, duracao, dataFim, horaFim } = atividadeEmFinalizacao;
-            finalizarComDados(index, atividade, duracao, dataFim, horaFim, justificativa);
+            const { atividade, index, duracao, dataFim, horaFim, dataFinalizacao } = atividadeEmFinalizacao;
+            finalizarComDados(index, atividade, duracao, dataFim, horaFim, justificativa, [], dataFinalizacao);
 
             modalJustificativa.style.display = 'none';
             txtJustificativa.value = '';
@@ -2787,6 +2825,10 @@
                     colaborador: obterNomeColaborador(atividadePausa),
                     motivo: motivo,
                     grupo: grupo || 'Não definido',
+                    chaveAtividade: atividadePausa.chaveAtividade || '',
+                    dataHoraPausa: agora.toISOString(),
+                    pausadoPor: usuarioAtual?.nome || usuarioAtual?.email || 'Desconhecido',
+                    emailPausadoPor: usuarioAtual?.email || '',
                     status: 'Pausado',
                     dataInicio: atividadePausa.dataInicio || '-',
                     dataPausa: agora.toLocaleDateString('pt-BR'),
@@ -2817,6 +2859,7 @@
             if (atividadePausa) {
                 registrarPausaAtividade(atividadePausa.ticket, atividadePausa.descricao, motivo, {
                     chaveAtividade: atividadePausa.chaveAtividade,
+                    atividadeId: atividadePausa.id,
                     grupo: grupoNormalizado,
                     usuario_logado: usuarioAtual?.email
                 });
@@ -2845,13 +2888,16 @@
                 const tempoPausaMs = agora.getTime() - estadoPausa.tempoInicioPausa;
                 
                 // Procurar o registro de pausa para esta atividade no histórico
-                const indicePausa = historicoPausas.findIndex(p => p && p.id === atividadeId && p.status === 'Pausado');
+                const indicePausa = historicoPausas.findIndex(p => p && String(p.id) === String(atividadeId) && p.status === 'Pausado');
                 
                 if (indicePausa !== -1) {
                     // ✅ ATUALIZAR o registro existente
                     historicoPausas[indicePausa].status = 'Retomado';
                     historicoPausas[indicePausa].horaRetomada = agora.toLocaleTimeString('pt-BR');
                     historicoPausas[indicePausa].dataRetomada = agora.toLocaleDateString('pt-BR');
+                    historicoPausas[indicePausa].dataHoraRetomada = agora.toISOString();
+                    historicoPausas[indicePausa].retomadoPor = usuarioAtual?.nome || usuarioAtual?.email || 'Desconhecido';
+                    historicoPausas[indicePausa].emailRetomadoPor = usuarioAtual?.email || '';
                     historicoPausas[indicePausa].tempoPausaMs = tempoPausaMs;
                     historicoPausas[indicePausa].tempoPausaFormatado = formatarTempo(tempoPausaMs);
                     historicoPausas[indicePausa].ativa = false;
@@ -2864,6 +2910,7 @@
                         historicoPausas.push({
                             id: atividadeId,
                             ticket: atividade.ticket,
+                            chaveAtividade: atividade.chaveAtividade || '',
                             colaborador: obterNomeColaborador(atividade),
                             motivo: estadoPausa.motivoPausa || '-',
                             grupo: estadoPausa.grupoPausa || 'Não definido',
@@ -2871,8 +2918,14 @@
                             dataInicio: atividade.dataInicio || '-',
                             dataPausa: new Date(estadoPausa.tempoInicioPausa).toLocaleDateString('pt-BR'),
                             horaPausa: new Date(estadoPausa.tempoInicioPausa).toLocaleTimeString('pt-BR'),
+                            dataHoraPausa: new Date(estadoPausa.tempoInicioPausa).toISOString(),
+                            pausadoPor: usuarioAtual?.nome || usuarioAtual?.email || 'Desconhecido',
+                            emailPausadoPor: usuarioAtual?.email || '',
                             horaRetomada: agora.toLocaleTimeString('pt-BR'),
                             dataRetomada: agora.toLocaleDateString('pt-BR'),
+                            dataHoraRetomada: agora.toISOString(),
+                            retomadoPor: usuarioAtual?.nome || usuarioAtual?.email || 'Desconhecido',
+                            emailRetomadoPor: usuarioAtual?.email || '',
                             tempoPausaMs: tempoPausaMs,
                             tempoPausaFormatado: formatarTempo(tempoPausaMs),
                             duracao: atividade.duracao || '00:00:00',
@@ -2894,6 +2947,8 @@
             const atividadeRetoma = atividadesEmAndamento.find(a => a && a.id === atividadeId);
             if (atividadeRetoma) {
                 registrarRastreioAtividade('RETOMOU', atividadeRetoma.ticket, atividadeRetoma.descricao, {
+                    chaveAtividade: atividadeRetoma.chaveAtividade,
+                    atividadeId: atividadeRetoma.id,
                     tempoPausa: estadoPausa && estadoPausa.tempoInicioPausa ? formatarTempo(agora.getTime() - estadoPausa.tempoInicioPausa) : '-',
                     usuario_logado: usuarioAtual?.email
                 });

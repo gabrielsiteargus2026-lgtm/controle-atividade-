@@ -541,7 +541,7 @@ function registrarRastreioAtividade(tipoRastreio, ticket, descricao, detalhesAdi
         return;
     }
 
-    const tiposValidos = ['INICIO', 'FIM', 'PAUSA', 'EXCLUSAO', 'RETOMOU'];
+    const tiposValidos = ['INICIO', 'FIM', 'PAUSA', 'EXCLUSAO', 'RETOMOU', 'REABRIU', 'REABRIU_DO_CONCLUIDO'];
     if (!tiposValidos.includes(tipoRastreio)) {
         console.warn(`⚠️ Tipo de rastreio inválido: ${tipoRastreio}`);
         return;
@@ -678,4 +678,3 @@ function configurarRastreioSaidaPagina() {
         }
     });
 }
-

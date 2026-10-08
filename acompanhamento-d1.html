@@ -305,14 +305,14 @@
                 </div>
             </div>
             <div class="summary-grid">
-                <div class="summary-card"><div class="summary-value" id="totalAtividadesCriadas">0</div><div class="summary-label">Total Criadas no Dia</div></div>
-                <div class="summary-card"><div class="summary-value" id="totalEmAndamento">0</div><div class="summary-label">Em Andamento ao fim do dia</div></div>
-                <div class="summary-card"><div class="summary-value" id="totalPausadas">0</div><div class="summary-label">Pausadas ao fim do dia</div></div>
+                <div class="summary-card"><div class="summary-value" id="totalAtividadesCriadas">0</div><div class="summary-label">Total de Atividades criadas</div></div>
+                <div class="summary-card"><div class="summary-value" id="totalEmAndamento">0</div><div class="summary-label">Total de atividades em andamento</div></div>
+                <div class="summary-card"><div class="summary-value" id="totalPausadas">0</div><div class="summary-label">Total Atividades Pausadas</div></div>
                 <div class="summary-card"><div class="summary-value" id="totalConcluidas">0</div><div class="summary-label">Total Concluídas no Dia</div></div>
-                <div class="summary-card"><div class="summary-value" id="tempoTotalAtividades">--</div><div class="summary-label">Total de Tempo Gasto</div></div>
+                <div class="summary-card"><div class="summary-value" id="mediaPorColaboradorDia">--</div><div class="summary-label">Média por Colaborador por Dia</div></div>
                 <div class="summary-card"><div class="summary-value" id="tempoMedioFinalizacao">--</div><div class="summary-label">Média de Finalização</div></div>
                 <div class="summary-card"><div class="summary-value" id="tempoMedioPausa">--</div><div class="summary-label">Média de Pausa</div></div>
-                <div class="summary-card"><div class="summary-value" id="mediaPorColaboradorDia">--</div><div class="summary-label">Média por Colaborador por Dia</div></div>
+                <div class="summary-card"><div class="summary-value" id="tempoTotalAtividades">--</div><div class="summary-label">Media do tempo total</div></div>
             </div>
         </section>
 
@@ -409,7 +409,7 @@
     <div id="modalRelatorio" class="relatorio-modal" role="dialog" aria-modal="true" aria-labelledby="tituloRelatorio">
         <div class="relatorio-modal-content">
             <div class="relatorio-modal-header">
-                <h2 id="tituloRelatorio">Relatório explicativo</h2>
+                <h2 id="tituloRelatorio">Resumo diário de atividades</h2>
                 <button type="button" id="btnFecharRelatorio" class="btn-secondary" aria-label="Fechar relatório">Fechar</button>
             </div>
             <div class="relatorio-modal-body">
@@ -417,7 +417,7 @@
             </div>
             <div class="relatorio-modal-footer">
                 <span id="statusCopiaRelatorio" class="relatorio-status" aria-live="polite"></span>
-                <button type="button" id="btnCopiarRelatorio">Copiar resumo</button>
+                <button type="button" id="btnCopiarRelatorio">Copiar relatório</button>
             </div>
         </div>
     </div>
@@ -610,7 +610,7 @@
         function dataD1() {
             const data = new Date();
             data.setDate(data.getDate() - 1);
-            return data.toISOString().slice(0, 10);
+            return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
         }
 
         function dataAtividadeParaISO(data) {
@@ -624,6 +624,12 @@
             const data = new Date(timestamp);
             if (Number.isNaN(data.getTime())) return '';
             return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
+        }
+
+        function dataMovimentacaoParaISO(valor) {
+            return /^\d{4}-\d{2}-\d{2}T/.test(String(valor || ''))
+                ? dataRegistroParaISO(valor)
+                : dataAtividadeParaISO(valor);
         }
 
         function normalizarLista(dados) {
@@ -806,6 +812,152 @@
             return Math.max(0, (Math.min(fim.getTime(), fimDia) - Math.max(inicio.getTime(), inicioDia)) / 60000);
         }
 
+        function obterAtividadesDaRastreabilidade() {
+            const atividadesPorChave = new Map();
+            const aliases = new Map();
+            const obterChave = item => {
+                if (item?.atividadeId !== undefined && item.atividadeId !== null) return `id:${item.atividadeId}`;
+                if (item?.id !== undefined && item.id !== null) return `id:${item.id}`;
+                if (item?.chaveAtividade) return `chave:${item.chaveAtividade}`;
+                if (item?.ticket) return `ticket:${item.ticket}`;
+                return '';
+            };
+            const indexar = item => {
+                if (!item || item.ehAjudante) return;
+                const chave = obterChave(item);
+                if (!chave) return;
+                atividadesPorChave.set(chave, { ...(atividadesPorChave.get(chave) || {}), ...item });
+                if (item.id !== undefined && item.id !== null) aliases.set(`id:${item.id}`, chave);
+                if (item.chaveAtividade) aliases.set(`chave:${item.chaveAtividade}`, chave);
+                if (item.ticket) aliases.set(`ticket:${item.ticket}`, chave);
+            };
+
+            [...atividades, ...atividadesEmAndamento].forEach(indexar);
+            const eventos = registrosAtividades
+                .filter(registro => ['INICIO', 'PAUSA', 'RETOMOU', 'FIM', 'REABRIU', 'REABRIU_DO_CONCLUIDO'].includes(registro.tipo))
+                .slice()
+                .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+            eventos.forEach(evento => {
+                const chaveEvento = obterChave(evento);
+                const chave = aliases.get(chaveEvento) || chaveEvento;
+                if (!chave) return;
+                let atividade = atividadesPorChave.get(chave);
+                if (!atividade) {
+                    atividade = {
+                        id: evento.atividadeId || null,
+                        chaveAtividade: evento.chaveAtividade || '',
+                        ticket: evento.ticket || '',
+                        nome: evento.colaborador || evento.nome_usuario || ''
+                    };
+                }
+                atividade._eventosResumo = [...(atividade._eventosResumo || []), evento];
+                if (evento.tipo === 'INICIO' && !atividade.data_criacao) atividade.data_criacao = evento.timestamp;
+                if (evento.tipo === 'FIM') {
+                    atividade.data_finalizacao = evento.timestamp;
+                    atividade.duracao = evento.duracao || atividade.duracao;
+                }
+                atividadesPorChave.set(chave, atividade);
+                if (atividade.id !== undefined && atividade.id !== null) aliases.set(`id:${atividade.id}`, chave);
+                if (atividade.chaveAtividade) aliases.set(`chave:${atividade.chaveAtividade}`, chave);
+                if (atividade.ticket) aliases.set(`ticket:${atividade.ticket}`, chave);
+            });
+
+            return [...atividadesPorChave.values()].map(atividade => {
+                const pausas = historicoPausas.filter(pausa =>
+                    (atividade.id && pausa.id && String(atividade.id) === String(pausa.id)) ||
+                    (atividade.chaveAtividade && pausa.chaveAtividade && atividade.chaveAtividade === pausa.chaveAtividade) ||
+                    (!atividade.id && !atividade.chaveAtividade && atividade.ticket && String(atividade.ticket) === String(pausa.ticket))
+                );
+                const eventosAtividade = atividade._eventosResumo || [];
+                eventosAtividade.filter(evento => evento.tipo === 'PAUSA').forEach(evento => {
+                    const timestamp = new Date(evento.timestamp).getTime();
+                    const existe = pausas.some(pausa => {
+                        const timestampPausa = pausa.dataHoraPausa
+                            ? new Date(pausa.dataHoraPausa).getTime()
+                            : converterDataHoraPausa(pausa.dataPausa || pausa.dataInicio, pausa.horaPausa)?.getTime();
+                        return Number.isFinite(timestampPausa) && Math.abs(timestampPausa - timestamp) < 1000;
+                    });
+                    if (existe) return;
+                    const retomada = eventosAtividade.find(item =>
+                        item.tipo === 'RETOMOU' && new Date(item.timestamp) >= new Date(evento.timestamp)
+                    );
+                    const inicio = new Date(evento.timestamp);
+                    const fim = retomada ? new Date(retomada.timestamp) : null;
+                    pausas.push({
+                        id: atividade.id,
+                        chaveAtividade: atividade.chaveAtividade,
+                        ticket: atividade.ticket,
+                        dataInicio: atividade.dataInicio,
+                        colaborador: atividade.colaborador || atividade.nome,
+                        motivo: evento.motivo_pausa || '',
+                        grupo: evento.grupo || '',
+                        dataPausa: inicio.toLocaleDateString('pt-BR'),
+                        horaPausa: inicio.toLocaleTimeString('pt-BR'),
+                        dataHoraPausa: evento.timestamp,
+                        dataRetomada: fim ? fim.toLocaleDateString('pt-BR') : '',
+                        horaRetomada: fim ? fim.toLocaleTimeString('pt-BR') : '',
+                        dataHoraRetomada: retomada?.timestamp || '',
+                        status: retomada ? 'Retomado' : 'Pausado',
+                        tempoPausaMs: fim ? Math.max(0, fim - inicio) : 0
+                    });
+                });
+                atividade._pausasResumo = pausas;
+                return atividade;
+            });
+        }
+
+        function obterStatusRastreabilidadeNoFimDoDia(atividade, data) {
+            const [ano, mes, dia] = data.split('-').map(Number);
+            const limite = new Date(ano, mes - 1, dia + 1).getTime() - 1;
+            const movimentos = [...(atividade._eventosResumo || [])];
+            (atividade._pausasResumo || []).forEach(pausa => {
+                const inicio = pausa.dataHoraPausa
+                    ? new Date(pausa.dataHoraPausa)
+                    : converterDataHoraPausa(pausa.dataPausa || pausa.dataInicio, pausa.horaPausa);
+                const retomada = pausa.dataHoraRetomada
+                    ? new Date(pausa.dataHoraRetomada)
+                    : pausa.horaRetomada
+                        ? converterDataHoraPausa(pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio, pausa.horaRetomada)
+                        : null;
+                if (inicio && !movimentos.some(evento =>
+                    evento.tipo === 'PAUSA' && Math.abs(new Date(evento.timestamp) - inicio) < 1000
+                )) movimentos.push({ tipo: 'PAUSA', timestamp: inicio.toISOString() });
+                if (retomada && !movimentos.some(evento =>
+                    evento.tipo === 'RETOMOU' && Math.abs(new Date(evento.timestamp) - retomada) < 1000
+                )) movimentos.push({ tipo: 'RETOMOU', timestamp: retomada.toISOString() });
+            });
+            if (atividade.dataFim && !movimentos.some(evento => evento.tipo === 'FIM')) {
+                const dataFim = converterDataHoraPausa(atividade.dataFim, atividade.horaFim);
+                if (dataFim) movimentos.push({ tipo: 'FIM', timestamp: dataFim.toISOString() });
+            }
+            const eventosAteOLimite = movimentos
+                .filter(evento => new Date(evento.timestamp).getTime() <= limite);
+            eventosAteOLimite.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            const ultimoEvento = eventosAteOLimite[eventosAteOLimite.length - 1];
+            if (ultimoEvento) {
+                if (ultimoEvento.tipo === 'PAUSA') return 'pausado';
+                if (ultimoEvento.tipo === 'FIM') return 'concluido';
+                return 'em_andamento';
+            }
+
+            const dataCriacao = dataMovimentacaoParaISO(atividade.data_criacao || atividade.dataInicio);
+            if (dataCriacao && dataCriacao > data) return '';
+            const dataFim = dataMovimentacaoParaISO(atividade.data_finalizacao || atividade.dataFim);
+            if (dataFim && dataFim <= data) return 'concluido';
+            const pausaAberta = (atividade._pausasResumo || []).some(pausa => {
+                const inicio = pausa.dataHoraPausa
+                    ? new Date(pausa.dataHoraPausa).getTime()
+                    : converterDataHoraPausa(pausa.dataPausa || pausa.dataInicio, pausa.horaPausa)?.getTime();
+                const retomada = pausa.dataHoraRetomada
+                    ? new Date(pausa.dataHoraRetomada).getTime()
+                    : converterDataHoraPausa(pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio, pausa.horaRetomada)?.getTime();
+                return Number.isFinite(inicio) && inicio <= limite && (!Number.isFinite(retomada) || retomada > limite);
+            });
+            if (pausaAberta) return 'pausado';
+            return 'em_andamento';
+        }
+
         function obterPausasNoFimDoDia(data) {
             const [ano, mes, dia] = data.split('-').map(Number);
             const fimDoDia = new Date(ano, mes - 1, dia + 1).getTime() - 1;
@@ -878,23 +1030,29 @@
         }
 
         function obterAtividadesPorStatus(data) {
-            const criadas = obterAtividadesCriadasNoDia(data);
-            const pausadasIds = new Set(obterPausasNoFimDoDia(data).map(item =>
-                String(item.id || item.chaveAtividade || item.ticket)
-            ));
-            const concluidas = criadas.filter(item => dataAtividadeParaISO(item.dataFim) === data);
-            const pausadas = criadas.filter(item =>
-                pausadasIds.has(String(item.id || item.chaveAtividade || item.ticket))
-            );
-            const idsConcluidas = new Set(concluidas.map(item =>
-                String(item.id || item.chaveAtividade || item.ticket)
-            ));
-            const idsPausadas = new Set(pausadas.map(item =>
-                String(item.id || item.chaveAtividade || item.ticket)
-            ));
-            const emAndamento = criadas.filter(item => {
-                const identificador = String(item.id || item.chaveAtividade || item.ticket);
-                return !idsConcluidas.has(identificador) && !idsPausadas.has(identificador);
+            const criadas = obterAtividadesDaRastreabilidade().filter(atividade => {
+                const inicio = (atividade._eventosResumo || []).find(evento => evento.tipo === 'INICIO');
+                const dataCriacao = dataMovimentacaoParaISO(inicio?.timestamp || atividade.data_criacao || atividade.dataInicio);
+                return dataCriacao === data;
+            });
+            const emAndamento = [];
+            const pausadas = [];
+            const concluidas = [];
+            criadas.forEach(atividade => {
+                const status = obterStatusRastreabilidadeNoFimDoDia(atividade, data);
+                if (status === 'em_andamento') emAndamento.push(atividade);
+                if (status === 'pausado') pausadas.push(atividade);
+                if (status === 'concluido') {
+                    const [ano, mes, dia] = data.split('-').map(Number);
+                    const limite = new Date(ano, mes - 1, dia + 1).getTime();
+                    const finalizacao = [...(atividade._eventosResumo || [])].reverse().find(evento =>
+                        evento.tipo === 'FIM' && new Date(evento.timestamp).getTime() < limite
+                    );
+                    concluidas.push({
+                        ...atividade,
+                        duracao: finalizacao?.duracao || atividade.duracao
+                    });
+                }
             });
             return { criadas, emAndamento, pausadas, concluidas };
         }
@@ -908,25 +1066,10 @@
 
         function renderizarKanbanDia(data) {
             const atividadesPorStatus = obterAtividadesPorStatus(data);
-            const concluidasKanban = [...atividadesPorStatus.concluidas];
-            const idsConcluidasKanban = new Set(concluidasKanban.map(item =>
-                String(item.id || item.chaveAtividade || item.ticket)
-            ));
-            atividades.filter(item =>
-                item && !item.ehAjudante &&
-                (item.isReabertura || item.reaberto_por || item.data_reaberta) &&
-                dataAtividadeParaISO(item.dataFim) === data
-            ).forEach(atividade => {
-                const identificador = String(atividade.id || atividade.chaveAtividade || atividade.ticket);
-                if (!idsConcluidasKanban.has(identificador)) {
-                    idsConcluidasKanban.add(identificador);
-                    concluidasKanban.push(atividade);
-                }
-            });
             const estados = [
                 { chave: 'andamento', atividades: atividadesPorStatus.emAndamento },
                 { chave: 'pausadas', atividades: atividadesPorStatus.pausadas },
-                { chave: 'concluidas', atividades: concluidasKanban }
+                { chave: 'concluidas', atividades: atividadesPorStatus.concluidas }
             ];
 
             estados.forEach(({ chave, atividades: listaAtividades }) => {
@@ -964,27 +1107,49 @@
 
         function contarStatus(data) {
             const atividadesDoDia = obterAtividadesPorStatus(data);
-            const atividadesCriadasNoDia = atividadesDoDia.criadas;
-            const atividadesFinalizadasNoDia = atividadesDoDia.concluidas;
-            const concluidas = atividadesFinalizadasNoDia.length;
-            const pausadas = atividadesDoDia.pausadas.length;
-            const emAndamento = atividadesDoDia.emAndamento.length;
-            const criadas = atividadesCriadasNoDia.length;
-            const atividadesComDuracaoFinalizadas = atividadesFinalizadasNoDia.filter(item => item.duracao);
-            const duracoesFinalizadas = atividadesComDuracaoFinalizadas.map(item => minutosDaDuracao(item.duracao));
-            const tempoTotalAtividades = duracoesFinalizadas.reduce((total, minutos) => total + minutos, 0);
-            const tempoMedioFinalizacao = duracoesFinalizadas.length
-                ? tempoTotalAtividades / duracoesFinalizadas.length
-                : null;
-            const pausasDoDia = historicoPausas.filter(item =>
-                dataAtividadeParaISO(item.dataPausa || item.dataInicio) === data
+            const { criadas, concluidas, pausadas, emAndamento } = atividadesDoDia;
+            const atividadesComDuracaoFinalizadas = concluidas.filter(item => item.duracao);
+            const duracoesPorAtividade = atividadesComDuracaoFinalizadas
+                .map(atividade => ({
+                    atividade,
+                    minutos: calcularMinutosAtivos(atividade)
+                }))
+                .filter(item => Number.isFinite(item.minutos));
+            const tempoTotalAtividades = duracoesPorAtividade.reduce(
+                (total, item) => total + item.minutos,
+                0
             );
+            const tempoMedioFinalizacao = duracoesPorAtividade.length
+                ? duracoesPorAtividade.reduce((total, item) => total + item.minutos, 0) / duracoesPorAtividade.length
+                : null;
+            const pausasDoDia = criadas.flatMap(item => item._pausasResumo || [])
+                .filter(pausa => dataRegistroParaISO(pausa.dataHoraPausa) === data ||
+                    dataAtividadeParaISO(pausa.dataPausa || pausa.dataInicio) === data);
             const tempoTotalPausas = pausasDoDia.reduce((total, item) => total + calcularMinutosPausaNoDia(item, data), 0);
             const tempoMedioPausa = pausasDoDia.length ? tempoTotalPausas / pausasDoDia.length : null;
-            const colaboradoresDoDia = new Set(atividadesComDuracaoFinalizadas.map(item => item.nome || item.colaborador || 'Não informado'));
-            const mediaPorColaboradorDia = colaboradoresDoDia.size ? tempoTotalAtividades / colaboradoresDoDia.size : null;
-            const taxaFinalizacao = criadas ? Math.min(100, concluidas / criadas * 100) : 0;
-            return { emAndamento, pausadas, concluidas, criadas, taxaFinalizacao, tempoTotalAtividades, tempoMedioFinalizacao, tempoMedioPausa, mediaPorColaboradorDia };
+            const tempoPorColaborador = new Map();
+            duracoesPorAtividade.forEach(({ atividade, minutos }) => {
+                const colaborador = atividade.nome || atividade.colaborador || 'Não informado';
+                tempoPorColaborador.set(
+                    colaborador,
+                    (tempoPorColaborador.get(colaborador) || 0) + minutos
+                );
+            });
+            const mediaPorColaboradorDia = tempoPorColaborador.size
+                ? [...tempoPorColaborador.values()].reduce((total, minutos) => total + minutos, 0) / tempoPorColaborador.size
+                : null;
+            const taxaFinalizacao = criadas.length ? Math.min(100, concluidas.length / criadas.length * 100) : 0;
+            return {
+                emAndamento: emAndamento.length,
+                pausadas: pausadas.length,
+                concluidas: concluidas.length,
+                criadas: criadas.length,
+                taxaFinalizacao,
+                tempoTotalAtividades,
+                tempoMedioFinalizacao,
+                tempoMedioPausa,
+                mediaPorColaboradorDia
+            };
         }
 
         function atualizarCards(data) {
@@ -1003,111 +1168,6 @@
 
         function gerarTextoRelatorio(data) {
             const totais = contarStatus(data);
-            const colaboradores = new Map();
-            const setores = new Map();
-            const pausasNoFimDoDia = obterPausasNoFimDoDia(data);
-            const eventosDoDia = registrosAtividades
-                .filter(registro => dataRegistroParaISO(registro.timestamp) === data)
-                .sort((registroA, registroB) => new Date(registroA.timestamp) - new Date(registroB.timestamp));
-            const obterNomeEvento = registro =>
-                registro.colaborador || registro.nome_usuario || registro.email_usuario || 'Não informado';
-            const obterResumoColaborador = nome => {
-                const nomeValido = String(nome || '').trim() || 'Não informado';
-                if (!colaboradores.has(nomeValido)) {
-                    colaboradores.set(nomeValido, {
-                        iniciadas: 0,
-                        pausas: 0,
-                        concluidas: 0,
-                        retroativas: 0,
-                        minutosAtivos: 0,
-                        minutosDecorridos: 0,
-                        minutosEmAndamento: 0
-                    });
-                }
-                return colaboradores.get(nomeValido);
-            };
-
-            eventosDoDia.filter(registro => registro.tipo === 'INICIO').forEach(registro => {
-                obterResumoColaborador(obterNomeEvento(registro)).iniciadas++;
-            });
-
-            const pausasDoDia = historicoPausas.filter(pausa =>
-                dataAtividadeParaISO(pausa.dataPausa || pausa.dataInicio) === data
-            );
-            const atividadesPausadasRetroativas = new Set(
-                pausasDoDia
-                    .filter(pausa => dataAtividadeParaISO(pausa.dataInicio) < data)
-                    .map(pausa => String(pausa.id || pausa.chaveAtividade || pausa.ticket || JSON.stringify(pausa)))
-            );
-            pausasDoDia.forEach(pausa => {
-                obterResumoColaborador(pausa.colaborador || pausa.nome).pausas++;
-                const setor = obterSetorPausa(pausa);
-                const resumoSetor = setores.get(setor) || { quantidade: 0, minutos: 0 };
-                resumoSetor.quantidade++;
-                resumoSetor.minutos += calcularMinutosPausa(pausa);
-                setores.set(setor, resumoSetor);
-            });
-            const finalizadasDoDia = atividades.filter(atividade =>
-                !atividade.ehAjudante &&
-                dataAtividadeParaISO(atividade.dataFim) === data
-            );
-            finalizadasDoDia.forEach(atividade => {
-                const nome = atividade.finalizado_por || atividade.colaborador || atividade.nome || 'Não informado';
-                const resumo = obterResumoColaborador(nome);
-                resumo.concluidas++;
-                if (dataAtividadeParaISO(atividade.dataInicio) < data) {
-                    resumo.retroativas++;
-                } else if (atividade.duracao) {
-                    resumo.minutosAtivos += calcularMinutosAtivos(atividade);
-                }
-            });
-
-            const [ano, mes, dia] = data.split('-').map(Number);
-            const fimDoDia = new Date(ano, mes - 1, dia + 1).getTime();
-            const limiteDuracao = Math.min(fimDoDia, Date.now());
-            const atividadesIniciadasNoDia = obterAtividadesCriadasNoDia(data);
-            atividadesIniciadasNoDia.forEach(atividade => {
-                const colaborador = atividade.colaborador || atividade.nome || atividade.criador_ticket || 'Não informado';
-                const resumo = obterResumoColaborador(colaborador);
-                const inicioPorTimestamp = atividade.tempoInicio
-                    ? new Date(Number(atividade.tempoInicio))
-                    : null;
-                const inicio = inicioPorTimestamp && !Number.isNaN(inicioPorTimestamp.getTime())
-                    ? inicioPorTimestamp
-                    : converterDataHoraPausa(atividade.dataInicio, atividade.horaInicio);
-                if (!inicio || Number.isNaN(inicio.getTime())) return;
-
-                let fimRegistrado = atividade.dataFim
-                    ? converterDataHoraPausa(atividade.dataFim, atividade.horaFim)
-                    : null;
-                if (!fimRegistrado && atividade.dataFim && atividade.duracao) {
-                    fimRegistrado = new Date(inicio.getTime() + minutosDaDuracao(atividade.duracao) * 60000);
-                }
-                const fim = fimRegistrado && fimRegistrado.getTime() < limiteDuracao
-                    ? fimRegistrado.getTime()
-                    : limiteDuracao;
-                if (fim <= inicio.getTime()) return;
-
-                const minutosDecorridos = (fim - inicio.getTime()) / 60000;
-                const pausasMinutos = historicoPausas.reduce((total, pausa) => {
-                    const mesmaAtividade = (atividade.id && pausa.id && String(atividade.id) === String(pausa.id)) ||
-                        (atividade.chaveAtividade && pausa.chaveAtividade && atividade.chaveAtividade === pausa.chaveAtividade) ||
-                        (!atividade.id && !atividade.chaveAtividade && atividade.ticket && String(atividade.ticket) === String(pausa.ticket));
-                    if (!mesmaAtividade) return total;
-                    const inicioPausa = converterDataHoraPausa(pausa.dataPausa || pausa.dataInicio, pausa.horaPausa);
-                    if (!inicioPausa) return total;
-                    const fimPausa = pausa.horaRetomada
-                        ? converterDataHoraPausa(pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio, pausa.horaRetomada)
-                        : null;
-                    const inicioSobreposto = Math.max(inicio.getTime(), inicioPausa.getTime());
-                    const fimSobreposto = Math.min(fim, fimPausa ? fimPausa.getTime() : limiteDuracao);
-                    return total + Math.max(0, (fimSobreposto - inicioSobreposto) / 60000);
-                }, 0);
-
-                resumo.minutosDecorridos += minutosDecorridos;
-                resumo.minutosEmAndamento += Math.max(0, minutosDecorridos - pausasMinutos);
-            });
-
             const formatarData = valor => {
                 if (!valor) return data;
                 const [ano, mes, dia] = valor.split('-').map(Number);
@@ -1116,54 +1176,21 @@
             const formatarTempo = minutos => minutos === null || !Number.isFinite(minutos)
                 ? 'sem dados'
                 : formatarHoras(minutos);
-            const linhasColaboradores = [...colaboradores.entries()]
-                .sort(([nomeA], [nomeB]) => nomeA.localeCompare(nomeB, 'pt-BR'))
-                .flatMap(([nome, resumo]) => [
-                    `- ${nome}`,
-                    `  - Total de Atividades iniciadas no dia: ${resumo.iniciadas}`,
-                    `  - Total de Pausas iniciadas no dia: ${resumo.pausas}`,
-                    `  - Total de atividades finalizadas no dia: ${resumo.concluidas}`,
-                    `  - Total de atividades finalizadas retroativas: ${resumo.retroativas}`,
-                    `  - Tempo total em andamento (pausas descontadas): ${formatarHoras(resumo.minutosEmAndamento)}`
-                ]);
-            const linhasSetores = [...setores.entries()]
-                .sort(([, resumoA], [, resumoB]) => resumoB.quantidade - resumoA.quantidade)
-                .map(([setor, resumo]) =>
-                    `- ${setor}: ${resumo.quantidade} pausa(s); média de ${formatarHoras(resumo.minutos / resumo.quantidade)}`
-                );
-            const pausasDoDiaMinutos = pausasDoDia.reduce(
-                (total, pausa) => total + calcularMinutosPausaNoDia(pausa, data),
-                0
-            );
             return [
-                `RELATÓRIO DE ACOMPANHAMENTO DE ATIVIDADES — ${formatarData(data)}`,
+                `RESUMO DIÁRIO DE ATIVIDADES — ${formatarData(data)}`,
                 '',
-                'RESUMO DO DIA',
-                `- Total atividades criadas no dia: ${totais.criadas}`,
-                `- Total de atividades em andamento no dia: ${totais.emAndamento}`,
-                `- Total de atividades pausadas no dia: ${totais.pausadas}`,
-                `- Total de atividades pausadas retroativas: ${atividadesPausadasRetroativas.size}`,
-                `- Total de atividades concluídas no dia: ${totais.concluidas}`,
-                `- Taxa de finalização: ${Math.round(totais.taxaFinalizacao)}%`,
-                `- Tempo total gasto de todos colaboradores: ${formatarTempo(totais.tempoTotalAtividades)}`,
-                `- Média de finalização total: ${formatarTempo(totais.tempoMedioFinalizacao)}`,
+                'OBJETIVO',
+                'Acompanhar as atividades iniciadas no dia, seu status ao fim do dia e os tempos registrados.',
+                '',
+                'RESULTADOS',
+                `- Iniciadas no dia: ${totais.criadas}`,
+                `- Status ao fim do dia: ${totais.emAndamento} em andamento, ${totais.pausadas} pausadas, ${totais.concluidas} concluídas`,
+                `- Taxa de conclusão: ${Math.round(totais.taxaFinalizacao)}% (${totais.concluidas} de ${totais.criadas})`,
+                `- Tempo líquido das concluídas: ${formatarTempo(totais.tempoTotalAtividades)}; média por atividade: ${formatarTempo(totais.tempoMedioFinalizacao)}`,
                 `- Média de pausa: ${formatarTempo(totais.tempoMedioPausa)}`,
-                `- Média por colaborador: ${formatarTempo(totais.mediaPorColaboradorDia)}`,
                 '',
-                'ATIVIDADES POR COLABORADOR',
-                ...(linhasColaboradores.length ? linhasColaboradores : ['- Nenhuma atividade ou pausa registrada nesta data.']),
-                '',
-                'PAUSAS POR SETOR',
-                ...(linhasSetores.length ? linhasSetores : ['- Nenhuma pausa registrada nesta data.']),
-                `- Total de pausas: ${pausasDoDia.length}; tempo somado no dia: ${formatarHoras(pausasDoDiaMinutos)}`,
-                '',
-                'CRITÉRIOS',
-                '- Atividades abertas são contadas pelos eventos INICIO registrados na data selecionada.',
-                '- Pausas durante o dia são contadas pela data de início da pausa; o status ao fim do dia é informado separadamente.',
-                '- As atividades por colaborador mostram apenas movimentos da data selecionada; as finalizações e o tempo ativo excluem atividades iniciadas em dias anteriores.',
-                '- O tempo ativo das atividades finalizadas no dia desconta a duração das pausas associadas.',
-                '- Pausas por setor e seu tempo consideram os registros de pausa iniciados na data selecionada.',
-                '- O total de atividades criadas do card usa a contagem distinta da página e pode diferir do número de eventos INICIO.'
+                'CRITÉRIO',
+                'A taxa e o status consideram as atividades iniciadas na data selecionada; o tempo líquido desconta as pausas.'
             ].join('\n');
         }
 
