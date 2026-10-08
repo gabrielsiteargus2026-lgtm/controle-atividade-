@@ -1124,9 +1124,7 @@
                     `  - Total de Pausas iniciadas no dia: ${resumo.pausas}`,
                     `  - Total de atividades finalizadas no dia: ${resumo.concluidas}`,
                     `  - Total de atividades finalizadas retroativas: ${resumo.retroativas}`,
-                    `  - Tempo total gasto nas atividades abertas/iniciadas: ${formatarHoras(resumo.minutosDecorridos)}`,
-                    `  - Tempo total em andamento (pausas descontadas): ${formatarHoras(resumo.minutosEmAndamento)}`,
-                    `  - Tempo total gasto nas atividades finalizadas (pausas descontadas): ${formatarHoras(resumo.minutosAtivos)}`
+                    `  - Tempo total em andamento (pausas descontadas): ${formatarHoras(resumo.minutosEmAndamento)}`
                 ]);
             const linhasSetores = [...setores.entries()]
                 .sort(([, resumoA], [, resumoB]) => resumoB.quantidade - resumoA.quantidade)
