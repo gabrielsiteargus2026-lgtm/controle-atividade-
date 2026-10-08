@@ -451,7 +451,7 @@
                         const valor = dataset.data[indice];
                         if (Number(valor) !== 0 && valor !== null && valor !== undefined) {
                             contexto.textAlign = 'center';
-                            const deslocamento = chart.canvas.id === 'chartStatusPorColaborador' ? 10 : (dataset.type === 'line' ? 14 : 18);
+                            const deslocamento = chart.canvas.id === 'chartStatusPorColaborador' ? 18 : (dataset.type === 'line' ? 18 : 24);
                             const rotulo = chart.canvas.id === 'chartAtividadesPorColaborador' && dataset.type === 'line' ? `${Math.round(valor)}%` : valor;
                             contexto.fillText(rotulo, barra.x, Math.max(barra.y - deslocamento, 18));
                         }
@@ -530,7 +530,7 @@
                             contexto.strokeStyle = '#fff';
                             contexto.lineWidth = 3;
                             const rotulo = valor.toLocaleString('pt-BR');
-                            const posicaoY = Math.max(elemento.y - 6, 14);
+                            const posicaoY = Math.max(elemento.y - 26, 18);
                             contexto.strokeText(rotulo, elemento.x, posicaoY);
                             contexto.fillText(rotulo, elemento.x, posicaoY);
                         } else if (dataset.type === 'line') {
@@ -582,8 +582,8 @@
                 contexto.restore();
             }
         };
-        const PLUGIN_CURVA_TEMPO_MEDIO = {
-            id: 'curvaTempoMedio',
+        const PLUGIN_LINHA_TEMPO_MEDIO = {
+            id: 'linhaTempoMedio',
             beforeDatasetsDraw(chart) {
                 const pontos = chart.getDatasetMeta(0).data;
                 if (pontos.length < 2) return;
@@ -595,12 +595,9 @@
                 contexto.clip();
                 contexto.beginPath();
                 contexto.moveTo(pontos[0].x, pontos[0].y);
-                for (let indice = 0; indice < pontos.length - 1; indice++) {
-                    const atual = pontos[indice];
-                    const proximo = pontos[indice + 1];
-                    const distanciaX = proximo.x - atual.x;
-                    const curvatura = distanciaX * 0.32;
-                    contexto.bezierCurveTo(atual.x + curvatura, atual.y, proximo.x - curvatura, proximo.y, proximo.x, proximo.y);
+                for (let indice = 1; indice < pontos.length; indice++) {
+                    const ponto = pontos[indice];
+                    contexto.lineTo(ponto.x, ponto.y);
                 }
                 contexto.strokeStyle = dataset.borderColor;
                 contexto.lineWidth = dataset.borderWidth || 2;
@@ -1009,46 +1006,106 @@
             const colaboradores = new Map();
             const setores = new Map();
             const pausasNoFimDoDia = obterPausasNoFimDoDia(data);
+            const eventosDoDia = registrosAtividades
+                .filter(registro => dataRegistroParaISO(registro.timestamp) === data)
+                .sort((registroA, registroB) => new Date(registroA.timestamp) - new Date(registroB.timestamp));
+            const obterNomeEvento = registro =>
+                registro.colaborador || registro.nome_usuario || registro.email_usuario || 'Não informado';
             const obterResumoColaborador = nome => {
                 const nomeValido = String(nome || '').trim() || 'Não informado';
                 if (!colaboradores.has(nomeValido)) {
-                    colaboradores.set(nomeValido, { criadas: 0, pausas: 0, concluidas: 0, retroativas: 0, minutosAtivos: 0 });
+                    colaboradores.set(nomeValido, {
+                        iniciadas: 0,
+                        pausas: 0,
+                        concluidas: 0,
+                        retroativas: 0,
+                        minutosAtivos: 0,
+                        minutosDecorridos: 0,
+                        minutosEmAndamento: 0
+                    });
                 }
                 return colaboradores.get(nomeValido);
             };
 
-            const iniciosDoDia = registrosAtividades.filter(registro =>
-                registro.tipo === 'INICIO' && dataRegistroParaISO(registro.timestamp) === data
-            );
-            iniciosDoDia.forEach(registro => {
-                const nome = registro.colaborador || registro.nome_usuario || registro.email_usuario || 'Não informado';
-                obterResumoColaborador(nome).criadas++;
+            eventosDoDia.filter(registro => registro.tipo === 'INICIO').forEach(registro => {
+                obterResumoColaborador(obterNomeEvento(registro)).iniciadas++;
             });
 
             const pausasDoDia = historicoPausas.filter(pausa =>
                 dataAtividadeParaISO(pausa.dataPausa || pausa.dataInicio) === data
             );
+            const atividadesPausadasRetroativas = new Set(
+                pausasDoDia
+                    .filter(pausa => dataAtividadeParaISO(pausa.dataInicio) < data)
+                    .map(pausa => String(pausa.id || pausa.chaveAtividade || pausa.ticket || JSON.stringify(pausa)))
+            );
             pausasDoDia.forEach(pausa => {
+                obterResumoColaborador(pausa.colaborador || pausa.nome).pausas++;
                 const setor = obterSetorPausa(pausa);
                 const resumoSetor = setores.get(setor) || { quantidade: 0, minutos: 0 };
                 resumoSetor.quantidade++;
                 resumoSetor.minutos += calcularMinutosPausa(pausa);
                 setores.set(setor, resumoSetor);
             });
-            pausasNoFimDoDia.forEach(pausa => {
-                const nome = pausa.colaborador || pausa.nome || 'Não informado';
-                obterResumoColaborador(nome).pausas++;
-            });
-
             const finalizadasDoDia = atividades.filter(atividade =>
-                !atividade.ehAjudante && dataAtividadeParaISO(atividade.dataFim || atividade.dataInicio) === data
+                !atividade.ehAjudante &&
+                dataAtividadeParaISO(atividade.dataFim) === data
             );
             finalizadasDoDia.forEach(atividade => {
                 const nome = atividade.finalizado_por || atividade.colaborador || atividade.nome || 'Não informado';
                 const resumo = obterResumoColaborador(nome);
                 resumo.concluidas++;
-                if (dataAtividadeParaISO(atividade.dataInicio) < data) resumo.retroativas++;
-                if (atividade.duracao) resumo.minutosAtivos += calcularMinutosAtivos(atividade);
+                if (dataAtividadeParaISO(atividade.dataInicio) < data) {
+                    resumo.retroativas++;
+                } else if (atividade.duracao) {
+                    resumo.minutosAtivos += calcularMinutosAtivos(atividade);
+                }
+            });
+
+            const [ano, mes, dia] = data.split('-').map(Number);
+            const fimDoDia = new Date(ano, mes - 1, dia + 1).getTime();
+            const limiteDuracao = Math.min(fimDoDia, Date.now());
+            const atividadesIniciadasNoDia = obterAtividadesCriadasNoDia(data);
+            atividadesIniciadasNoDia.forEach(atividade => {
+                const colaborador = atividade.colaborador || atividade.nome || atividade.criador_ticket || 'Não informado';
+                const resumo = obterResumoColaborador(colaborador);
+                const inicioPorTimestamp = atividade.tempoInicio
+                    ? new Date(Number(atividade.tempoInicio))
+                    : null;
+                const inicio = inicioPorTimestamp && !Number.isNaN(inicioPorTimestamp.getTime())
+                    ? inicioPorTimestamp
+                    : converterDataHoraPausa(atividade.dataInicio, atividade.horaInicio);
+                if (!inicio || Number.isNaN(inicio.getTime())) return;
+
+                let fimRegistrado = atividade.dataFim
+                    ? converterDataHoraPausa(atividade.dataFim, atividade.horaFim)
+                    : null;
+                if (!fimRegistrado && atividade.dataFim && atividade.duracao) {
+                    fimRegistrado = new Date(inicio.getTime() + minutosDaDuracao(atividade.duracao) * 60000);
+                }
+                const fim = fimRegistrado && fimRegistrado.getTime() < limiteDuracao
+                    ? fimRegistrado.getTime()
+                    : limiteDuracao;
+                if (fim <= inicio.getTime()) return;
+
+                const minutosDecorridos = (fim - inicio.getTime()) / 60000;
+                const pausasMinutos = historicoPausas.reduce((total, pausa) => {
+                    const mesmaAtividade = (atividade.id && pausa.id && String(atividade.id) === String(pausa.id)) ||
+                        (atividade.chaveAtividade && pausa.chaveAtividade && atividade.chaveAtividade === pausa.chaveAtividade) ||
+                        (!atividade.id && !atividade.chaveAtividade && atividade.ticket && String(atividade.ticket) === String(pausa.ticket));
+                    if (!mesmaAtividade) return total;
+                    const inicioPausa = converterDataHoraPausa(pausa.dataPausa || pausa.dataInicio, pausa.horaPausa);
+                    if (!inicioPausa) return total;
+                    const fimPausa = pausa.horaRetomada
+                        ? converterDataHoraPausa(pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio, pausa.horaRetomada)
+                        : null;
+                    const inicioSobreposto = Math.max(inicio.getTime(), inicioPausa.getTime());
+                    const fimSobreposto = Math.min(fim, fimPausa ? fimPausa.getTime() : limiteDuracao);
+                    return total + Math.max(0, (fimSobreposto - inicioSobreposto) / 60000);
+                }, 0);
+
+                resumo.minutosDecorridos += minutosDecorridos;
+                resumo.minutosEmAndamento += Math.max(0, minutosDecorridos - pausasMinutos);
             });
 
             const formatarData = valor => {
@@ -1061,10 +1118,16 @@
                 : formatarHoras(minutos);
             const linhasColaboradores = [...colaboradores.entries()]
                 .sort(([nomeA], [nomeB]) => nomeA.localeCompare(nomeB, 'pt-BR'))
-                .map(([nome, resumo]) =>
-                    `- ${nome}: ${resumo.criadas} iniciada(s), ${resumo.pausas} pausa(s), ${resumo.concluidas} concluída(s), ${resumo.retroativas} retroativa(s)` +
-                    (resumo.concluidas ? `; tempo ativo total nas finalizadas: ${formatarHoras(resumo.minutosAtivos)}` : '')
-                );
+                .flatMap(([nome, resumo]) => [
+                    `- ${nome}`,
+                    `  - Total de Atividades iniciadas no dia: ${resumo.iniciadas}`,
+                    `  - Total de Pausas iniciadas no dia: ${resumo.pausas}`,
+                    `  - Total de atividades finalizadas no dia: ${resumo.concluidas}`,
+                    `  - Total de atividades finalizadas retroativas: ${resumo.retroativas}`,
+                    `  - Tempo total gasto nas atividades abertas/iniciadas: ${formatarHoras(resumo.minutosDecorridos)}`,
+                    `  - Tempo total em andamento (pausas descontadas): ${formatarHoras(resumo.minutosEmAndamento)}`,
+                    `  - Tempo total gasto nas atividades finalizadas (pausas descontadas): ${formatarHoras(resumo.minutosAtivos)}`
+                ]);
             const linhasSetores = [...setores.entries()]
                 .sort(([, resumoA], [, resumoB]) => resumoB.quantidade - resumoA.quantidade)
                 .map(([setor, resumo]) =>
@@ -1074,21 +1137,18 @@
                 (total, pausa) => total + calcularMinutosPausaNoDia(pausa, data),
                 0
             );
-            const totalRetroativas = [...colaboradores.values()].reduce((total, resumo) => total + resumo.retroativas, 0);
-
             return [
                 `RELATÓRIO DE ACOMPANHAMENTO DE ATIVIDADES — ${formatarData(data)}`,
                 '',
                 'RESUMO DO DIA',
-                `- Atividades criadas (card): ${totais.criadas}`,
-                `- Atividades iniciadas registradas: ${iniciosDoDia.length}`,
-                `- Em andamento: ${totais.emAndamento}`,
-                `- Pausadas ao fim do dia: ${pausasNoFimDoDia.length}`,
-                `- Concluídas no dia: ${totais.concluidas}`,
-                `- Concluídas retroativamente: ${totalRetroativas}`,
+                `- Total atividades criadas no dia: ${totais.criadas}`,
+                `- Total de atividades em andamento no dia: ${totais.emAndamento}`,
+                `- Total de atividades pausadas no dia: ${totais.pausadas}`,
+                `- Total de atividades pausadas retroativas: ${atividadesPausadasRetroativas.size}`,
+                `- Total de atividades concluídas no dia: ${totais.concluidas}`,
                 `- Taxa de finalização: ${Math.round(totais.taxaFinalizacao)}%`,
-                `- Tempo total gasto: ${formatarTempo(totais.tempoTotalAtividades)}`,
-                `- Média de finalização: ${formatarTempo(totais.tempoMedioFinalizacao)}`,
+                `- Tempo total gasto de todos colaboradores: ${formatarTempo(totais.tempoTotalAtividades)}`,
+                `- Média de finalização total: ${formatarTempo(totais.tempoMedioFinalizacao)}`,
                 `- Média de pausa: ${formatarTempo(totais.tempoMedioPausa)}`,
                 `- Média por colaborador: ${formatarTempo(totais.mediaPorColaboradorDia)}`,
                 '',
@@ -1100,14 +1160,12 @@
                 `- Total de pausas: ${pausasDoDia.length}; tempo somado no dia: ${formatarHoras(pausasDoDiaMinutos)}`,
                 '',
                 'CRITÉRIOS',
-                '- Inícios por colaborador são contados pelos registros do tipo INICIO na data selecionada.',
-                '- Os quatro cards de status usam as atividades criadas na data selecionada; em andamento e pausadas são estados observados no encerramento desse dia.',
-                '- As contagens de em andamento, pausadas e concluídas formam a divisão do total criado nesse dia.',
-                '- Conclusões por colaborador são contadas pela data de conclusão; atividades auxiliares não entram nessa contagem.',
-                '- Pausadas por colaborador e o total de pausadas consideram atividades que permaneciam pausadas no fim do dia selecionado.',
-                '- Pausas por setor continuam contando os registros de pausa iniciados na data selecionada.',
-                '- Total de tempo e média de finalização consideram a duração registrada das atividades finalizadas na data selecionada, sem descontar pausas.',
-                '- O total de atividades criadas do card usa a contagem distinta da página; por isso pode diferir dos registros individuais de INICIO.'
+                '- Atividades abertas são contadas pelos eventos INICIO registrados na data selecionada.',
+                '- Pausas durante o dia são contadas pela data de início da pausa; o status ao fim do dia é informado separadamente.',
+                '- As atividades por colaborador mostram apenas movimentos da data selecionada; as finalizações e o tempo ativo excluem atividades iniciadas em dias anteriores.',
+                '- O tempo ativo das atividades finalizadas no dia desconta a duração das pausas associadas.',
+                '- Pausas por setor e seu tempo consideram os registros de pausa iniciados na data selecionada.',
+                '- O total de atividades criadas do card usa a contagem distinta da página e pode diferir do número de eventos INICIO.'
             ].join('\n');
         }
 
@@ -1286,7 +1344,7 @@
                     { label: 'Atividades criadas', data: nomes.map(nome => porColaborador[nome]), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[1], borderWidth: 1, borderRadius: 5, order: 1 },
                     { type: 'line', label: 'Taxa de finalização', data: nomes.map(nome => porColaborador[nome] ? Math.min(100, finalizadasPorColaborador[nome] / porColaborador[nome] * 100) : 0), yAxisID: 'yTaxa', borderColor: '#f97316', backgroundColor: '#f97316', borderWidth: 3, tension: 0.3, fill: false, showLine: false, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 1.5, pointRadius: 4, pointHoverRadius: 6, order: 0 }
                 ] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top', align: 'center' } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' }, ticks: { precision: 0 } }, yTaxa: { beginAtZero: true, position: 'right', grid: { display: false }, border: { display: true, color: '#f97316' }, ticks: { color: '#f97316', callback: valor => `${Math.round(valor)}%` } } } },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', align: 'center' } }, scales: { x: { grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' }, ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } }, y: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0 } }, yTaxa: { beginAtZero: true, position: 'right', grid: { display: false }, border: { display: true, color: '#f97316' }, ticks: { color: '#f97316', callback: valor => `${Math.round(valor)}%` } } } },
                 plugins: [PLUGIN_ROTULOS_ATIVIDADES_COLABORADOR]
             });
         }
@@ -1353,7 +1411,7 @@
                         { label: 'Finalizada', data: nomes.map(nome => contagens[nome].finalizada), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[1], borderWidth: 1, borderRadius: 4 }
                     ]
                 },
-                options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 28 } }, plugins: { legend: { display: false } }, scales: { x: { position: 'top', ticks: { padding: 8 } }, y: { beginAtZero: true, ticks: { precision: 0, stepSize: 1 } } } },
+                options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 16 } }, plugins: { legend: { display: false } }, scales: { x: { position: 'bottom', grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' }, ticks: { padding: 8, autoSkip: false, maxRotation: 45, minRotation: 0 } }, y: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0, stepSize: 1 } } } },
                 plugins: [PLUGIN_VALORES_COLUNAS]
             });
         }
@@ -1510,7 +1568,7 @@
                         x: { ticks: { autoSkip: true, maxRotation: 35, minRotation: 0 } }
                     }
                 },
-                plugins: [PLUGIN_CURVA_TEMPO_MEDIO, PLUGIN_VALORES_TEMPO_MEDIO]
+                plugins: [PLUGIN_LINHA_TEMPO_MEDIO, PLUGIN_VALORES_TEMPO_MEDIO]
             });
         }
 
