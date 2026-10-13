@@ -201,6 +201,11 @@
         .relatorio-texto { margin: 0; color: #1f2937; font: 14px/1.6 'Segoe UI', Tahoma, sans-serif; white-space: pre-wrap; overflow-wrap: anywhere; }
         .relatorio-modal-footer { justify-content: flex-end; border-top: 1px solid #e5edf5; }
         .relatorio-status { margin-right: auto; color: #2f855a; font-size: .9em; }
+        .comparativo-detalhes-tabela { min-width: 680px; font-size: .9em; }
+        .comparativo-detalhes-tabela thead { position: sticky; top: 0; }
+        .comparativo-detalhes-tabela th, .comparativo-detalhes-tabela td { padding: 9px 10px; }
+        .comparativo-detalhes-vazio { padding: 24px 8px; color: #64748b; text-align: center; }
+        .comparativo-detalhes-criterio { margin: 0 0 14px; color: #475569; line-height: 1.5; }
 
         .section-title { color: #2c3e50; margin-bottom: 16px; font-size: 1.25em; }
         .table-container { overflow-x: auto; }
@@ -248,6 +253,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="firebase-auth.js"></script>
+    <script src="colaborador-tempo.js"></script>
     <script>
         if (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.includes('COLE_AQUI')) {
             firebase.initializeApp(FIREBASE_CONFIG);
@@ -361,9 +367,9 @@
                 </div>
             </div>
             <div class="card linha-adaptavel">
-                <h2 class="chart-title">Tempo Médio Total por Colaborador</h2>
+                <h2 class="chart-title">Tempo Total Ativo por Colaborador</h2>
                 <div id="containerGraficoTempoMedioAtividade" class="chart-container small"><canvas id="chartTempoMedioAtividade"></canvas></div>
-                <div id="estadoTempoMedioAtividade" class="empty-state" hidden>Nenhuma atividade finalizada nesta data</div>
+                <div id="estadoTempoMedioAtividade" class="empty-state" hidden>Nenhum tempo ativo registrado nesta data</div>
             </div>
             <div class="card">
                 <h2 class="chart-title">Atividades Retroativas Finalizadas por Colaborador</h2>
@@ -420,6 +426,18 @@
                 <button type="button" id="btnCopiarRelatorio">Copiar relatório</button>
             </div>
         </div>
+        <div id="modalDetalhesComparativo" class="relatorio-modal" role="dialog" aria-modal="true" aria-labelledby="tituloDetalhesComparativo">
+            <div class="relatorio-modal-content">
+                <div class="relatorio-modal-header">
+                    <h2 id="tituloDetalhesComparativo">Atividades do comparativo</h2>
+                    <button type="button" id="btnFecharDetalhesComparativo" class="btn-secondary" aria-label="Fechar detalhes">Fechar</button>
+                </div>
+                <div class="relatorio-modal-body">
+                    <p id="criterioDetalhesComparativo" class="comparativo-detalhes-criterio"></p>
+                    <div id="conteudoDetalhesComparativo" class="table-container"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -451,9 +469,34 @@
                         const valor = dataset.data[indice];
                         if (Number(valor) !== 0 && valor !== null && valor !== undefined) {
                             contexto.textAlign = 'center';
-                            const deslocamento = chart.canvas.id === 'chartStatusPorColaborador' ? 18 : (dataset.type === 'line' ? 18 : 24);
                             const rotulo = chart.canvas.id === 'chartAtividadesPorColaborador' && dataset.type === 'line' ? `${Math.round(valor)}%` : valor;
-                            contexto.fillText(rotulo, barra.x, Math.max(barra.y - deslocamento, 18));
+                            if (dataset.type === 'line') {
+                                contexto.font = '600 11px Segoe UI';
+                                contexto.textBaseline = 'middle';
+                                const largura = contexto.measureText(rotulo).width + 12;
+                                const altura = 18;
+                                const topo = Math.max(barra.y - 32, chart.chartArea.top + 2);
+                                contexto.beginPath();
+                                contexto.roundRect(barra.x - largura / 2, topo, largura, altura, 9);
+                                contexto.fillStyle = '#facc15';
+                                contexto.fill();
+                                contexto.fillStyle = '#1f2937';
+                                contexto.fillText(rotulo, barra.x, topo + altura / 2);
+                            } else {
+                                contexto.font = '600 12px Segoe UI';
+                                contexto.textBaseline = 'bottom';
+                                contexto.strokeStyle = '#fff';
+                                contexto.lineWidth = 3;
+                                const usarFaixaSuperior =
+                                    chart.canvas.id === 'chartStatusPorColaborador' &&
+                                    barra.y <= chart.chartArea.top + chart.chartArea.height * 0.15;
+                                const posicaoY = usarFaixaSuperior
+                                    ? chart.chartArea.top - 22
+                                    : barra.y - 14;
+                                contexto.strokeText(rotulo, barra.x, posicaoY);
+                                contexto.fillStyle = '#1f2937';
+                                contexto.fillText(rotulo, barra.x, posicaoY);
+                            }
                         }
                     });
                 });
@@ -530,7 +573,11 @@
                             contexto.strokeStyle = '#fff';
                             contexto.lineWidth = 3;
                             const rotulo = valor.toLocaleString('pt-BR');
-                            const posicaoY = Math.max(elemento.y - 26, 18);
+                            const usarFaixaSuperior =
+                                elemento.y <= chart.chartArea.top + chart.chartArea.height * 0.15;
+                            const posicaoY = usarFaixaSuperior
+                                ? chart.chartArea.top - 22
+                                : elemento.y - 16;
                             contexto.strokeText(rotulo, elemento.x, posicaoY);
                             contexto.fillText(rotulo, elemento.x, posicaoY);
                         } else if (dataset.type === 'line') {
@@ -540,7 +587,7 @@
                             const largura = contexto.measureText(rotulo).width + 12;
                             const altura = 18;
                             const esquerda = elemento.x - largura / 2;
-                            const topo = Math.max(elemento.y - 27, chart.chartArea.top + 2);
+                            const topo = Math.max(elemento.y - 32, chart.chartArea.top + 2);
                             contexto.beginPath();
                             contexto.roundRect(esquerda, topo, largura, altura, 9);
                             contexto.fillStyle = '#facc15';
@@ -549,9 +596,13 @@
                             contexto.fillText(rotulo, elemento.x, topo + altura / 2);
                         } else {
                             contexto.font = '700 11px Segoe UI';
-                            contexto.textBaseline = 'middle';
-                            contexto.fillStyle = '#fff';
-                            contexto.fillText(valor.toLocaleString('pt-BR'), elemento.x, Math.min(elemento.y + 14, chart.chartArea.bottom - 8));
+                            contexto.textBaseline = 'bottom';
+                            contexto.fillStyle = '#1f2937';
+                            contexto.strokeStyle = '#fff';
+                            contexto.lineWidth = 3;
+                            const posicaoY = Math.max(elemento.y - 8, chart.chartArea.top + 18);
+                            contexto.strokeText(valor.toLocaleString('pt-BR'), elemento.x, posicaoY);
+                            contexto.fillText(valor.toLocaleString('pt-BR'), elemento.x, posicaoY);
                         }
                     });
                 });
@@ -573,7 +624,7 @@
                     chart.getDatasetMeta(indiceDataset).data.forEach((ponto, indice) => {
                         const valor = dataset.data[indice];
                         if (valor === null || valor === undefined) return;
-                        const rotulo = formatarHoras(Number(valor));
+                        const rotulo = formatarTempoTotalAtividades(Number(valor));
                         const posicaoY = Math.max(ponto.y - 10, 14);
                         contexto.strokeText(rotulo, ponto.x, posicaoY);
                         contexto.fillText(rotulo, ponto.x, posicaoY);
@@ -1157,9 +1208,15 @@
             const atividadesPorId = new Map();
             const adicionarAtividade = atividade => {
                 if (!atividade || atividade.ehAjudante) return;
-                const identificador = atividade.id || atividade.chaveAtividade || atividade.ticket;
+                const identificador = atividade.id !== undefined && atividade.id !== null
+                    ? `id:${atividade.id}`
+                    : atividade.chaveAtividade
+                        ? `chave:${atividade.chaveAtividade}`
+                        : atividade.ticket
+                            ? `ticket:${atividade.ticket}`
+                            : '';
                 if (!identificador || dataAtividadeParaISO(atividade.dataInicio) !== data) return;
-                const chave = String(identificador);
+                const chave = identificador;
                 const existente = atividadesPorId.get(chave);
                 atividadesPorId.set(chave, existente ? { ...atividade, ...existente } : atividade);
             };
@@ -1168,15 +1225,31 @@
             atividadesEmAndamento.forEach(adicionarAtividade);
             historicoPausas.forEach(adicionarAtividade);
 
+            obterAtividadesDaRastreabilidade().forEach(atividade => {
+                if (!atividade || atividade.ehAjudante) return;
+                const eventoCriacao = (atividade._eventosResumo || [])
+                    .filter(evento => evento.tipo === 'INICIO')
+                    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))[0];
+                const dataCriacao = dataMovimentacaoParaISO(
+                    eventoCriacao?.timestamp || atividade.data_criacao || atividade.dataInicio
+                );
+                if (dataCriacao !== data) return;
+
+                const identificador = atividade.id !== undefined && atividade.id !== null
+                    ? `id:${atividade.id}`
+                    : atividade.chaveAtividade
+                        ? `chave:${atividade.chaveAtividade}`
+                        : atividade.ticket
+                            ? `ticket:${atividade.ticket}`
+                            : '';
+                if (identificador) atividadesPorId.set(identificador, atividade);
+            });
+
             return [...atividadesPorId.values()];
         }
 
         function obterAtividadesPorStatus(data) {
-            const criadas = obterAtividadesDaRastreabilidade().filter(atividade => {
-                const inicio = (atividade._eventosResumo || []).find(evento => evento.tipo === 'INICIO');
-                const dataCriacao = dataMovimentacaoParaISO(inicio?.timestamp || atividade.data_criacao || atividade.dataInicio);
-                return dataCriacao === data;
-            });
+            const criadas = obterAtividadesCriadasNoDia(data);
             const emAndamento = [];
             const pausadas = [];
             const concluidas = [];
@@ -1197,6 +1270,168 @@
                 }
             });
             return { criadas, emAndamento, pausadas, concluidas };
+        }
+
+        function obterDataCriacaoComparativo(atividade) {
+            const eventoCriacao = (atividade._eventosResumo || [])
+                .filter(evento => evento.tipo === 'INICIO')
+                .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            return dataMovimentacaoParaISO(
+                eventoCriacao[0]?.timestamp || atividade.data_criacao || atividade.dataInicio
+            );
+        }
+
+        function obterDatasFinalizacaoComparativo(atividade) {
+            const finalizacoes = (atividade._eventosResumo || [])
+                .filter(evento => evento.tipo === 'FIM')
+                .map(evento => dataMovimentacaoParaISO(evento.timestamp))
+                .filter(Boolean);
+            if (finalizacoes.length) return [...new Set(finalizacoes)];
+            const finalizacao = dataMovimentacaoParaISO(atividade.data_finalizacao || atividade.dataFim);
+            return finalizacao ? [finalizacao] : [];
+        }
+
+        function obterFinalizacoesDaAtividadeNoDia(atividade, data) {
+            const eventosFim = (atividade._eventosResumo || [])
+                .filter(evento => evento.tipo === 'FIM' && dataMovimentacaoParaISO(evento.timestamp) === data)
+                .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            if (eventosFim.length) return eventosFim;
+            if (dataMovimentacaoParaISO(atividade.data_finalizacao || atividade.dataFim) !== data) return [];
+            return [{
+                tipo: 'FIM',
+                timestamp: atividade.data_finalizacao ||
+                    converterDataHoraPausa(atividade.dataFim, atividade.horaFim)?.toISOString() ||
+                    atividade.dataFim
+            }];
+        }
+
+        function calcularMinutosAtivosAteFinalizacao(atividade, eventoFinalizacao) {
+            const limite = new Date(eventoFinalizacao.timestamp).getTime();
+            if (!Number.isFinite(limite)) return calcularMinutosAtivos(atividade);
+            const pausasAteFinalizacao = (atividade._pausasResumo || [])
+                .filter(pausa => {
+                    const inicio = pausa.dataHoraPausa
+                        ? new Date(pausa.dataHoraPausa).getTime()
+                        : converterDataHoraPausa(pausa.dataPausa || pausa.dataInicio, pausa.horaPausa)?.getTime();
+                    return !Number.isFinite(inicio) || inicio <= limite;
+                })
+                .map(pausa => {
+                    const retomada = pausa.dataHoraRetomada
+                        ? new Date(pausa.dataHoraRetomada).getTime()
+                        : converterDataHoraPausa(
+                            pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio,
+                            pausa.horaRetomada
+                        )?.getTime();
+                    if (!Number.isFinite(retomada) || retomada <= limite) return pausa;
+                    return {
+                        ...pausa,
+                        dataHoraRetomada: '',
+                        dataRetomada: '',
+                        horaRetomada: '',
+                        status: 'Pausado'
+                    };
+                });
+            return calcularMinutosAtivos({
+                ...atividade,
+                _eventosResumo: (atividade._eventosResumo || [])
+                    .filter(evento => new Date(evento.timestamp).getTime() <= limite),
+                _pausasResumo: pausasAteFinalizacao
+            });
+        }
+
+        function obterAtividadesRetroativasFinalizadasNoDia(data) {
+            return obterAtividadesDaRastreabilidade().filter(atividade => {
+                if (atividade.ehAjudante) return false;
+                const dataCriacao = obterDataCriacaoComparativo(atividade);
+                return dataCriacao && dataCriacao < data &&
+                    obterDatasFinalizacaoComparativo(atividade).includes(data);
+            });
+        }
+
+        function obterDatasComparativoDiario() {
+            const datas = new Set();
+            [...atividades, ...atividadesEmAndamento, ...historicoPausas, ...obterAtividadesDaRastreabilidade()].forEach(atividade => {
+                if (atividade.ehAjudante) return;
+                const dataCriacao = obterDataCriacaoComparativo(atividade);
+                if (dataCriacao) datas.add(dataCriacao);
+                obterDatasFinalizacaoComparativo(atividade).forEach(data => datas.add(data));
+            });
+            return [...datas].sort();
+        }
+
+        function formatarDataComparativo(data) {
+            if (!data) return 'Não informada';
+            const partes = data.split('-');
+            return partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : data;
+        }
+
+        function abrirDetalhesComparativo(data, indiceSerie, atividadesDetalhe) {
+            const series = [
+                {
+                    titulo: 'Atividades criadas',
+                    criterio: 'Atividades cuja criação ocorreu nesta data.'
+                },
+                {
+                    titulo: 'Atividades finalizadas (criadas no dia)',
+                    criterio: 'Atividades criadas e finalizadas nesta data. Esta contagem corresponde ao card “Total Concluídas no Dia”.'
+                },
+                {
+                    titulo: 'Atividades retroativas finalizadas',
+                    criterio: 'Atividades criadas antes desta data e finalizadas nesta data.'
+                }
+            ];
+            const serie = series[indiceSerie];
+            if (!serie) return;
+
+            document.getElementById('tituloDetalhesComparativo').textContent =
+                `${serie.titulo} — ${formatarDataComparativo(data)} (${atividadesDetalhe.length})`;
+            document.getElementById('criterioDetalhesComparativo').textContent = serie.criterio;
+            const conteudo = document.getElementById('conteudoDetalhesComparativo');
+            conteudo.replaceChildren();
+            if (!atividadesDetalhe.length) {
+                const vazio = document.createElement('p');
+                vazio.className = 'comparativo-detalhes-vazio';
+                vazio.textContent = 'Nenhuma atividade corresponde a este ponto.';
+                conteudo.appendChild(vazio);
+            } else {
+                const tabela = document.createElement('table');
+                tabela.className = 'comparativo-detalhes-tabela';
+                const cabecalho = document.createElement('thead');
+                const linhaCabecalho = document.createElement('tr');
+                ['Ticket / Chave', 'Atividade', 'Colaborador', 'Criada em', 'Finalizada em'].forEach(texto => {
+                    const celula = document.createElement('th');
+                    celula.textContent = texto;
+                    linhaCabecalho.appendChild(celula);
+                });
+                cabecalho.appendChild(linhaCabecalho);
+                tabela.appendChild(cabecalho);
+
+                const corpo = document.createElement('tbody');
+                atividadesDetalhe.forEach(atividade => {
+                    const linha = document.createElement('tr');
+                    const valores = [
+                        atividade.ticket || atividade.chaveAtividade || atividade.id || 'Sem identificação',
+                        atividade.titulo || atividade.descricao || 'Sem descrição',
+                        atividade.nome || atividade.colaborador || atividade.finalizado_por || 'Não informado',
+                        formatarDataComparativo(obterDataCriacaoComparativo(atividade)),
+                        formatarDataComparativo(
+                            obterDatasFinalizacaoComparativo(atividade).includes(data)
+                                ? data
+                                : obterDatasFinalizacaoComparativo(atividade).slice(-1)[0]
+                        )
+                    ];
+                    valores.forEach(valor => {
+                        const celula = document.createElement('td');
+                        celula.textContent = String(valor);
+                        linha.appendChild(celula);
+                    });
+                    corpo.appendChild(linha);
+                });
+                tabela.appendChild(corpo);
+                conteudo.appendChild(tabela);
+            }
+            document.getElementById('modalDetalhesComparativo').style.display = 'flex';
+            document.getElementById('btnFecharDetalhesComparativo').focus();
         }
 
         function criarTextoKanban(classe, texto) {
@@ -1283,13 +1518,6 @@
                 (total, atividade) => total + calcularMinutosAtivos(atividade, data),
                 0
             );
-            const atividadesFinalizadasNoDia = atividadesRastreabilidade.filter(atividade => {
-                const finalizacoes = (atividade._eventosResumo || [])
-                    .filter(evento => evento.tipo === 'FIM');
-                return finalizacoes.length
-                    ? finalizacoes.some(evento => dataMovimentacaoParaISO(evento.timestamp) === data)
-                    : dataMovimentacaoParaISO(atividade.data_finalizacao || atividade.dataFim) === data;
-            });
             const chaveTicket = atividade => {
                 const ticket = String(atividade.ticket || '').trim();
                 if (ticket) return `ticket:${ticket}`;
@@ -1297,14 +1525,34 @@
                 if (identificador) return `atividade:${identificador}`;
                 return '';
             };
-            const ticketsFinalizadosNoDia = new Set(
-                atividadesFinalizadasNoDia.map(chaveTicket).filter(Boolean)
-            );
-            const tempoTotalTicketsFinalizados = atividadesRastreabilidade
-                .filter(atividade => ticketsFinalizadosNoDia.has(chaveTicket(atividade)))
-                .reduce((total, atividade) => total + calcularMinutosAtivos(atividade), 0);
-            const tempoMedioFinalizacao = ticketsFinalizadosNoDia.size
-                ? tempoTotalTicketsFinalizados / ticketsFinalizadosNoDia.size
+            const finalizacoesPorTicket = new Map();
+            atividadesRastreabilidade.forEach(atividade => {
+                if (atividade.ehAjudante) return;
+                const ticket = chaveTicket(atividade);
+                if (!ticket) return;
+                const finalizacoes = obterFinalizacoesDaAtividadeNoDia(atividade, data);
+                if (!finalizacoes.length) return;
+
+                const atividadesDoTicket = finalizacoesPorTicket.get(ticket) || new Map();
+                const chaveAtividade = atividade.id !== undefined && atividade.id !== null
+                    ? `id:${atividade.id}`
+                    : atividade.chaveAtividade
+                        ? `chave:${atividade.chaveAtividade}`
+                        : ticket;
+                const finalizacaoMaisRecente = finalizacoes[finalizacoes.length - 1];
+                const finalizacaoExistente = atividadesDoTicket.get(chaveAtividade);
+                if (!finalizacaoExistente ||
+                    new Date(finalizacaoMaisRecente.timestamp) > new Date(finalizacaoExistente.evento.timestamp)) {
+                    atividadesDoTicket.set(chaveAtividade, { atividade, evento: finalizacaoMaisRecente });
+                }
+                finalizacoesPorTicket.set(ticket, atividadesDoTicket);
+            });
+            const tempoTotalTicketsFinalizados = [...finalizacoesPorTicket.values()]
+                .flatMap(atividadesDoTicket => [...atividadesDoTicket.values()])
+                .reduce((total, item) =>
+                    total + calcularMinutosAtivosAteFinalizacao(item.atividade, item.evento), 0);
+            const tempoMedioFinalizacao = finalizacoesPorTicket.size
+                ? tempoTotalTicketsFinalizados / finalizacoesPorTicket.size
                 : null;
             const colaboradoresTempoTotal = new Set();
             atividadesTempoTotal.forEach(atividade => {
@@ -1461,31 +1709,20 @@
         function renderizarGraficoDiario() {
             if (!window.chartPronto || typeof Chart === 'undefined') return;
             if (!filtroMesInicializado) popularSelectMesAtividades();
-            const pausasAtivas = obterPausasAtivasPorTicket();
-            const ticketsPausados = new Set(Object.keys(pausasAtivas));
-            const porDiaCriadas = {};
-            const porDiaFinalizadas = {};
             const mesSelecionado = document.getElementById('selectMesAtividades').value;
-            const adicionar = (contagem, item, data) => {
-                if (!item || !data) return;
-                const iso = dataAtividadeParaISO(data);
-                if (!iso || (iso.slice(0, 7) !== mesSelecionado && mesSelecionado !== 'all')) return;
-                contagem[iso] = (contagem[iso] || 0) + 1;
-            };
-            atividades.forEach(item => {
-                adicionar(porDiaCriadas, item, item.dataInicio);
-                adicionar(porDiaFinalizadas, item, item.dataInicio);
-            });
-            atividadesEmAndamento.forEach(item => {
-                if (!item.ticket || !ticketsPausados.has(String(item.ticket))) adicionar(porDiaCriadas, item, item.dataInicio);
-            });
-            Object.values(pausasAtivas).forEach(item => adicionar(porDiaCriadas, item, item.dataInicio));
-
-            const datas = [...new Set([...Object.keys(porDiaCriadas), ...Object.keys(porDiaFinalizadas)])].sort();
+            const datas = obterDatasComparativoDiario().filter(data =>
+                mesSelecionado === 'all' || data.slice(0, 7) === mesSelecionado
+            );
             const labels = datas.map(data => {
                 const [, mes, dia] = data.split('-');
                 return `${dia}/${mes}`;
             });
+            const detalhesPorSerie = [
+                datas.map(data => obterAtividadesCriadasNoDia(data)),
+                datas.map(data => obterAtividadesPorStatus(data).concluidas),
+                datas.map(data => obterAtividadesRetroativasFinalizadasNoDia(data))
+            ];
+            const contagensPorSerie = detalhesPorSerie.map(detalhes => detalhes.map(atividadesDoPonto => atividadesDoPonto.length));
             const canvas = document.getElementById('chartAtividadesCriadasPorDia');
             if (graficoDiario) graficoDiario.destroy();
             graficoDiario = new Chart(canvas.getContext('2d'), {
@@ -1493,11 +1730,37 @@
                 data: {
                     labels,
                     datasets: [
-                        { label: 'Atividades criadas', data: datas.map(data => porDiaCriadas[data] || 0), borderColor: PALETA_GRAFICOS[1], backgroundColor: 'rgba(30, 58, 95, 0.12)', borderWidth: 1.5, fill: true, tension: 0.4, pointBackgroundColor: PALETA_GRAFICOS[1], pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5 },
-                        { label: 'Atividades finalizadas', data: datas.map(data => porDiaFinalizadas[data] || 0), borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', borderWidth: 1.5, fill: false, tension: 0.4, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5 }
+                        { label: 'Atividades criadas', data: contagensPorSerie[0], borderColor: PALETA_GRAFICOS[1], backgroundColor: 'rgba(30, 58, 95, 0.12)', borderWidth: 1.5, fill: true, tension: 0.4, pointBackgroundColor: PALETA_GRAFICOS[1], pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5, pointHitRadius: 22 },
+                        { label: 'Atividades finalizadas (criadas no dia)', data: contagensPorSerie[1], borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', borderWidth: 1.5, fill: false, tension: 0.4, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5, pointHitRadius: 22 },
+                        { label: 'Atividades retroativas finalizadas', data: contagensPorSerie[2], borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', borderWidth: 1.5, fill: false, tension: 0.4, pointBackgroundColor: '#8b5cf6', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5, pointHitRadius: 22 }
                     ]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom' } }, scales: { x: { grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' } }, y: { beginAtZero: true, grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' }, ticks: { precision: 0, stepSize: 1 } } } },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'nearest', intersect: false },
+                    onClick(event, elementos, chart) {
+                        const elemento = elementos[0] || chart.getElementsAtEventForMode(
+                            event,
+                            'nearest',
+                            { intersect: false, axis: 'xy' },
+                            true
+                        )[0];
+                        if (!elemento) return;
+                        const ponto = chart.getDatasetMeta(elemento.datasetIndex).data[elemento.index];
+                        if (!ponto || Math.hypot(event.x - ponto.x, event.y - ponto.y) > 40) return;
+                        abrirDetalhesComparativo(
+                            datas[elemento.index],
+                            elemento.datasetIndex,
+                            detalhesPorSerie[elemento.datasetIndex][elemento.index]
+                        );
+                    },
+                    onHover(event, elementos) {
+                        event.native.target.style.cursor = elementos.length ? 'pointer' : 'default';
+                    },
+                    plugins: { legend: { display: true, position: 'bottom' } },
+                    scales: { x: { grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' } }, y: { beginAtZero: true, grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' }, ticks: { precision: 0, stepSize: 1 } } }
+                },
                 plugins: [{
                     id: 'valoresNosPontos',
                     afterDatasetsDraw(chart) {
@@ -1554,7 +1817,7 @@
                     { label: 'Atividades criadas', data: nomes.map(nome => porColaborador[nome]), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[1], borderWidth: 1, borderRadius: 5, order: 1 },
                     { type: 'line', label: 'Taxa de finalização', data: nomes.map(nome => porColaborador[nome] ? Math.min(100, finalizadasPorColaborador[nome] / porColaborador[nome] * 100) : 0), yAxisID: 'yTaxa', borderColor: '#f97316', backgroundColor: '#f97316', borderWidth: 3, tension: 0.3, fill: false, showLine: false, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 1.5, pointRadius: 4, pointHoverRadius: 6, order: 0 }
                 ] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', align: 'center' } }, scales: { x: { grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' }, ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } }, y: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0 } }, yTaxa: { beginAtZero: true, position: 'right', grid: { display: false }, border: { display: true, color: '#f97316' }, ticks: { color: '#f97316', callback: valor => `${Math.round(valor)}%` } } } },
+                options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 44 } }, plugins: { legend: { display: true, position: 'bottom', align: 'center' } }, scales: { x: { grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' }, ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } }, y: { beginAtZero: true, grace: '15%', grid: { display: false }, ticks: { precision: 0 } }, yTaxa: { beginAtZero: true, position: 'right', grid: { display: false }, border: { display: true, color: '#f97316' }, ticks: { color: '#f97316', callback: valor => `${Math.round(valor)}%` } } } },
                 plugins: [PLUGIN_ROTULOS_ATIVIDADES_COLABORADOR]
             });
         }
@@ -1621,7 +1884,7 @@
                         { label: 'Finalizada', data: nomes.map(nome => contagens[nome].finalizada), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[1], borderWidth: 1, borderRadius: 4 }
                     ]
                 },
-                options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 16 } }, plugins: { legend: { display: false } }, scales: { x: { position: 'bottom', grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' }, ticks: { padding: 8, autoSkip: false, maxRotation: 45, minRotation: 0 } }, y: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0, stepSize: 1 } } } },
+                options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 36 } }, plugins: { legend: { display: false } }, scales: { x: { position: 'bottom', grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' }, ticks: { padding: 8, autoSkip: false, maxRotation: 45, minRotation: 0 } }, y: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0, stepSize: 1 } } } },
                 plugins: [PLUGIN_VALORES_COLUNAS]
             });
         }
@@ -1720,65 +1983,125 @@
         }
 
         function renderizarGraficoTempoMedio() {
+            if (!window.chartPronto || typeof Chart === 'undefined') return;
             const data = obterDiaGrafico();
-            const temposPorColaborador = new Map();
-            atividades
-                .filter(item => dataAtividadeParaISO(item.dataFim) === data && item.duracao)
-                .forEach(item => {
-                    const colaborador = item.nome || item.colaborador || 'Não informado';
-                    const minutos = calcularMinutosAtivos(item);
-                    const resumo = temposPorColaborador.get(colaborador) || { totalMinutos: 0, quantidade: 0 };
-                    resumo.totalMinutos += minutos;
-                    resumo.quantidade++;
-                    temposPorColaborador.set(colaborador, resumo);
-                });
-            const colaboradores = [...temposPorColaborador.entries()].sort(([nomeA], [nomeB]) => nomeA.localeCompare(nomeB, 'pt-BR'));
+            const temposPublicados = obterTemposPorColaboradorPublicados(data);
+            const colaboradores = temposPublicados || agruparTempoAtivoPorColaborador(
+                obterAtividadesDaRastreabilidade().map(atividade => {
+                    const eventoInicio = (atividade._eventosResumo || []).find(evento => evento.tipo === 'INICIO');
+                    const emailsColaborador = [
+                        atividade.email_criador,
+                        atividade.email_usuario,
+                        eventoInicio?.email_usuario
+                    ];
+                    const emailColaborador = emailsColaborador.find(email =>
+                        typeof email === 'string' && email.includes('@')
+                    );
+                    const nomesColaborador = [
+                        atividade.criador_atividade,
+                        atividade.nome_usuario,
+                        eventoInicio?.nome_usuario,
+                        eventoInicio?.colaborador
+                    ];
+                    const pausas = atividade._pausasResumo || [];
+                    const estaEmAndamento = atividadesEmAndamento.some(item =>
+                        (atividade.id !== undefined && atividade.id !== null && String(item.id) === String(atividade.id)) ||
+                        (atividade.chaveAtividade && item.chaveAtividade === atividade.chaveAtividade) ||
+                        (!atividade.id && !atividade.chaveAtividade && atividade.ticket &&
+                            String(item.ticket) === String(atividade.ticket))
+                    );
+                    const pausaAtual = [...pausas].reverse().find(pausa =>
+                        !(pausa.dataHoraRetomada || pausa.horaRetomada || pausa.dataRetomada) &&
+                        (pausa.status === 'Pausado' || pausa.ativa !== false)
+                    );
+                    const inicio = atividade.data_criacao
+                        ? new Date(atividade.data_criacao).getTime()
+                        : converterDataHoraPausa(atividade.dataInicio, atividade.horaInicio)?.getTime();
+                    const fim = atividade.data_finalizacao
+                        ? new Date(atividade.data_finalizacao).getTime()
+                        : converterDataHoraPausa(atividade.dataFim, atividade.horaFim)?.getTime();
+                    const totalAtivoMs = calcularTempoAtivoDiarioMs({
+                        data,
+                        eventos: atividade._eventosResumo || [],
+                        pausas: pausas.map(pausa => ({
+                            inicio: pausa.dataHoraPausa
+                                ? new Date(pausa.dataHoraPausa).getTime()
+                                : converterDataHoraPausa(pausa.dataPausa || pausa.dataInicio, pausa.horaPausa)?.getTime(),
+                            retomada: pausa.dataHoraRetomada
+                                ? new Date(pausa.dataHoraRetomada).getTime()
+                                : converterDataHoraPausa(
+                                    pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio,
+                                    pausa.horaRetomada
+                                )?.getTime()
+                        })),
+                        inicio,
+                        fim,
+                        aberta: estaEmAndamento,
+                        pausada: String(atividade.status || '').toLocaleLowerCase('pt-BR') === 'pausado' ||
+                            Boolean(pausaAtual),
+                        inicioPausa: pausaAtual?.dataHoraPausa
+                            ? new Date(pausaAtual.dataHoraPausa).getTime()
+                            : converterDataHoraPausa(
+                                pausaAtual?.dataPausa || pausaAtual?.dataInicio,
+                                pausaAtual?.horaPausa
+                            )?.getTime()
+                    });
+                    return {
+                        nome: obterNomeColaboradorTempo(nomesColaborador, emailColaborador),
+                        totalMs: Math.floor(totalAtivoMs / 1000) * 1000,
+                        ehAjudante: atividade.ehAjudante
+                    };
+                })
+            );
             const container = document.getElementById('containerGraficoTempoMedioAtividade');
             const estadoVazio = document.getElementById('estadoTempoMedioAtividade');
-            if (graficoTempoMedio) {
-                graficoTempoMedio.destroy();
-                graficoTempoMedio = null;
-            }
             if (colaboradores.length === 0) {
+                if (graficoTempoMedio) {
+                    graficoTempoMedio.destroy();
+                    graficoTempoMedio = null;
+                }
                 container.hidden = true;
                 estadoVazio.hidden = false;
                 return;
             }
             container.hidden = false;
             estadoVazio.hidden = true;
+            const labels = colaboradores.map(resumo => resumo.nome);
+            const valores = colaboradores.map(resumo => resumo.totalMs / 60000);
+            if (graficoTempoMedio) {
+                graficoTempoMedio.data.labels = labels;
+                graficoTempoMedio.data.datasets[0].data = valores;
+                graficoTempoMedio.update('none');
+                return;
+            }
             const canvas = document.getElementById('chartTempoMedioAtividade');
             graficoTempoMedio = new Chart(canvas.getContext('2d'), {
-                type: 'line',
+                type: 'bar',
                 data: {
-                    labels: colaboradores.map(([nome]) => nome),
+                    labels,
                     datasets: [{
-                        label: 'Média ativa',
-                        data: colaboradores.map(([, resumo]) => resumo.totalMinutos / resumo.quantidade),
+                        label: 'Total ativo',
+                        data: valores,
+                        backgroundColor: '#5b8ec6',
                         borderColor: '#1e3a5f',
-                        backgroundColor: 'rgba(91, 142, 198, 0.14)',
-                        borderWidth: 2,
-                        fill: false,
-                        showLine: false,
-                        pointBackgroundColor: '#5b8ec6',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 1.5,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
+                        borderWidth: 1,
+                        borderRadius: 5
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: { padding: { top: 32 } },
                     plugins: {
                         legend: { display: false },
-                        tooltip: { callbacks: { label: contexto => `Média ativa: ${formatarHoras(contexto.parsed.y)}` } }
+                        tooltip: { callbacks: { label: contexto => `Total ativo: ${formatarTempoTotalAtividades(contexto.parsed.y)}` } }
                     },
                     scales: {
-                        y: { beginAtZero: true, ticks: { callback: valor => formatarHoras(Number(valor)) } },
+                        y: { beginAtZero: true, ticks: { callback: valor => formatarTempoTotalAtividades(Number(valor)) } },
                         x: { ticks: { autoSkip: true, maxRotation: 35, minRotation: 0 } }
                     }
                 },
-                plugins: [PLUGIN_LINHA_TEMPO_MEDIO, PLUGIN_VALORES_TEMPO_MEDIO]
+                plugins: [PLUGIN_VALORES_TEMPO_MEDIO]
             });
         }
 
@@ -1830,6 +2153,11 @@
             renderizarTabelaHistoricoPausas();
         });
         document.getElementById('dataResumoCards').value = dataD1();
+        setInterval(() => {
+            if (!document.hidden && window.chartPronto && typeof Chart !== 'undefined') {
+                renderizarGraficoTempoMedio();
+            }
+        }, 1000);
 
         async function capturarGraficos() {
             const botao = document.getElementById('btnCapturarGraficos');
@@ -1879,13 +2207,24 @@
         document.getElementById('btnCapturarGraficos').addEventListener('click', capturarGraficos);
         document.getElementById('btnGerarRelatorio').addEventListener('click', abrirRelatorio);
         document.getElementById('btnFecharRelatorio').addEventListener('click', fecharRelatorio);
+        document.getElementById('btnFecharDetalhesComparativo').addEventListener('click', () => {
+            document.getElementById('modalDetalhesComparativo').style.display = 'none';
+        });
         document.getElementById('btnCopiarRelatorio').addEventListener('click', copiarRelatorio);
         document.getElementById('modalRelatorio').addEventListener('click', event => {
             if (event.target.id === 'modalRelatorio') fecharRelatorio();
         });
+        document.getElementById('modalDetalhesComparativo').addEventListener('click', event => {
+            if (event.target.id === 'modalDetalhesComparativo') {
+                document.getElementById('modalDetalhesComparativo').style.display = 'none';
+            }
+        });
         document.addEventListener('keydown', event => {
             if (event.key === 'Escape' && document.getElementById('modalRelatorio').style.display === 'flex') {
                 fecharRelatorio();
+            }
+            if (event.key === 'Escape' && document.getElementById('modalDetalhesComparativo').style.display === 'flex') {
+                document.getElementById('modalDetalhesComparativo').style.display = 'none';
             }
         });
         carregarAtividades();

@@ -437,8 +437,54 @@
 
         .movement-filters {
             display: flex;
+            align-items: center;
             gap: 10px;
             margin-bottom: 15px;
+        }
+
+        .movement-filter-with-totals {
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .collaborator-time-cards {
+            display: flex;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 0 0 16px;
+        }
+
+        .collaborator-time-heading {
+            margin: 0 0 8px;
+            color: #334155;
+            font-size: 1em;
+        }
+
+        .collaborator-time-card {
+            min-width: 112px;
+            padding: 8px 12px;
+            border: 1px solid #dbe4ef;
+            border-left: 3px solid #5b8ec6;
+            border-radius: 7px;
+            background: #f8fafc;
+            text-align: center;
+        }
+
+        .collaborator-time-name {
+            display: block;
+            margin-bottom: 3px;
+            color: #475569;
+            font-size: .76em;
+            font-weight: 600;
+        }
+
+        .collaborator-time-value {
+            display: block;
+            color: #1e3a5f;
+            font-size: .95em;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
         }
 
         .movement-filters input {
@@ -621,6 +667,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="firebase-auth.js"></script>
+    <script src="colaborador-tempo.js"></script>
 </head>
 <body>
     <!-- Sidebar -->
@@ -656,12 +703,14 @@
 
         <div class="card">
             <h2>Rastreabilidade das Atividades <span id="totalTempoRastreabilidade" style="font-size: 0.75em; font-weight: 600; color: #5b8ec6; margin-left: 8px;">Tempo total em andamento: 00:00:00</span></h2>
-            <div class="movement-filters">
+            <div class="movement-filters movement-filter-with-totals">
                 <label for="filtroDataRastreabilidade" style="display: flex; align-items: center; gap: 10px; margin: 0;">
                     Data das movimentações
                     <input type="date" id="filtroDataRastreabilidade" aria-label="Filtrar movimentações por data">
                 </label>
             </div>
+            <h3 class="collaborator-time-heading">Tempo total por colaborador</h3>
+            <div id="temposPorColaboradorRastreabilidade" class="collaborator-time-cards" aria-live="polite" aria-label="Tempo total em andamento por colaborador"></div>
             <div class="table-scroll-container movement-table-container">
                 <table class="movement-table">
                     <thead>
@@ -1366,13 +1415,28 @@
                 const dataCriacao = atividade.data_criacao || eventoCriacao?.timestamp;
                 const dataFinalizacao = estaAberta ? '' : (atividade.data_finalizacao || eventoFinalizacao?.timestamp);
 
+                const emailsColaborador = [
+                    atividade.email_criador,
+                    atividade.email_usuario,
+                    eventoCriacao?.email_usuario
+                ];
+                const emailCriador = emailsColaborador.find(email =>
+                    typeof email === 'string' && email.includes('@')
+                ) || '';
+                const nomesColaborador = [
+                    atividade.criador_atividade,
+                    atividade.nome_usuario,
+                    eventoCriacao?.nome_usuario,
+                    eventoCriacao?.colaborador
+                ];
+                const nomeColaborador = obterNomeColaboradorTempo(nomesColaborador, emailCriador);
+
                 return {
                     atividade,
                     chave,
                     ticket,
-                    nomeCriador: atividade.criador_atividade || atividade.nome_usuario ||
-                        eventoCriacao?.nome_usuario || eventoCriacao?.email_usuario || atividade.email_usuario || '-',
-                    emailCriador: atividade.email_criador || atividade.email_usuario || eventoCriacao?.email_usuario || '',
+                    nomeCriador: nomeColaborador,
+                    emailCriador,
                     dataCriacao: dataCriacao
                         ? formatarDataHoraRastreio(dataCriacao)
                         : formatarDataHoraRastreio('', atividade.dataInicio, atividade.horaInicio),
@@ -1402,6 +1466,43 @@
             return rotulos[tipo] || String(tipo || 'Movimentação');
         }
 
+        function renderizarTemposPorColaboradorRastreabilidade(registros, dataSelecionada) {
+            const container = document.getElementById('temposPorColaboradorRastreabilidade');
+            const colaboradores = agruparTempoAtivoPorColaborador(registros.map(registro => {
+                const tempo = calcularTempoTotalAtividade(registro.atividade, registro, dataSelecionada);
+                const tempoMs = converterTempoAtividadeParaMilissegundos(tempo);
+                return {
+                    nome: registro.nomeCriador,
+                    totalMs: tempoMs,
+                    ehAjudante: registro.atividade.ehAjudante
+                };
+            }));
+
+            container.replaceChildren();
+            if (!colaboradores.length) {
+                const vazio = document.createElement('span');
+                vazio.className = 'collaborator-time-name';
+                vazio.textContent = 'Sem tempo em andamento nesta data';
+                container.appendChild(vazio);
+                publicarTemposPorColaborador(dataSelecionada, []);
+                return;
+            }
+
+            colaboradores.forEach(({ nome, totalMs }) => {
+                const card = document.createElement('div');
+                card.className = 'collaborator-time-card';
+                const nomeElemento = document.createElement('span');
+                nomeElemento.className = 'collaborator-time-name';
+                nomeElemento.textContent = nome;
+                const tempoElemento = document.createElement('span');
+                tempoElemento.className = 'collaborator-time-value';
+                tempoElemento.textContent = formatarTempoTotalAtividade(totalMs);
+                card.append(nomeElemento, tempoElemento);
+                container.appendChild(card);
+            });
+            publicarTemposPorColaborador(dataSelecionada, colaboradores);
+        }
+
         function renderizarTabelaMovimentacoes() {
             const tbody = document.getElementById('tableBodyMovimentacoes');
             const totalTempo = document.getElementById('totalTempoRastreabilidade');
@@ -1419,6 +1520,7 @@
                 celula.textContent = 'Nenhuma movimentação encontrada para esta data.';
                 linha.appendChild(celula);
                 tbody.appendChild(linha);
+                renderizarTemposPorColaboradorRastreabilidade(registros, dataSelecionada);
                 return;
             }
 
@@ -1512,6 +1614,7 @@
                 tbody.appendChild(linha);
             });
             totalTempo.textContent = `Tempo total em andamento: ${formatarTempoTotalAtividade(totalTempoAtivoMs)}`;
+            renderizarTemposPorColaboradorRastreabilidade(registros, dataSelecionada);
         }
 
         function atividadeEstaAberta(registro) {
@@ -1552,6 +1655,7 @@
             });
 
             totalTempo.textContent = `Tempo total em andamento: ${formatarTempoTotalAtividade(totalTempoAtivoMs)}`;
+            renderizarTemposPorColaboradorRastreabilidade(registros, dataSelecionada);
         }
 
         function obterTimestampAtividade(valor, dataFallback = '', horaFallback = '') {
@@ -1617,6 +1721,38 @@
             };
             const tiposInicio = new Set(['INICIO', 'REABRIU', 'REABRIU_DO_CONCLUIDO']);
             const partesData = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dataSelecionada);
+            if (partesData) {
+                const estaEmAndamento = atividadesEmAndamentoGlobal.some(item =>
+                    (atividade.id && String(item.id) === String(atividade.id)) ||
+                    (atividade.chaveAtividade && item.chaveAtividade === atividade.chaveAtividade) ||
+                    (!atividade.id && !atividade.chaveAtividade && atividade.ticket &&
+                        String(item.ticket) === String(atividade.ticket))
+                );
+                const estado = kanbanStateGlobal[atividade.id] ||
+                    (atividade.chaveAtividade && kanbanStateGlobal[atividade.chaveAtividade]);
+                const pausaAtual = [...(registro?.pausas || [])].reverse().find(pausa =>
+                    pausa.status === 'Pausado' &&
+                    !(pausa.dataHoraRetomada || pausa.horaRetomada || pausa.dataRetomada)
+                );
+                const totalAtivoMs = calcularTempoAtivoDiarioMs({
+                    data: dataSelecionada,
+                    eventos: registro?.eventos || [],
+                    pausas: (registro?.pausas || []).map(pausa => ({
+                        inicio: obterTimestampAtividade(pausa.dataHoraPausa, pausa.dataPausa, pausa.horaPausa),
+                        retomada: obterTimestampAtividade(pausa.dataHoraRetomada, pausa.dataRetomada, pausa.horaRetomada)
+                    })),
+                    inicio: obterTimestampAtividade(atividade.data_criacao, atividade.dataInicio, atividade.horaInicio),
+                    fim: obterTimestampAtividade(atividade.data_finalizacao, atividade.dataFim, atividade.horaFim),
+                    aberta: estaEmAndamento,
+                    pausada: registro?.status === 'pausado' || estado?.status === 'pausado',
+                    inicioPausa: obterTimestampAtividade(
+                        pausaAtual?.dataHoraPausa,
+                        pausaAtual?.dataPausa,
+                        pausaAtual?.horaPausa
+                    ) ?? Number(estado?.tempoInicioPausa)
+                });
+                return formatarTempoTotalAtividade(totalAtivoMs);
+            }
             const inicioDia = partesData
                 ? new Date(Number(partesData[1]), Number(partesData[2]) - 1, Number(partesData[3])).getTime()
                 : null;
