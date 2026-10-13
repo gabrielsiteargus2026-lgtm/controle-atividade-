@@ -390,6 +390,10 @@
             min-width: 80px;
         }
 
+        .movement-table .status-badge {
+            animation: statusIndicatorPulse 1.8s ease-in-out infinite;
+        }
+
         .status-em_andamento {
             background: #e3f2fd;
             color: #1976d2;
@@ -403,6 +407,21 @@
         .status-concluido {
             background: #e8f5e9;
             color: #388e3c;
+        }
+
+        @keyframes statusIndicatorPulse {
+            0%, 100% {
+                filter: brightness(1);
+            }
+            50% {
+                filter: brightness(0.88);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .movement-table .status-badge {
+                animation: none;
+            }
         }
 
         .actions-cell {
@@ -433,6 +452,31 @@
             min-width: 220px;
         }
 
+        .activity-period-filters {
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .activity-period-filters label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+        }
+
+        .activity-period-filters select,
+        .activity-period-filters input {
+            min-width: 170px;
+            padding: 9px 12px;
+            border: 1px solid #d5dce5;
+            border-radius: 5px;
+            font-size: 0.95em;
+        }
+
+        .activity-period-filters [hidden] {
+            display: none;
+        }
+
         .movement-table-container {
             max-height: 65vh;
             overflow: auto;
@@ -446,6 +490,79 @@
             vertical-align: top;
             white-space: pre-line;
             line-height: 1.5;
+        }
+
+        .movement-identity-cell,
+        .movement-colaborador-cell {
+            white-space: normal !important;
+        }
+
+        .movement-key,
+        .movement-ticket {
+            display: inline-block;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+
+        .movement-key {
+            color: #174a7e;
+            background: #e5f1fc;
+        }
+
+        .movement-ticket {
+            margin-top: 5px;
+            color: inherit;
+            font-weight: 700;
+        }
+
+        .movement-colaborador-name {
+            font-weight: 700;
+        }
+
+        .movement-colaborador-email {
+            display: block;
+            margin-top: 3px;
+            color: #5f6b78;
+            font-size: 0.9em;
+        }
+
+        .movement-table thead th:nth-child(6),
+        .movement-table thead th:nth-child(7),
+        .movement-table thead th:nth-child(8),
+        .movement-table thead th:nth-child(9) {
+            background: #f4a3a8;
+            color: #000;
+        }
+
+        .movement-table tbody td:nth-child(6),
+        .movement-table tbody td:nth-child(7),
+        .movement-table tbody td:nth-child(8),
+        .movement-table tbody td:nth-child(9) {
+            background: #fff1f2;
+            color: #000;
+        }
+
+        .pause-flag-cell {
+            white-space: normal !important;
+        }
+
+        .pause-period-cell {
+            min-width: 120px;
+            white-space: normal !important;
+        }
+
+        .pause-period-value {
+            display: block;
+            margin-bottom: 6px;
+            padding: 6px 8px;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+            background: #fff7f7;
+        }
+
+        .pause-period-value:last-child {
+            margin-bottom: 0;
         }
 
         .movement-timeline {
@@ -527,7 +644,6 @@
     <div class="container">
         <div class="header">
             <h1>Base de Dados de Atividades</h1>
-            <p>Gerenciar e visualizar todas as atividades do sistema</p>
         </div>
 
         <!-- Toolbar -->
@@ -539,8 +655,7 @@
         </div>
 
         <div class="card">
-            <h2>Rastreabilidade das Atividades</h2>
-            <p style="color: #666; margin: -5px 0 15px;">Criação, pausas, retomadas, finalizações e status atual de cada atividade.</p>
+            <h2>Rastreabilidade das Atividades <span id="totalTempoRastreabilidade" style="font-size: 0.75em; font-weight: 600; color: #5b8ec6; margin-left: 8px;">Tempo total em andamento: 00:00:00</span></h2>
             <div class="movement-filters">
                 <label for="filtroDataRastreabilidade" style="display: flex; align-items: center; gap: 10px; margin: 0;">
                     Data das movimentações
@@ -552,20 +667,24 @@
                     <thead>
                         <tr>
                             <th>Chave / Ticket</th>
-                            <th>Quem criou</th>
+                            <th>Colaborador</th>
                             <th>Data de criação</th>
                             <th>Hora de criação</th>
                             <th>Foi pausada?</th>
-                            <th>Data / hora da pausa</th>
-                            <th>Data / hora da retomada</th>
+                            <th>Data da pausa</th>
+                            <th>Hora da pausa</th>
+                            <th>Data da retomada</th>
+                            <th>Hora da retomada</th>
+                            <th>Tempo total pausada</th>
                             <th>Data de finalização</th>
                             <th>Hora de finalização</th>
+                            <th>Tempo total em andamento</th>
                             <th>Status atual</th>
                             <th>Movimentações / responsáveis</th>
                         </tr>
                     </thead>
                     <tbody id="tableBodyMovimentacoes">
-                        <tr><td colspan="11" class="empty-state">Carregando movimentações...</td></tr>
+                        <tr><td colspan="15" class="empty-state">Carregando movimentações...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -573,7 +692,21 @@
 
         <!-- Tabela de Atividades -->
         <div class="card">
-            <h2>Todas as Atividades</h2>
+            <h2>Todas as Atividades <span id="totalTempoAtividadesPeriodo" style="font-size: 0.75em; font-weight: 600; color: #5b8ec6; margin-left: 8px;">Total no período: 00:00:00</span></h2>
+            <div class="movement-filters activity-period-filters">
+                <label for="tipoFiltroPeriodoAtividades">Visualizar por
+                    <select id="tipoFiltroPeriodoAtividades" aria-label="Tipo de período das atividades">
+                        <option value="dia">Dia</option>
+                        <option value="mes">Mês</option>
+                    </select>
+                </label>
+                <label for="filtroDiaAtividades" id="labelFiltroDiaAtividades">Data
+                    <input type="date" id="filtroDiaAtividades" aria-label="Selecionar dia das atividades">
+                </label>
+                <label for="filtroMesAtividades" id="labelFiltroMesAtividades" hidden>Mês
+                    <input type="month" id="filtroMesAtividades" aria-label="Selecionar mês das atividades">
+                </label>
+            </div>
             <div class="table-scroll-container">
                 <table id="atividadesTable">
                     <thead>
@@ -587,15 +720,14 @@
                             <th>Hora Início</th>
                             <th>Data Fim</th>
                             <th>Hora Fim</th>
-                            <th>Duração (min)</th>
+                            <th>Tempo Total em Andamento</th>
                             <th>Status</th>
                             <th>Observação</th>
-                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
                         <tr>
-                            <td colspan="13" class="empty-state">Carregando atividades...</td>
+                            <td colspan="12" class="empty-state">Carregando atividades...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1048,6 +1180,55 @@
             return '-';
         }
 
+        function separarDataHoraRastreio(valor, dataFallback = '', horaFallback = '') {
+            if (valor) {
+                const data = new Date(valor);
+                if (!Number.isNaN(data.getTime())) {
+                    return {
+                        data: data.toLocaleDateString('pt-BR'),
+                        hora: data.toLocaleTimeString('pt-BR')
+                    };
+                }
+            }
+            return {
+                data: dataFallback || '-',
+                hora: horaFallback || '-'
+            };
+        }
+
+        function criarCelulasPeriodosPausa(pausas) {
+            const colunas = Array.from({ length: 4 }, () => {
+                const celula = document.createElement('td');
+                celula.className = 'pause-period-cell pause-period-highlight';
+                return celula;
+            });
+            const pausasExibidas = pausas.length ? pausas : [null];
+
+            pausasExibidas.forEach(pausa => {
+                const inicio = pausa
+                    ? separarDataHoraRastreio(pausa.dataHoraPausa, pausa.dataPausa || pausa.dataInicio, pausa.horaPausa)
+                    : { data: '-', hora: '-' };
+                const fim = pausa
+                    ? separarDataHoraRastreio(
+                        pausa.dataHoraRetomada,
+                        pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio,
+                        pausa.horaRetomada
+                    )
+                    : { data: '-', hora: '-' };
+                const temRetomada = Boolean(pausa && (pausa.dataHoraRetomada || pausa.horaRetomada || pausa.dataRetomada));
+                const valores = [inicio.data, inicio.hora, temRetomada ? fim.data : '-', temRetomada ? fim.hora : '-'];
+
+                valores.forEach((valor, indice) => {
+                    const linha = document.createElement('span');
+                    linha.className = 'pause-period-value';
+                    linha.textContent = valor;
+                    colunas[indice].appendChild(linha);
+                });
+            });
+
+            return colunas;
+        }
+
         function formatarDataLocalISO(data) {
             const ano = data.getFullYear();
             const mes = String(data.getMonth() + 1).padStart(2, '0');
@@ -1091,7 +1272,29 @@
             const dataSelecionada = document.getElementById('filtroDataRastreabilidade').value;
             const registros = obterRegistrosRastreabilidade();
             if (!dataSelecionada) return registros;
-            return registros.filter(registro => obterDatasDaRastreabilidade(registro).includes(dataSelecionada));
+            return registros.filter(registro => {
+                const eventoNoDia = registro.eventos.some(evento =>
+                    ['INICIO', 'REABRIU', 'REABRIU_DO_CONCLUIDO', 'PAUSA', 'RETOMOU', 'FIM'].includes(evento.tipo) &&
+                    obterDataLocalMovimentacao(evento.timestamp) === dataSelecionada
+                );
+                const criacaoLegadaNoDia = registro.eventos.length === 0 &&
+                    obterDataLocalMovimentacao(registro.atividade.data_criacao || registro.atividade.dataInicio) === dataSelecionada;
+                const pausaNoDia = registro.pausas.some(pausa =>
+                    obterDataLocalMovimentacao(pausa.dataHoraPausa || pausa.dataPausa) === dataSelecionada
+                );
+                const retomadaNoDia = registro.pausas.some(pausa =>
+                    obterDataLocalMovimentacao(pausa.dataHoraRetomada || pausa.dataRetomada) === dataSelecionada
+                );
+                const temEventoFinalizacao = registro.eventos.some(evento => evento.tipo === 'FIM');
+                const finalizacaoLegadaNoDia = !temEventoFinalizacao && obterDataLocalMovimentacao(
+                    registro.atividade.data_finalizacao || registro.atividade.dataFim
+                ) === dataSelecionada;
+                const teveTempoAtivoNoDia = converterTempoAtividadeParaMilissegundos(
+                    calcularTempoTotalAtividade(registro.atividade, registro, dataSelecionada)
+                ) > 0;
+                return eventoNoDia || criacaoLegadaNoDia || pausaNoDia || retomadaNoDia ||
+                    finalizacaoLegadaNoDia || teveTempoAtivoNoDia;
+            });
         }
 
         function obterRegistrosRastreabilidade() {
@@ -1145,8 +1348,19 @@
                 }
 
                 const estado = kanbanStateGlobal[atividade.id] || kanbanStateGlobal[chave] || {};
-                const estaAberta = idsAbertos.has(String(atividade.id));
-                const status = estado.status || (estaAberta ? 'em_andamento' : atividade.dataFim ? 'concluido' : 'desconhecido');
+                const estaAberta = atividadesEmAndamentoGlobal.some(item =>
+                    (atividade.id !== undefined && atividade.id !== null && String(item.id) === String(atividade.id)) ||
+                    (chave && item.chaveAtividade && String(item.chaveAtividade) === chave)
+                );
+                const pausadaAtualmente = pausas.some(pausa =>
+                    !(pausa.dataHoraRetomada || pausa.horaRetomada) &&
+                    (pausa.status === 'Pausado' || pausa.ativa !== false)
+                );
+                const status = !estaAberta
+                    ? 'concluido'
+                    : estado.status === 'pausado' || pausadaAtualmente
+                        ? 'pausado'
+                        : 'em_andamento';
                 const eventoCriacao = eventosCriacao[0];
                 const eventoFinalizacao = eventosFinalizacao[eventosFinalizacao.length - 1];
                 const dataCriacao = atividade.data_criacao || eventoCriacao?.timestamp;
@@ -1190,13 +1404,17 @@
 
         function renderizarTabelaMovimentacoes() {
             const tbody = document.getElementById('tableBodyMovimentacoes');
+            const totalTempo = document.getElementById('totalTempoRastreabilidade');
+            const dataSelecionada = document.getElementById('filtroDataRastreabilidade').value;
             const registros = obterRegistrosFiltradosPorData();
+            let totalTempoAtivoMs = 0;
+            totalTempo.textContent = 'Tempo total em andamento: 00:00:00';
 
             tbody.replaceChildren();
             if (registros.length === 0) {
                 const linha = document.createElement('tr');
                 const celula = document.createElement('td');
-                celula.colSpan = 11;
+                celula.colSpan = 15;
                 celula.className = 'empty-state';
                 celula.textContent = 'Nenhuma movimentação encontrada para esta data.';
                 linha.appendChild(celula);
@@ -1204,32 +1422,71 @@
                 return;
             }
 
-            registros.forEach(registro => {
+            registros.forEach((registro, indiceRegistro) => {
                 const linha = document.createElement('tr');
+                linha.dataset.rastreabilidadeIndex = String(indiceRegistro);
                 const pausas = registro.pausas;
+                const atividadeAberta = atividadeEstaAberta(registro);
+                const tempoAtivo = calcularTempoTotalAtividade(registro.atividade, registro, dataSelecionada);
+                totalTempoAtivoMs += converterTempoAtividadeParaMilissegundos(tempoAtivo);
+                const tempoPausado = calcularTempoTotalPausada(pausas, atividadeAberta);
                 const valores = [
                     `${registro.chave || '-'}\nTicket: ${registro.ticket || '-'}`,
                     `${registro.nomeCriador}${registro.emailCriador ? `\n${registro.emailCriador}` : ''}`,
                     registro.dataCriacao.split(' ')[0] || '-',
                     registro.dataCriacao.split(' ').slice(1).join(' ') || '-',
                     pausas.length ? 'Sim' : 'Não',
-                    pausas.map(pausa => `${formatarDataHoraRastreio(pausa.dataHoraPausa, pausa.dataPausa, pausa.horaPausa)}${pausa.pausadoPor ? `\nPor: ${pausa.pausadoPor}` : ''}`).join('\n\n') || '-',
-                    pausas.map(pausa => `${formatarDataHoraRastreio(pausa.dataHoraRetomada, pausa.dataRetomada, pausa.horaRetomada)}${pausa.retomadoPor ? `\nPor: ${pausa.retomadoPor}` : ''}`).join('\n\n') || '-',
+                    tempoPausado,
                     registro.dataFinalizacao.split(' ')[0] || '-',
-                    registro.dataFinalizacao.split(' ').slice(1).join(' ') || '-'
+                    registro.dataFinalizacao.split(' ').slice(1).join(' ') || '-',
+                    tempoAtivo
                 ];
-                valores.forEach(valor => {
+                valores.forEach((valor, indice) => {
                     const celula = document.createElement('td');
-                    celula.textContent = valor || '-';
+                    if (indice === 0) {
+                        celula.className = 'movement-identity-cell';
+                        const chave = document.createElement('span');
+                        chave.className = 'movement-key';
+                        chave.textContent = registro.chave || '-';
+                        const ticket = document.createElement('span');
+                        ticket.className = 'movement-ticket';
+                        ticket.textContent = `Ticket: ${registro.ticket || '-'}`;
+                        celula.append(chave, document.createElement('br'), ticket);
+                    } else if (indice === 1) {
+                        celula.className = 'movement-colaborador-cell';
+                        const nome = document.createElement('strong');
+                        nome.className = 'movement-colaborador-name';
+                        nome.textContent = registro.nomeCriador || '-';
+                        celula.appendChild(nome);
+                        if (registro.emailCriador) {
+                            const email = document.createElement('span');
+                            email.className = 'movement-colaborador-email';
+                            email.textContent = registro.emailCriador;
+                            celula.appendChild(email);
+                        }
+                    } else if (indice === 4) {
+                        celula.className = 'pause-flag-cell';
+                        const indicador = document.createElement('span');
+                        indicador.className = `status-badge ${pausas.length ? 'status-pausado' : 'status-concluido'}`;
+                        indicador.textContent = valor;
+                        celula.appendChild(indicador);
+                    } else {
+                        if (indice === 5) celula.className = 'rastreio-tempo-pausada';
+                        celula.textContent = valor || '-';
+                    }
                     linha.appendChild(celula);
+                    if (indice === 4) {
+                        criarCelulasPeriodosPausa(pausas).forEach(celulaPausa => linha.appendChild(celulaPausa));
+                    }
+                    if (indice === 8) celula.className = 'rastreio-tempo-ativo';
                 });
 
                 const celulaStatus = document.createElement('td');
                 const badge = document.createElement('span');
                 badge.className = `status-badge status-${registro.status}`;
                 badge.textContent = registro.status === 'em_andamento' ? 'Em andamento' :
-                    registro.status === 'pausado' ? 'Pausado' :
-                    registro.status === 'concluido' ? 'Concluído' : 'Desconhecido';
+                    registro.status === 'pausado' ? 'Pausada' :
+                    registro.status === 'concluido' ? 'Encerrada' : 'Desconhecido';
                 celulaStatus.appendChild(badge);
                 linha.appendChild(celulaStatus);
 
@@ -1254,23 +1511,291 @@
                 linha.appendChild(celulaMovimentacoes);
                 tbody.appendChild(linha);
             });
+            totalTempo.textContent = `Tempo total em andamento: ${formatarTempoTotalAtividade(totalTempoAtivoMs)}`;
+        }
+
+        function atividadeEstaAberta(registro) {
+            return atividadesEmAndamentoGlobal.some(atividade =>
+                (registro.atividade.id !== undefined && String(atividade.id) === String(registro.atividade.id)) ||
+                (registro.chave && atividade.chaveAtividade === registro.chave)
+            );
+        }
+
+        function atualizarTemposRastreabilidade() {
+            if (document.hidden) return;
+
+            const tbody = document.getElementById('tableBodyMovimentacoes');
+            const totalTempo = document.getElementById('totalTempoRastreabilidade');
+            const dataSelecionada = document.getElementById('filtroDataRastreabilidade').value;
+            const registros = obterRegistrosFiltradosPorData();
+            let totalTempoAtivoMs = 0;
+
+            Array.from(tbody.rows).forEach(linha => {
+                const indiceRegistro = Number(linha.dataset.rastreabilidadeIndex);
+                const registro = registros[indiceRegistro];
+                if (!registro) return;
+
+                const tempoAtivo = calcularTempoTotalAtividade(registro.atividade, registro, dataSelecionada);
+                const tempoAtivoMs = converterTempoAtividadeParaMilissegundos(tempoAtivo);
+                totalTempoAtivoMs += tempoAtivoMs;
+
+                const celulaTempoAtivo = linha.querySelector('.rastreio-tempo-ativo');
+                if (celulaTempoAtivo) celulaTempoAtivo.textContent = tempoAtivo;
+
+                const celulaTempoPausada = linha.querySelector('.rastreio-tempo-pausada');
+                if (celulaTempoPausada) {
+                    celulaTempoPausada.textContent = calcularTempoTotalPausada(
+                        registro.pausas,
+                        atividadeEstaAberta(registro)
+                    );
+                }
+            });
+
+            totalTempo.textContent = `Tempo total em andamento: ${formatarTempoTotalAtividade(totalTempoAtivoMs)}`;
+        }
+
+        function obterTimestampAtividade(valor, dataFallback = '', horaFallback = '') {
+            if (valor !== null && valor !== undefined && valor !== '') {
+                const timestamp = new Date(valor).getTime();
+                if (Number.isFinite(timestamp)) return timestamp;
+            }
+
+            const data = String(dataFallback || valor || '');
+            const hora = String(horaFallback || '00:00:00');
+            const partesData = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(data);
+            const partesHora = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(hora);
+            if (!partesData || !partesHora) return null;
+            const timestamp = new Date(
+                Number(partesData[3]),
+                Number(partesData[2]) - 1,
+                Number(partesData[1]),
+                Number(partesHora[1]),
+                Number(partesHora[2]),
+                Number(partesHora[3] || 0)
+            ).getTime();
+            return Number.isFinite(timestamp) ? timestamp : null;
+        }
+
+        function formatarTempoTotalAtividade(milissegundos) {
+            const segundos = Math.max(0, Math.floor(milissegundos / 1000));
+            const horas = Math.floor(segundos / 3600);
+            const minutos = Math.floor((segundos % 3600) / 60);
+            const segundosRestantes = segundos % 60;
+            return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundosRestantes).padStart(2, '0')}`;
+        }
+
+        function calcularTempoTotalPausada(pausas, atividadeAberta) {
+            const totalMs = pausas.reduce((total, pausa) => {
+                const inicio = obterTimestampAtividade(pausa.dataHoraPausa, pausa.dataPausa, pausa.horaPausa);
+                if (inicio === null) {
+                    return total + Math.max(0, Number(pausa.tempoPausaMs) || 0);
+                }
+                const retomada = obterTimestampAtividade(
+                    pausa.dataHoraRetomada,
+                    pausa.dataRetomada,
+                    pausa.horaRetomada
+                );
+                if (retomada !== null) return total + Math.max(0, retomada - inicio);
+                if (atividadeAberta && (pausa.status === 'Pausado' || pausa.ativa !== false)) {
+                    return total + Math.max(0, Date.now() - inicio);
+                }
+                return total + Math.max(0, Number(pausa.tempoPausaMs) || 0);
+            }, 0);
+            return formatarTempoTotalAtividade(totalMs);
+        }
+
+        function converterTempoAtividadeParaMilissegundos(tempo) {
+            const partes = /^(\d+):([0-5]\d):([0-5]\d)$/.exec(String(tempo || ''));
+            if (!partes) return 0;
+            return (Number(partes[1]) * 3600 + Number(partes[2]) * 60 + Number(partes[3])) * 1000;
+        }
+
+        function calcularTempoTotalAtividade(atividade, registro, dataSelecionada = '') {
+            const eventos = [];
+            const adicionarEvento = (tipo, timestamp, duracao) => {
+                if (Number.isFinite(timestamp)) eventos.push({ tipo, timestamp, duracao });
+            };
+            const tiposInicio = new Set(['INICIO', 'REABRIU', 'REABRIU_DO_CONCLUIDO']);
+            const partesData = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dataSelecionada);
+            const inicioDia = partesData
+                ? new Date(Number(partesData[1]), Number(partesData[2]) - 1, Number(partesData[3])).getTime()
+                : null;
+            const fimDia = inicioDia === null
+                ? null
+                : new Date(Number(partesData[1]), Number(partesData[2]) - 1, Number(partesData[3]) + 1).getTime();
+
+            (registro?.eventos || []).forEach(evento => {
+                adicionarEvento(evento.tipo, obterTimestampAtividade(evento.timestamp), evento.duracao);
+            });
+            (registro?.pausas || []).forEach(pausa => {
+                adicionarEvento(
+                    'PAUSA',
+                    obterTimestampAtividade(pausa.dataHoraPausa, pausa.dataPausa, pausa.horaPausa)
+                );
+                adicionarEvento(
+                    'RETOMOU',
+                    obterTimestampAtividade(pausa.dataHoraRetomada, pausa.dataRetomada, pausa.horaRetomada)
+                );
+            });
+
+            if (!eventos.some(evento => tiposInicio.has(evento.tipo))) {
+                adicionarEvento(
+                    'INICIO',
+                    obterTimestampAtividade(atividade.data_criacao, atividade.dataInicio, atividade.horaInicio)
+                );
+            }
+
+            if (!eventos.some(evento => evento.tipo === 'FIM')) {
+                adicionarEvento(
+                    'FIM',
+                    obterTimestampAtividade(atividade.data_finalizacao, atividade.dataFim, atividade.horaFim),
+                    atividade.duracao
+                );
+            }
+
+            const eventosUnicos = new Map();
+            eventos.forEach(evento => {
+                const chave = `${evento.tipo}:${Math.round(evento.timestamp / 1000)}`;
+                if (!eventosUnicos.has(chave)) eventosUnicos.set(chave, evento);
+            });
+            const eventosOrdenados = [...eventosUnicos.values()]
+                .sort((a, b) => a.timestamp - b.timestamp);
+
+            let tempoAtivoMs = 0;
+            let inicioAtivo = null;
+            let atividadeAberta = false;
+            let pausada = false;
+            const acumularIntervaloAtivo = (inicio, fim) => {
+                const inicioContabilizado = inicioDia === null ? inicio : Math.max(inicio, inicioDia);
+                const fimContabilizado = fimDia === null ? fim : Math.min(fim, fimDia);
+                tempoAtivoMs += Math.max(0, fimContabilizado - inicioContabilizado);
+            };
+            eventosOrdenados.forEach(evento => {
+                if (tiposInicio.has(evento.tipo)) {
+                    if (!atividadeAberta) {
+                        atividadeAberta = true;
+                        pausada = false;
+                        inicioAtivo = evento.timestamp;
+                    }
+                } else if (evento.tipo === 'PAUSA' && atividadeAberta && !pausada) {
+                    if (inicioAtivo !== null) acumularIntervaloAtivo(inicioAtivo, evento.timestamp);
+                    inicioAtivo = null;
+                    pausada = true;
+                } else if (evento.tipo === 'RETOMOU' && atividadeAberta) {
+                    if (pausada || inicioAtivo === null) {
+                        inicioAtivo = evento.timestamp;
+                    }
+                    pausada = false;
+                } else if (evento.tipo === 'FIM' && atividadeAberta) {
+                    if (!pausada && inicioAtivo !== null) {
+                        acumularIntervaloAtivo(inicioAtivo, evento.timestamp);
+                    }
+                    inicioAtivo = null;
+                    atividadeAberta = false;
+                    pausada = false;
+                }
+            });
+
+            const estaEmAndamento = atividadesEmAndamentoGlobal.some(item =>
+                (atividade.id !== undefined && String(item.id) === String(atividade.id)) ||
+                (atividade.chaveAtividade && item.chaveAtividade === atividade.chaveAtividade)
+            );
+            if (atividadeAberta && inicioAtivo !== null && estaEmAndamento) {
+                const estado = kanbanStateGlobal[atividade.id] ||
+                    (atividade.chaveAtividade && kanbanStateGlobal[atividade.chaveAtividade]);
+                const estaPausada = pausada || registro?.status === 'pausado' || estado?.status === 'pausado';
+                if (estaPausada) {
+                    const pausaAtual = [...(registro?.pausas || [])].reverse().find(pausa =>
+                        !(pausa.dataHoraRetomada || pausa.horaRetomada || pausa.dataRetomada)
+                    );
+                    const inicioPausa = obterTimestampAtividade(
+                        pausaAtual?.dataHoraPausa,
+                        pausaAtual?.dataPausa,
+                        pausaAtual?.horaPausa
+                    ) ?? Number(estado?.tempoInicioPausa);
+                    if (Number.isFinite(inicioPausa)) {
+                        acumularIntervaloAtivo(inicioAtivo, inicioPausa);
+                    }
+                } else {
+                    acumularIntervaloAtivo(inicioAtivo, Date.now());
+                }
+            }
+            if (eventosOrdenados.some(evento => evento.tipo === 'FIM') || estaEmAndamento) {
+                return formatarTempoTotalAtividade(tempoAtivoMs);
+            }
+
+            const duracaoTexto = String(atividade.duracao || '');
+            const partesDuracao = duracaoTexto.split(':').map(Number);
+            let duracaoMs = null;
+            if (partesDuracao.length === 3 && partesDuracao.every(Number.isFinite)) {
+                duracaoMs = ((partesDuracao[0] * 60 + partesDuracao[1]) * 60 + partesDuracao[2]) * 1000;
+            } else if (partesDuracao.length === 2 && partesDuracao.every(Number.isFinite)) {
+                duracaoMs = (partesDuracao[0] * 60 + partesDuracao[1]) * 60000;
+            } else if (duracaoTexto && Number.isFinite(Number(duracaoTexto))) {
+                duracaoMs = Number(duracaoTexto) * 60000;
+            }
+
+            if (duracaoMs === null) return '-';
+            const pausaMs = (registro?.pausas || []).reduce((total, pausa) => {
+                if (pausa.tempoPausaMs !== undefined && pausa.tempoPausaMs !== null) {
+                    return total + Math.max(0, Number(pausa.tempoPausaMs) || 0);
+                }
+                const inicio = obterTimestampAtividade(pausa.dataHoraPausa, pausa.dataPausa, pausa.horaPausa);
+                const fim = obterTimestampAtividade(pausa.dataHoraRetomada, pausa.dataRetomada, pausa.horaRetomada);
+                if (inicio === null) return total;
+                const fimPausa = fim === null && estaEmAndamento ? Date.now() : fim;
+                return fimPausa === null ? total : total + Math.max(0, fimPausa - inicio);
+            }, 0);
+            return formatarTempoTotalAtividade(Math.max(0, duracaoMs - pausaMs));
         }
 
         // Renderizar tabela
         function renderizarTabela() {
             const tbody = document.getElementById('tableBody');
+            const totalPeriodo = document.getElementById('totalTempoAtividadesPeriodo');
+            const filtroTipo = document.getElementById('tipoFiltroPeriodoAtividades').value;
+            const periodoSelecionado = filtroTipo === 'dia'
+                ? document.getElementById('filtroDiaAtividades').value
+                : document.getElementById('filtroMesAtividades').value;
+            let tempoTotalPeriodoMs = 0;
+            totalPeriodo.textContent = 'Total no período: 00:00:00';
 
             if (atividadesGlobais.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="13" class="empty-state">Nenhuma atividade encontrada</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="12" class="empty-state">Nenhuma atividade encontrada</td></tr>';
                 return;
             }
 
             let html = '';
+            const registrosRastreabilidade = obterRegistrosRastreabilidade();
+            let atividadesNoPeriodo = 0;
             atividadesGlobais.forEach((atividade, index) => {
                 if (!atividade) return;
 
+                const registro = registrosRastreabilidade.find(item =>
+                    (atividade.id !== undefined && String(item.atividade.id) === String(atividade.id)) ||
+                    (atividade.chaveAtividade && item.chave === String(atividade.chaveAtividade)) ||
+                    (!atividade.id && !atividade.chaveAtividade && atividade.ticket && item.ticket === String(atividade.ticket))
+                );
+                const datasAtividade = registro
+                    ? obterDatasDaRastreabilidade(registro)
+                    : [
+                        obterDataLocalMovimentacao(atividade.data_criacao || atividade.dataInicio),
+                        obterDataLocalMovimentacao(atividade.data_finalizacao || atividade.dataFim)
+                    ].filter(Boolean);
+                const correspondeAoPeriodo = !periodoSelecionado || datasAtividade.some(data =>
+                    filtroTipo === 'dia' ? data === periodoSelecionado : data.startsWith(periodoSelecionado)
+                );
+                if (!correspondeAoPeriodo) return;
+
+                atividadesNoPeriodo++;
                 const status = obterStatus(atividade);
-                const statusBadgeClass = `status-${status}`;
+                const statusBadgeClass = status === 'Em Andamento'
+                    ? 'status-em_andamento'
+                    : status === 'Pausada'
+                        ? 'status-pausado'
+                        : 'status-concluido';
+                const tempoTotal = calcularTempoTotalAtividade(atividade, registro);
+                tempoTotalPeriodoMs += converterTempoAtividadeParaMilissegundos(tempoTotal);
 
                 html += `
                     <tr>
@@ -1283,36 +1808,30 @@
                         <td>${atividade.horaInicio || '-'}</td>
                         <td>${atividade.dataFim || '-'}</td>
                         <td>${atividade.horaFim || '-'}</td>
-                        <td>${atividade.duracao || '-'}</td>
+                        <td>${tempoTotal}</td>
                         <td><span class="status-badge ${statusBadgeClass}">${status}</span></td>
                         <td>${(atividade.observacao || '-').substring(0, 20)}...</td>
-                        <td class="actions-cell">
-                            <button class="btn btn-primary" onclick="editarAtividade(${index})">Editar</button>
-                            <button class="btn btn-danger" onclick="deletarAtividade(${index})">Deletar</button>
-                        </td>
                     </tr>
                 `;
             });
 
-            tbody.innerHTML = html;
+            tbody.innerHTML = atividadesNoPeriodo
+                ? html
+                : '<tr><td colspan="12" class="empty-state">Nenhuma atividade encontrada para o período selecionado</td></tr>';
+            totalPeriodo.textContent = `Total no período: ${formatarTempoTotalAtividade(tempoTotalPeriodoMs)}`;
         }
 
         // Obter status da atividade
         function obterStatus(atividade) {
-            // Tentar com id primeiro (para atividades novas)
-            let estado = kanbanStateGlobal[atividade.id];
-            
-            // Se não encontrou com id, tentar com chaveAtividade (para compatibilidade)
-            if (!estado && atividade.chaveAtividade) {
-                estado = kanbanStateGlobal[atividade.chaveAtividade];
-            }
-            
-            if (estado && estado.status) {
-                if (estado.status === 'em_andamento') return 'Em Andamento';
-                if (estado.status === 'pausado') return 'Pausado';
-                if (estado.status === 'concluido') return 'Concluído';
-            }
-            return 'Em Andamento'; // Default para atividades sem status definido
+            const estaAberta = atividadesEmAndamentoGlobal.some(item =>
+                (atividade.id !== undefined && String(item.id) === String(atividade.id)) ||
+                (atividade.chaveAtividade && item.chaveAtividade === atividade.chaveAtividade)
+            );
+            if (!estaAberta) return 'Encerrada';
+
+            const estado = kanbanStateGlobal[atividade.id] ||
+                (atividade.chaveAtividade && kanbanStateGlobal[atividade.chaveAtividade]);
+            return estado?.status === 'pausado' ? 'Pausada' : 'Em Andamento';
         }
 
         // Abrir modal de nova atividade
@@ -1503,9 +2022,11 @@
 
             const colunas = [
                 'Chave', 'Ticket', 'Quem criou', 'Data de criação', 'Hora de criação',
-                'Foi pausada?', 'Data/hora da pausa', 'Responsável pela pausa',
+                'Foi pausada?', 'Períodos de pausa', 'Tempo total pausada',
+                'Responsável pela pausa',
                 'Data/hora da retomada', 'Responsável pela retomada',
-                'Data de finalização', 'Hora de finalização', 'Status atual', 'Movimentações'
+                'Data de finalização', 'Hora de finalização', 'Tempo total em andamento',
+                'Status atual', 'Movimentações'
             ];
             const linhas = registros.map(registro => {
                 const pausas = registro.pausas.map(pausa => [
@@ -1515,6 +2036,16 @@
                     pausa.retomadoPor || '-'
                 ].join(' — ')).join(' | ');
                 const dataFinalizacao = registro.dataFinalizacao.split(' ');
+                const atividadeAberta = atividadesEmAndamentoGlobal.some(atividade =>
+                    (registro.atividade.id !== undefined && String(atividade.id) === String(registro.atividade.id)) ||
+                    (registro.chave && atividade.chaveAtividade === registro.chave)
+                );
+                const tempoAtivo = calcularTempoTotalAtividade(
+                    registro.atividade,
+                    registro,
+                    document.getElementById('filtroDataRastreabilidade').value
+                );
+                const tempoPausado = calcularTempoTotalPausada(registro.pausas, atividadeAberta);
                 const eventos = registro.eventos.map(evento =>
                     `${rotuloTipoMovimentacao(evento.tipo)}: ${formatarDataHoraRastreio(evento.timestamp)} (${evento.nome_usuario || evento.email_usuario || 'Responsável não identificado'})`
                 ).join(' | ');
@@ -1522,12 +2053,14 @@
                     registro.chave, registro.ticket,
                     `${registro.nomeCriador}${registro.emailCriador ? ` <${registro.emailCriador}>` : ''}`,
                     registro.dataCriacao.split(' ')[0], registro.dataCriacao.split(' ').slice(1).join(' '),
-                    registro.pausas.length ? 'Sim' : 'Não', pausas,
+                    registro.pausas.length ? 'Sim' : 'Não', pausas, tempoPausado,
                     registro.pausas.map(pausa => pausa.pausadoPor || '-').join(' | '),
                     registro.pausas.map(pausa => formatarDataHoraRastreio(pausa.dataHoraRetomada, pausa.dataRetomada, pausa.horaRetomada)).join(' | '),
                     registro.pausas.map(pausa => pausa.retomadoPor || '-').join(' | '),
-                    dataFinalizacao[0], dataFinalizacao.slice(1).join(' '),
-                    registro.status, eventos
+                    dataFinalizacao[0], dataFinalizacao.slice(1).join(' '), tempoAtivo,
+                    registro.status === 'em_andamento' ? 'Em andamento' :
+                        registro.status === 'pausado' ? 'Pausada' : 'Encerrada',
+                    eventos
                 ].map(escaparCampoCSV).join(',');
             });
             const conteudo = [colunas.map(escaparCampoCSV).join(','), ...linhas].join('\r\n');
@@ -1545,9 +2078,21 @@
 
         document.getElementById('filtroDataRastreabilidade').addEventListener('change', renderizarTabelaMovimentacoes);
 
+        document.getElementById('tipoFiltroPeriodoAtividades').addEventListener('change', evento => {
+            const porDia = evento.target.value === 'dia';
+            document.getElementById('labelFiltroDiaAtividades').hidden = !porDia;
+            document.getElementById('labelFiltroMesAtividades').hidden = porDia;
+            renderizarTabela();
+        });
+        document.getElementById('filtroDiaAtividades').addEventListener('change', renderizarTabela);
+        document.getElementById('filtroMesAtividades').addEventListener('change', renderizarTabela);
+
         // Inicializar ao carregar
         document.addEventListener('DOMContentLoaded', () => {
             console.log('DOM carregado');
+            const hoje = new Date();
+            document.getElementById('filtroDiaAtividades').value = formatarDataLocalISO(hoje);
+            document.getElementById('filtroMesAtividades').value = formatarDataLocalISO(hoje).slice(0, 7);
             const ontem = new Date();
             ontem.setDate(ontem.getDate() - 1);
             document.getElementById('filtroDataRastreabilidade').value = formatarDataLocalISO(ontem);
@@ -1564,6 +2109,8 @@
                 carregarAtividades();
             }
         }, 15000);
+
+        setInterval(atualizarTemposRastreabilidade, 1000);
     </script>
 </body>
 </html>

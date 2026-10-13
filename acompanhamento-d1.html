@@ -309,8 +309,8 @@
                 <div class="summary-card"><div class="summary-value" id="totalEmAndamento">0</div><div class="summary-label">Total de Atividades em Andamento</div></div>
                 <div class="summary-card"><div class="summary-value" id="totalPausadas">0</div><div class="summary-label">Total Atividades Pausadas</div></div>
                 <div class="summary-card"><div class="summary-value" id="totalConcluidas">0</div><div class="summary-label">Total Concluídas no Dia</div></div>
-                <div class="summary-card"><div class="summary-value" id="tempoTotalAtividades">--</div><div class="summary-label">Media do tempo total para finalização de atividades</div></div>
-                <div class="summary-card"><div class="summary-value" id="tempoMedioFinalizacao">--</div><div class="summary-label">Média de Finalização por Atividade</div></div>
+                <div class="summary-card"><div class="summary-value" id="tempoTotalAtividades">--</div><div class="summary-label">Tempo total das atividades</div></div>
+                <div class="summary-card"><div class="summary-value" id="tempoMedioFinalizacao">--</div><div class="summary-label">Média de Finalização por Ticket</div></div>
                 <div class="summary-card"><div class="summary-value" id="tempoMedioPausa">--</div><div class="summary-label">Média de Pausa por dia</div></div>
                 <div class="summary-card"><div class="summary-value" id="mediaPorColaboradorDia">--</div><div class="summary-label">Média por Colaborador</div></div>
             </div>
@@ -712,6 +712,14 @@
             return `${Math.floor(totalMinutos / 60)}h ${String(totalMinutos % 60).padStart(2, '0')}min`;
         }
 
+        function formatarTempoTotalAtividades(minutos) {
+            const totalSegundos = Math.floor(Math.max(0, Number(minutos) || 0) * 60);
+            const horas = Math.floor(totalSegundos / 3600);
+            const minutosRestantes = Math.floor((totalSegundos % 3600) / 60);
+            const segundos = totalSegundos % 60;
+            return `${String(horas).padStart(2, '0')}:${String(minutosRestantes).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+        }
+
         function identificarSetorPausa(motivo) {
             if (!motivo) return 'Não definido';
             const motivoNormalizado = String(motivo).toLowerCase();
@@ -794,7 +802,141 @@
             }, 0);
         }
 
-        function calcularMinutosAtivos(atividade) {
+        function calcularMinutosAtivos(atividade, dataSelecionada = '') {
+            const partesData = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dataSelecionada);
+            const inicioDia = partesData
+                ? new Date(Number(partesData[1]), Number(partesData[2]) - 1, Number(partesData[3])).getTime()
+                : null;
+            const fimDia = partesData
+                ? new Date(Number(partesData[1]), Number(partesData[2]) - 1, Number(partesData[3]) + 1).getTime()
+                : null;
+            const eventos = (atividade._eventosResumo || [])
+                .filter(evento => ['INICIO', 'REABRIU', 'REABRIU_DO_CONCLUIDO', 'PAUSA', 'RETOMOU', 'FIM'].includes(evento.tipo))
+                .map(evento => ({
+                    tipo: evento.tipo,
+                    timestamp: new Date(evento.timestamp).getTime(),
+                    duracao: evento.duracao
+                }))
+                .filter(evento => Number.isFinite(evento.timestamp));
+
+            (atividade._pausasResumo || []).forEach(pausa => {
+                const inicio = pausa.dataHoraPausa
+                    ? new Date(pausa.dataHoraPausa).getTime()
+                    : converterDataHoraPausa(pausa.dataPausa || pausa.dataInicio, pausa.horaPausa)?.getTime();
+                const retomada = pausa.dataHoraRetomada
+                    ? new Date(pausa.dataHoraRetomada).getTime()
+                    : converterDataHoraPausa(pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio, pausa.horaRetomada)?.getTime();
+                if (Number.isFinite(inicio)) eventos.push({ tipo: 'PAUSA', timestamp: inicio });
+                if (Number.isFinite(retomada)) eventos.push({ tipo: 'RETOMOU', timestamp: retomada });
+            });
+
+            const temInicio = eventos.some(evento =>
+                ['INICIO', 'REABRIU', 'REABRIU_DO_CONCLUIDO'].includes(evento.tipo)
+            );
+            if (!temInicio) {
+                const dataCriacao = atividade.data_criacao ? new Date(atividade.data_criacao).getTime() : NaN;
+                const inicio = Number.isFinite(dataCriacao)
+                    ? dataCriacao
+                    : converterDataHoraPausa(atividade.dataInicio, atividade.horaInicio)?.getTime();
+                if (Number.isFinite(inicio)) eventos.push({ tipo: 'INICIO', timestamp: inicio });
+            }
+
+            if (!eventos.some(evento => evento.tipo === 'FIM')) {
+                const dataFinalizacao = atividade.data_finalizacao ? new Date(atividade.data_finalizacao).getTime() : NaN;
+                const fim = Number.isFinite(dataFinalizacao)
+                    ? dataFinalizacao
+                    : converterDataHoraPausa(atividade.dataFim, atividade.horaFim)?.getTime();
+                if (Number.isFinite(fim)) eventos.push({ tipo: 'FIM', timestamp: fim });
+            }
+
+            const eventosUnicos = new Map();
+            eventos.forEach(evento => {
+                const chave = `${evento.tipo}:${Math.round(evento.timestamp / 1000)}`;
+                if (!eventosUnicos.has(chave)) eventosUnicos.set(chave, evento);
+            });
+            const eventosOrdenados = [...eventosUnicos.values()]
+                .sort((a, b) => a.timestamp - b.timestamp);
+            let inicioAtivo = null;
+            let cicloAberto = false;
+            let pausado = false;
+            let ciclosFinalizados = 0;
+            let totalAtivoMs = 0;
+            const acumularIntervaloAtivo = (inicio, fim) => {
+                const inicioContabilizado = inicioDia === null ? inicio : Math.max(inicio, inicioDia);
+                const fimContabilizado = fimDia === null ? fim : Math.min(fim, fimDia);
+                totalAtivoMs += Math.max(0, fimContabilizado - inicioContabilizado);
+            };
+
+            eventosOrdenados.forEach(evento => {
+                if (['INICIO', 'REABRIU', 'REABRIU_DO_CONCLUIDO'].includes(evento.tipo)) {
+                    if (!cicloAberto) {
+                        cicloAberto = true;
+                        pausado = false;
+                        inicioAtivo = evento.timestamp;
+                    } else if (pausado) {
+                        pausado = false;
+                        inicioAtivo = evento.timestamp;
+                    }
+                } else if (evento.tipo === 'PAUSA' && cicloAberto && !pausado) {
+                    if (inicioAtivo !== null) acumularIntervaloAtivo(inicioAtivo, evento.timestamp);
+                    inicioAtivo = null;
+                    pausado = true;
+                } else if (evento.tipo === 'RETOMOU' && cicloAberto && pausado) {
+                    inicioAtivo = evento.timestamp;
+                    pausado = false;
+                } else if (evento.tipo === 'FIM' && cicloAberto) {
+                    if (!pausado && inicioAtivo !== null) {
+                        acumularIntervaloAtivo(inicioAtivo, evento.timestamp);
+                    }
+                    inicioAtivo = null;
+                    cicloAberto = false;
+                    pausado = false;
+                    ciclosFinalizados++;
+                }
+            });
+
+            const atividadeEmAberto = atividadesEmAndamento.find(item =>
+                (atividade.id && String(item.id) === String(atividade.id)) ||
+                (atividade.chaveAtividade && item.chaveAtividade === atividade.chaveAtividade) ||
+                (!atividade.id && !atividade.chaveAtividade && atividade.ticket &&
+                    String(item.ticket) === String(atividade.ticket))
+            );
+            const pausaAtual = [...(atividade._pausasResumo || [])].reverse().find(pausa =>
+                pausa.status === 'Pausado' &&
+                !(pausa.dataHoraRetomada || pausa.horaRetomada || pausa.dataRetomada)
+            );
+            if (cicloAberto && inicioAtivo !== null && atividadeEmAberto) {
+                const pausadaAgora = pausado || Boolean(pausaAtual);
+                if (pausadaAgora) {
+                    const inicioPausa = pausaAtual?.dataHoraPausa
+                        ? new Date(pausaAtual.dataHoraPausa).getTime()
+                        : converterDataHoraPausa(
+                            pausaAtual?.dataPausa || pausaAtual?.dataInicio,
+                            pausaAtual?.horaPausa
+                        )?.getTime();
+                    if (Number.isFinite(inicioPausa)) {
+                            acumularIntervaloAtivo(inicioAtivo, inicioPausa);
+                    }
+                } else {
+                        acumularIntervaloAtivo(inicioAtivo, Date.now());
+                }
+            }
+
+            if (ciclosFinalizados > 0 || (cicloAberto && atividadeEmAberto)) {
+                return totalAtivoMs / 60000;
+            }
+
+            if (inicioDia !== null) {
+                return totalAtivoMs / 60000;
+            }
+
+            const duracoesRegistradas = eventosOrdenados
+                .filter(evento => evento.tipo === 'FIM' && evento.duracao)
+                .map(evento => minutosDaDuracao(evento.duracao));
+            if (duracoesRegistradas.length) {
+                return Math.max(0, duracoesRegistradas.reduce((total, minutos) => total + minutos, 0) -
+                    calcularMinutosPausados(atividade));
+            }
             return Math.max(0, minutosDaDuracao(atividade.duracao) - calcularMinutosPausados(atividade));
         }
 
@@ -1105,39 +1247,84 @@
 
         }
 
+        function atividadeCorrespondeAoPeriodoBaseDados(atividade, data) {
+            const eventos = atividade._eventosResumo || [];
+            const inicioNoDia = eventos.some(evento =>
+                ['INICIO', 'REABRIU', 'REABRIU_DO_CONCLUIDO'].includes(evento.tipo) &&
+                dataMovimentacaoParaISO(evento.timestamp) === data
+            ) || (
+                eventos.length === 0 &&
+                dataMovimentacaoParaISO(atividade.data_criacao || atividade.dataInicio) === data
+            );
+            const pausaOuRetomadaNoDia = (atividade._pausasResumo || []).some(pausa =>
+                dataMovimentacaoParaISO(pausa.dataHoraPausa) === data ||
+                dataAtividadeParaISO(pausa.dataPausa || pausa.dataInicio) === data ||
+                dataMovimentacaoParaISO(pausa.dataHoraRetomada) === data ||
+                dataAtividadeParaISO(pausa.dataRetomada) === data
+            ) || eventos.some(evento =>
+                ['PAUSA', 'RETOMOU'].includes(evento.tipo) && dataMovimentacaoParaISO(evento.timestamp) === data
+            );
+            const finalizacao = [...eventos].reverse().find(evento => evento.tipo === 'FIM');
+            const finalizacaoNoDia = dataMovimentacaoParaISO(
+                finalizacao?.timestamp || atividade.data_finalizacao || atividade.dataFim
+            ) === data;
+            const tempoAtivoNoDia = calcularMinutosAtivos(atividade, data);
+            return inicioNoDia || pausaOuRetomadaNoDia || finalizacaoNoDia || tempoAtivoNoDia > 0;
+        }
+
         function contarStatus(data) {
             const atividadesDoDia = obterAtividadesPorStatus(data);
             const { criadas, concluidas, pausadas, emAndamento } = atividadesDoDia;
-            const atividadesComDuracaoFinalizadas = concluidas.filter(item => item.duracao);
-            const duracoesPorAtividade = atividadesComDuracaoFinalizadas
-                .map(atividade => ({
-                    atividade,
-                    minutos: calcularMinutosAtivos(atividade)
-                }))
-                .filter(item => Number.isFinite(item.minutos));
-            const tempoTotalAtividades = duracoesPorAtividade.reduce(
-                (total, item) => total + item.minutos,
+            const atividadesRastreabilidade = obterAtividadesDaRastreabilidade();
+            const atividadesTempoTotal = atividadesRastreabilidade.filter(atividade =>
+                atividadeCorrespondeAoPeriodoBaseDados(atividade, data)
+            );
+            const tempoTotalAtivo = atividadesTempoTotal.reduce(
+                (total, atividade) => total + calcularMinutosAtivos(atividade, data),
                 0
             );
-            const tempoMedioFinalizacao = duracoesPorAtividade.length
-                ? duracoesPorAtividade.reduce((total, item) => total + item.minutos, 0) / duracoesPorAtividade.length
+            const atividadesFinalizadasNoDia = atividadesRastreabilidade.filter(atividade => {
+                const finalizacoes = (atividade._eventosResumo || [])
+                    .filter(evento => evento.tipo === 'FIM');
+                return finalizacoes.length
+                    ? finalizacoes.some(evento => dataMovimentacaoParaISO(evento.timestamp) === data)
+                    : dataMovimentacaoParaISO(atividade.data_finalizacao || atividade.dataFim) === data;
+            });
+            const chaveTicket = atividade => {
+                const ticket = String(atividade.ticket || '').trim();
+                if (ticket) return `ticket:${ticket}`;
+                const identificador = String(atividade.id || atividade.chaveAtividade || '').trim();
+                if (identificador) return `atividade:${identificador}`;
+                return '';
+            };
+            const ticketsFinalizadosNoDia = new Set(
+                atividadesFinalizadasNoDia.map(chaveTicket).filter(Boolean)
+            );
+            const tempoTotalTicketsFinalizados = atividadesRastreabilidade
+                .filter(atividade => ticketsFinalizadosNoDia.has(chaveTicket(atividade)))
+                .reduce((total, atividade) => total + calcularMinutosAtivos(atividade), 0);
+            const tempoMedioFinalizacao = ticketsFinalizadosNoDia.size
+                ? tempoTotalTicketsFinalizados / ticketsFinalizadosNoDia.size
+                : null;
+            const colaboradoresTempoTotal = new Set();
+            atividadesTempoTotal.forEach(atividade => {
+                const colaboradores = [
+                    atividade.nome || atividade.colaborador || atividade.criador_ticket,
+                    ...(Array.isArray(atividade.colaboradoresAuxiliares) ? atividade.colaboradoresAuxiliares : [])
+                ];
+                colaboradores.forEach(colaborador => {
+                    const nome = String(colaborador || '').trim();
+                    if (nome) colaboradoresTempoTotal.add(nome.toLocaleLowerCase('pt-BR'));
+                });
+            });
+            const mediaPorColaboradorDia = colaboradoresTempoTotal.size
+                ? tempoTotalAtivo / colaboradoresTempoTotal.size
                 : null;
             const pausasDoDia = criadas.flatMap(item => item._pausasResumo || [])
                 .filter(pausa => dataRegistroParaISO(pausa.dataHoraPausa) === data ||
                     dataAtividadeParaISO(pausa.dataPausa || pausa.dataInicio) === data);
             const tempoTotalPausas = pausasDoDia.reduce((total, item) => total + calcularMinutosPausaNoDia(item, data), 0);
             const tempoMedioPausa = pausasDoDia.length ? tempoTotalPausas / pausasDoDia.length : null;
-            const tempoPorColaborador = new Map();
-            duracoesPorAtividade.forEach(({ atividade, minutos }) => {
-                const colaborador = atividade.nome || atividade.colaborador || 'Não informado';
-                tempoPorColaborador.set(
-                    colaborador,
-                    (tempoPorColaborador.get(colaborador) || 0) + minutos
-                );
-            });
-            const mediaPorColaboradorDia = tempoPorColaborador.size
-                ? [...tempoPorColaborador.values()].reduce((total, minutos) => total + minutos, 0) / tempoPorColaborador.size
-                : null;
             const taxaFinalizacao = criadas.length ? Math.min(100, concluidas.length / criadas.length * 100) : 0;
             return {
                 emAndamento: emAndamento.length,
@@ -1145,7 +1332,7 @@
                 concluidas: concluidas.length,
                 criadas: criadas.length,
                 taxaFinalizacao,
-                tempoTotalAtividades,
+                tempoTotalAtividades: tempoTotalAtivo,
                 tempoMedioFinalizacao,
                 tempoMedioPausa,
                 mediaPorColaboradorDia
@@ -1160,7 +1347,7 @@
             document.getElementById('totalAtividadesCriadas').textContent = totais.criadas;
             document.getElementById('taxaFinalizacao').textContent = `${Math.round(totais.taxaFinalizacao)}%`;
             document.getElementById('tempoMedioFinalizacao').textContent = totais.tempoMedioFinalizacao === null ? '--' : formatarHoras(totais.tempoMedioFinalizacao);
-            document.getElementById('tempoTotalAtividades').textContent = formatarHoras(totais.tempoTotalAtividades);
+            document.getElementById('tempoTotalAtividades').textContent = formatarTempoTotalAtividades(totais.tempoTotalAtividades);
             document.getElementById('tempoMedioPausa').textContent = totais.tempoMedioPausa === null ? '--' : formatarHoras(totais.tempoMedioPausa);
             document.getElementById('mediaPorColaboradorDia').textContent = totais.mediaPorColaboradorDia === null ? '--' : formatarHoras(totais.mediaPorColaboradorDia);
             renderizarGraficoResumo(totais.taxaFinalizacao);
@@ -1186,8 +1373,8 @@
                 `  * Pausadas: ${totais.pausadas}`,
                 `  * Concluídas: ${totais.concluidas}`,
                 `- Taxa de conclusão: ${Math.round(totais.taxaFinalizacao)}%`,
-                `- Tempo medio total em atividades concluídas: ${formatarTempo(totais.tempoTotalAtividades)}`,
-                `- Média por atividade: ${formatarTempo(totais.tempoMedioFinalizacao)}`,
+                `- Tempo total das atividades: ${formatarTempo(totais.tempoTotalAtividades)}`,
+                `- Média por ticket finalizado: ${formatarTempo(totais.tempoMedioFinalizacao)}`,
                 `- Média de pausa: ${formatarTempo(totais.tempoMedioPausa)}`,
             ].join('\n');
         }
