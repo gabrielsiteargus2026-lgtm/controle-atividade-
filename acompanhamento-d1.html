@@ -312,13 +312,13 @@
             </div>
             <div class="summary-grid">
                 <div class="summary-card"><div class="summary-value" id="totalAtividadesCriadas">0</div><div class="summary-label">Total de Atividades Criadas</div></div>
+                <div class="summary-card"><div class="summary-value" id="totalConcluidas">0</div><div class="summary-label">Total Concluídas no Dia</div></div>
                 <div class="summary-card"><div class="summary-value" id="totalEmAndamento">0</div><div class="summary-label">Total de Atividades em Andamento</div></div>
                 <div class="summary-card"><div class="summary-value" id="totalPausadas">0</div><div class="summary-label">Total Atividades Pausadas</div></div>
-                <div class="summary-card"><div class="summary-value" id="totalConcluidas">0</div><div class="summary-label">Total Concluídas no Dia</div></div>
                 <div class="summary-card"><div class="summary-value" id="tempoTotalAtividades">--</div><div class="summary-label">Tempo total das atividades</div></div>
                 <div class="summary-card"><div class="summary-value" id="tempoMedioFinalizacao">--</div><div class="summary-label">Média de Finalização por Ticket</div></div>
-                <div class="summary-card"><div class="summary-value" id="tempoMedioPausa">--</div><div class="summary-label">Média de Pausa por dia</div></div>
                 <div class="summary-card"><div class="summary-value" id="mediaPorColaboradorDia">--</div><div class="summary-label">Média por Colaborador</div></div>
+                <div class="summary-card"><div class="summary-value" id="tempoMedioPausa">--</div><div class="summary-label">Média de Pausa por dia</div></div>
             </div>
         </section>
 
@@ -377,7 +377,6 @@
             </div>
             <div class="card">
                 <h2 class="chart-title">Pausas por Setor</h2>
-                <div class="chart-caption">Quantidade de pausas</div>
                 <div class="chart-container small"><canvas id="chartPausasPorSetor"></canvas></div>
             </div>
             <div class="card">
@@ -488,11 +487,12 @@
                                 contexto.strokeStyle = '#fff';
                                 contexto.lineWidth = 3;
                                 const usarFaixaSuperior =
-                                    chart.canvas.id === 'chartStatusPorColaborador' &&
+                                    (chart.canvas.id === 'chartStatusPorColaborador' ||
+                                        chart.canvas.id === 'chartPausasPorSetor') &&
                                     barra.y <= chart.chartArea.top + chart.chartArea.height * 0.15;
                                 const posicaoY = usarFaixaSuperior
                                     ? chart.chartArea.top - 22
-                                    : barra.y - 14;
+                                    : barra.y - 12;
                                 contexto.strokeText(rotulo, barra.x, posicaoY);
                                 contexto.fillStyle = '#1f2937';
                                 contexto.fillText(rotulo, barra.x, posicaoY);
@@ -991,18 +991,92 @@
             return Math.max(0, minutosDaDuracao(atividade.duracao) - calcularMinutosPausados(atividade));
         }
 
+        function obterTimestampPausa(pausa, retomada = false) {
+            const timestampDireto = retomada ? pausa.dataHoraRetomada : pausa.dataHoraPausa;
+            if (timestampDireto !== undefined && timestampDireto !== null && timestampDireto !== '') {
+                const timestamp = typeof timestampDireto === 'number'
+                    ? timestampDireto
+                    : new Date(timestampDireto).getTime();
+                if (Number.isFinite(timestamp)) return timestamp;
+            }
+            const data = retomada
+                ? pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio
+                : pausa.dataPausa || pausa.dataInicio;
+            const hora = retomada ? pausa.horaRetomada : pausa.horaPausa;
+            return converterDataHoraPausa(data, hora)?.getTime() ?? null;
+        }
+
+        function obterDataPausaISO(pausa) {
+            const inicio = obterTimestampPausa(pausa);
+            if (inicio !== null) return dataRegistroParaISO(inicio);
+            return dataAtividadeParaISO(pausa.dataPausa || pausa.dataInicio);
+        }
+
+        function obterPausasDoDia(data) {
+            const pausasUnicas = new Map();
+            historicoPausas.forEach(pausa => {
+                if (!pausa || obterDataPausaISO(pausa) !== data) return;
+                const inicio = obterTimestampPausa(pausa);
+                const identidadeAtividade = pausa.id || pausa.atividadeId || pausa.chaveAtividade ||
+                    (pausa.ticket ? `ticket:${pausa.ticket}` : '');
+                const identidadeInicio = inicio === null
+                    ? `${pausa.dataPausa || pausa.dataInicio || ''}:${pausa.horaPausa || ''}`
+                    : String(Math.floor(inicio / 1000));
+                const chave = identidadeAtividade
+                    ? `${identidadeAtividade}:${identidadeInicio}`
+                    : `${identidadeInicio}:${pausa.grupo || pausa.setor || ''}:${pausa.motivo || ''}`;
+                if (!pausasUnicas.has(chave)) pausasUnicas.set(chave, pausa);
+            });
+            return [...pausasUnicas.values()];
+        }
+
+        function obterDuracaoPausaMs(pausa) {
+            if (pausa.tempoPausaMs !== undefined && pausa.tempoPausaMs !== null) {
+                const duracao = Number(pausa.tempoPausaMs);
+                return Number.isFinite(duracao) && duracao >= 0 ? duracao : null;
+            }
+            const minutos = minutosDaDuracao(pausa.tempoPausaFormatado || pausa.tempoPausa);
+            return minutos > 0 ? minutos * 60000 : null;
+        }
+
         function calcularMinutosPausaNoDia(pausa, data) {
-            if (dataAtividadeParaISO(pausa.dataPausa || pausa.dataInicio) !== data) return 0;
-            const inicio = converterDataHoraPausa(pausa.dataPausa || pausa.dataInicio, pausa.horaPausa);
-            if (!inicio) return calcularMinutosPausa(pausa);
-            const fim = pausa.horaRetomada
-                ? converterDataHoraPausa(pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio, pausa.horaRetomada)
-                : new Date();
-            if (!fim) return calcularMinutosPausa(pausa);
+            if (obterDataPausaISO(pausa) !== data) return 0;
+            const inicio = obterTimestampPausa(pausa);
+            const duracaoRegistradaMs = obterDuracaoPausaMs(pausa);
+            if (inicio === null) return duracaoRegistradaMs === null ? null : duracaoRegistradaMs / 60000;
+
+            let fim = obterTimestampPausa(pausa, true);
+            if (fim === null && duracaoRegistradaMs !== null &&
+                (pausa.status !== 'Pausado' || pausa.horaRetomada || pausa.dataRetomada)) {
+                fim = inicio + duracaoRegistradaMs;
+            }
+            if (fim === null) fim = Date.now();
+
             const [ano, mes, dia] = data.split('-').map(Number);
             const inicioDia = new Date(ano, mes - 1, dia).getTime();
             const fimDia = new Date(ano, mes - 1, dia + 1).getTime();
-            return Math.max(0, (Math.min(fim.getTime(), fimDia) - Math.max(inicio.getTime(), inicioDia)) / 60000);
+            const duracaoNoDiaMs = Math.max(0, Math.min(fim, fimDia) - Math.max(inicio, inicioDia));
+            return duracaoNoDiaMs / 60000;
+        }
+
+        function obterResumoPausasPorSetor(data) {
+            const resumoPorSetor = new Map();
+            obterPausasDoDia(data).forEach(pausa => {
+                const setor = obterSetorPausa(pausa);
+                const resumo = resumoPorSetor.get(setor) || {
+                    quantidade: 0,
+                    totalMinutos: 0,
+                    quantidadeComDuracao: 0
+                };
+                resumo.quantidade++;
+                const minutos = calcularMinutosPausaNoDia(pausa, data);
+                if (Number.isFinite(minutos)) {
+                    resumo.totalMinutos += minutos;
+                    resumo.quantidadeComDuracao++;
+                }
+                resumoPorSetor.set(setor, resumo);
+            });
+            return resumoPorSetor;
         }
 
         function obterAtividadesDaRastreabilidade() {
@@ -1793,20 +1867,18 @@
             if (!window.chartPronto || typeof Chart === 'undefined') return;
             const data = obterDiaGrafico();
             const porColaborador = {};
-            registrosAtividades
-                .filter(registro => registro.tipo === 'INICIO' && dataRegistroParaISO(registro.timestamp) === data)
-                .forEach(registro => {
-                    const colaborador = registro.colaborador || registro.nome_usuario || registro.email_usuario || 'Não informado';
-                    porColaborador[colaborador] = (porColaborador[colaborador] || 0) + 1;
-                });
+            const atividadesPorStatus = obterAtividadesPorStatus(data);
+            const atividadesCriadasNoDia = atividadesPorStatus.criadas;
+            atividadesCriadasNoDia.forEach(atividade => {
+                const colaborador = obterNomeColaboradorAtividadeGrafico(atividade);
+                porColaborador[colaborador] = (porColaborador[colaborador] || 0) + 1;
+            });
 
             const finalizadasPorColaborador = {};
-            atividades
-                .filter(item => !item.ehAjudante && item.dataFim && dataAtividadeParaISO(item.dataInicio) === data)
-                .forEach(item => {
-                    const colaborador = item.colaborador || item.nome || item.finalizado_por || 'Não informado';
-                    finalizadasPorColaborador[colaborador] = (finalizadasPorColaborador[colaborador] || 0) + 1;
-                });
+            atividadesPorStatus.concluidas.forEach(atividade => {
+                const colaborador = obterNomeColaboradorAtividadeGrafico(atividade);
+                finalizadasPorColaborador[colaborador] = (finalizadasPorColaborador[colaborador] || 0) + 1;
+            });
 
             const nomes = Object.keys(porColaborador).sort((a, b) => porColaborador[b] - porColaborador[a]);
             const canvas = document.getElementById('chartAtividadesPorColaborador');
@@ -1822,16 +1894,37 @@
             });
         }
 
+        function obterNomeColaboradorAtividadeGrafico(atividade) {
+            const eventoInicio = (atividade._eventosResumo || [])
+                .filter(evento => evento.tipo === 'INICIO')
+                .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))[0];
+            const nomesColaborador = [
+                atividade.criador_atividade,
+                atividade.nome_usuario,
+                atividade.colaborador,
+                atividade.nome,
+                eventoInicio?.nome_usuario,
+                eventoInicio?.colaborador
+            ];
+            const emailColaborador = [
+                atividade.email_criador,
+                atividade.email_usuario,
+                eventoInicio?.email_usuario
+            ].find(email => typeof email === 'string' && email.includes('@'));
+            return obterNomeColaboradorTempo(nomesColaborador, emailColaborador);
+        }
+
         function renderizarGraficoAtividadesRetroativas() {
             if (!window.chartPronto || typeof Chart === 'undefined') return;
             const data = obterDiaGrafico();
             const porColaborador = {};
-            atividades
-                .filter(item => !item.ehAjudante && item.dataFim && dataAtividadeParaISO(item.dataFim) === data && dataAtividadeParaISO(item.dataInicio) < data)
-                .forEach(item => {
-                    const colaborador = item.finalizado_por || item.colaborador || item.nome || 'Não informado';
-                    porColaborador[colaborador] = (porColaborador[colaborador] || 0) + 1;
-                });
+            obterAtividadesRetroativasFinalizadasNoDia(data).forEach(atividade => {
+                const colaboradorFinalizacao = atividade.finalizado_por;
+                const colaborador = colaboradorFinalizacao
+                    ? obterNomeColaboradorTempo([colaboradorFinalizacao], '')
+                    : obterNomeColaboradorAtividadeGrafico(atividade);
+                porColaborador[colaborador] = (porColaborador[colaborador] || 0) + 1;
+            });
             const nomes = Object.keys(porColaborador).sort((a, b) => porColaborador[b] - porColaborador[a] || a.localeCompare(b, 'pt-BR'));
             const canvas = document.getElementById('chartAtividadesRetroativas');
             if (graficoAtividadesRetroativas) graficoAtividadesRetroativas.destroy();
@@ -1848,28 +1941,23 @@
         function renderizarGraficoStatusColaboradores() {
             if (!window.chartPronto || typeof Chart === 'undefined') return;
             const data = obterDiaGrafico();
-            const pausasAtivas = obterPausasAtivasPorTicket();
-            const ticketsPausados = new Set(Object.keys(pausasAtivas));
-            const contagens = {};
-            const garantirColaborador = colaborador => {
-                const nome = colaborador || 'Não informado';
-                if (!contagens[nome]) contagens[nome] = { andamento: 0, pausada: 0, finalizada: 0 };
-                return contagens[nome];
+            const atividadesPorStatus = obterAtividadesPorStatus(data);
+            const contagens = new Map();
+            const garantirColaborador = atividade => {
+                const nome = obterNomeColaboradorAtividadeGrafico(atividade);
+                if (!contagens.has(nome)) {
+                    contagens.set(nome, { andamento: 0, pausada: 0, finalizada: 0 });
+                }
+                return contagens.get(nome);
             };
 
-            atividadesEmAndamento
-                .filter(item => dataAtividadeParaISO(item.dataInicio) === data && (!item.ticket || !ticketsPausados.has(String(item.ticket))))
-                .forEach(item => garantirColaborador(item.nome || item.colaborador).andamento++);
-            historicoPausas
-                .filter(item => dataAtividadeParaISO(item.dataPausa || item.dataInicio) === data)
-                .forEach(item => garantirColaborador(item.colaborador || item.nome).pausada++);
-            atividades
-                .filter(item => dataAtividadeParaISO(item.dataInicio) === data)
-                .forEach(item => garantirColaborador(item.nome || item.colaborador).finalizada++);
+            atividadesPorStatus.emAndamento.forEach(atividade => garantirColaborador(atividade).andamento++);
+            atividadesPorStatus.pausadas.forEach(atividade => garantirColaborador(atividade).pausada++);
+            atividadesPorStatus.concluidas.forEach(atividade => garantirColaborador(atividade).finalizada++);
 
-            const nomes = Object.keys(contagens).sort((a, b) => {
-                const totalA = Object.values(contagens[a]).reduce((total, valor) => total + valor, 0);
-                const totalB = Object.values(contagens[b]).reduce((total, valor) => total + valor, 0);
+            const nomes = [...contagens.keys()].sort((a, b) => {
+                const totalA = Object.values(contagens.get(a)).reduce((total, valor) => total + valor, 0);
+                const totalB = Object.values(contagens.get(b)).reduce((total, valor) => total + valor, 0);
                 return totalB - totalA || a.localeCompare(b);
             });
             const canvas = document.getElementById('chartStatusPorColaborador');
@@ -1879,9 +1967,9 @@
                 data: {
                     labels: nomes,
                     datasets: [
-                        { label: 'Em andamento', data: nomes.map(nome => contagens[nome].andamento), backgroundColor: PALETA_GRAFICOS[0], borderColor: PALETA_GRAFICOS[0], borderWidth: 1, borderRadius: 4 },
-                        { label: 'Pausada', data: nomes.map(nome => contagens[nome].pausada), backgroundColor: PALETA_GRAFICOS[2], borderColor: PALETA_GRAFICOS[2], borderWidth: 1, borderRadius: 4 },
-                        { label: 'Finalizada', data: nomes.map(nome => contagens[nome].finalizada), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[1], borderWidth: 1, borderRadius: 4 }
+                        { label: 'Em andamento', data: nomes.map(nome => contagens.get(nome).andamento), backgroundColor: PALETA_GRAFICOS[0], borderColor: PALETA_GRAFICOS[0], borderWidth: 1, borderRadius: 4 },
+                        { label: 'Pausada', data: nomes.map(nome => contagens.get(nome).pausada), backgroundColor: PALETA_GRAFICOS[2], borderColor: PALETA_GRAFICOS[2], borderWidth: 1, borderRadius: 4 },
+                        { label: 'Finalizada', data: nomes.map(nome => contagens.get(nome).finalizada), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[1], borderWidth: 1, borderRadius: 4 }
                     ]
                 },
                 options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 36 } }, plugins: { legend: { display: false } }, scales: { x: { position: 'bottom', grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' }, ticks: { padding: 8, autoSkip: false, maxRotation: 45, minRotation: 0 } }, y: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0, stepSize: 1 } } } },
@@ -1891,14 +1979,7 @@
 
         function renderizarGraficoPausasColaboradores() {
             const data = obterDiaGrafico();
-            const porSetor = new Map();
-            historicoPausas.filter(item => dataAtividadeParaISO(item.dataPausa || item.dataInicio) === data).forEach(item => {
-                const setor = obterSetorPausa(item);
-                const resumo = porSetor.get(setor) || { totalMinutos: 0, quantidade: 0 };
-                resumo.totalMinutos += calcularMinutosPausa(item);
-                resumo.quantidade++;
-                porSetor.set(setor, resumo);
-            });
+            const porSetor = obterResumoPausasPorSetor(data);
 
             const setores = [...porSetor.entries()].sort(([setorA], [setorB]) => setorA.localeCompare(setorB, 'pt-BR'));
             const lista = document.getElementById('listaTempoMedioPausaPorSetor');
@@ -1916,10 +1997,14 @@
                 nomeSetor.textContent = setor;
                 const media = document.createElement('span');
                 media.className = 'tempo-lista-valor';
-                media.textContent = formatarHoras(resumo.totalMinutos / resumo.quantidade);
+                media.textContent = resumo.quantidadeComDuracao
+                    ? formatarHoras(resumo.totalMinutos / resumo.quantidadeComDuracao)
+                    : '--';
                 const quantidade = document.createElement('span');
                 quantidade.className = 'tempo-lista-colaborador';
-                quantidade.textContent = `Média de ${resumo.quantidade} ${resumo.quantidade === 1 ? 'pausa' : 'pausas'}`;
+                quantidade.textContent = resumo.quantidadeComDuracao
+                    ? `Média de ${resumo.quantidadeComDuracao} ${resumo.quantidadeComDuracao === 1 ? 'pausa' : 'pausas'} com duração`
+                    : 'Sem duração registrada para calcular a média';
                 cabecalho.append(nomeSetor, media);
                 item.append(cabecalho, quantidade);
                 return item;
@@ -2108,18 +2193,17 @@
         function renderizarGraficoPausasSetor() {
             if (!window.chartPronto || typeof Chart === 'undefined') return;
             const data = obterDiaGrafico();
-            const porSetor = {};
-            historicoPausas.filter(item => dataAtividadeParaISO(item.dataPausa || item.dataInicio) === data).forEach(item => {
-                const setor = obterSetorPausa(item);
-                porSetor[setor] = (porSetor[setor] || 0) + 1;
-            });
+            const resumoPorSetor = obterResumoPausasPorSetor(data);
+            const porSetor = Object.fromEntries(
+                [...resumoPorSetor].map(([setor, resumo]) => [setor, resumo.quantidade])
+            );
             const setores = Object.keys(porSetor).sort((a, b) => porSetor[b] - porSetor[a]);
             const canvas = document.getElementById('chartPausasPorSetor');
             if (graficoPausasSetor) graficoPausasSetor.destroy();
             graficoPausasSetor = new Chart(canvas.getContext('2d'), {
                 type: 'bar',
                 data: { labels: setores, datasets: [{ label: 'Quantidade de pausas', data: setores.map(setor => porSetor[setor]), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[2], borderWidth: 1, borderRadius: 5 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, max: 10, grid: { display: false }, ticks: { precision: 0, stepSize: 1 } } } },
+                options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 28 } }, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grace: '15%', grid: { display: false }, ticks: { precision: 0, stepSize: 1 } } } },
                 plugins: [PLUGIN_VALORES_COLUNAS]
             });
         }
