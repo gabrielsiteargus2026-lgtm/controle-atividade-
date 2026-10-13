@@ -37,7 +37,7 @@
         );
     }
 
-    function calcularTempoAtivoDiarioMs({ data, eventos = [], pausas = [], inicio, fim, aberta, pausada, inicioPausa }) {
+    function obterIntervalosAtivosDiarios({ data, eventos = [], pausas = [], inicio, fim, aberta, pausada, inicioPausa }) {
         const partesData = /^(\d{4})-(\d{2})-(\d{2})$/.exec(data || '');
         const inicioDia = partesData
             ? new Date(Number(partesData[1]), Number(partesData[2]) - 1, Number(partesData[3])).getTime()
@@ -83,11 +83,13 @@
         let inicioAtivo = null;
         let atividadeAberta = false;
         let estaPausada = false;
-        let totalAtivoMs = 0;
+        const intervalosAtivos = [];
         const acumularIntervalo = (inicioIntervalo, fimIntervalo) => {
             const inicioContabilizado = inicioDia === null ? inicioIntervalo : Math.max(inicioIntervalo, inicioDia);
             const fimContabilizado = fimDia === null ? fimIntervalo : Math.min(fimIntervalo, fimDia);
-            totalAtivoMs += Math.max(0, fimContabilizado - inicioContabilizado);
+            if (fimContabilizado > inicioContabilizado) {
+                intervalosAtivos.push({ inicio: inicioContabilizado, fim: fimContabilizado });
+            }
         };
 
         movimentosOrdenados.forEach(evento => {
@@ -123,7 +125,58 @@
                 acumularIntervalo(inicioAtivo, Date.now());
             }
         }
-        return totalAtivoMs;
+        return intervalosAtivos;
+    }
+
+    function calcularTempoAtivoDiarioMs(parametros) {
+        return obterIntervalosAtivosDiarios(parametros).reduce(
+            (total, intervalo) => total + intervalo.fim - intervalo.inicio,
+            0
+        );
+    }
+
+    function agruparTempoEfetivoPorColaborador(registros) {
+        const intervalosPorColaborador = new Map();
+        registros.forEach(registro => {
+            if (!registro || registro.ehAjudante) return;
+            const nome = String(registro.nome || '').trim();
+            if (!nome || !Array.isArray(registro.intervalos)) return;
+
+            const chave = String(registro.identificador || `nome:${nome}`).trim().toLocaleLowerCase('pt-BR');
+            const resumo = intervalosPorColaborador.get(chave) || { nome, intervalos: [] };
+            registro.intervalos.forEach(intervalo => {
+                const inicio = Number(intervalo?.inicio);
+                const fim = Number(intervalo?.fim);
+                if (Number.isFinite(inicio) && Number.isFinite(fim) && fim > inicio) {
+                    resumo.intervalos.push({ inicio, fim });
+                }
+            });
+            intervalosPorColaborador.set(chave, resumo);
+        });
+
+        return [...intervalosPorColaborador.values()]
+            .map(resumo => {
+                const intervalosOrdenados = resumo.intervalos.sort((a, b) => a.inicio - b.inicio || a.fim - b.fim);
+                let inicioAtual = null;
+                let fimAtual = null;
+                let totalMs = 0;
+                intervalosOrdenados.forEach(intervalo => {
+                    if (inicioAtual === null) {
+                        inicioAtual = intervalo.inicio;
+                        fimAtual = intervalo.fim;
+                    } else if (intervalo.inicio <= fimAtual) {
+                        fimAtual = Math.max(fimAtual, intervalo.fim);
+                    } else {
+                        totalMs += fimAtual - inicioAtual;
+                        inicioAtual = intervalo.inicio;
+                        fimAtual = intervalo.fim;
+                    }
+                });
+                if (inicioAtual !== null) totalMs += fimAtual - inicioAtual;
+                return { nome: resumo.nome, totalMs };
+            })
+            .filter(resumo => resumo.totalMs > 0)
+            .sort((a, b) => b.totalMs - a.totalMs || a.nome.localeCompare(b.nome, 'pt-BR'));
     }
 
     function publicarTemposPorColaborador(data, colaboradores) {
@@ -163,7 +216,9 @@
 
     global.obterNomeColaboradorTempo = obterNomeColaborador;
     global.agruparTempoAtivoPorColaborador = agruparTempoAtivoPorColaborador;
+    global.obterIntervalosAtivosDiarios = obterIntervalosAtivosDiarios;
     global.calcularTempoAtivoDiarioMs = calcularTempoAtivoDiarioMs;
+    global.agruparTempoEfetivoPorColaborador = agruparTempoEfetivoPorColaborador;
     global.publicarTemposPorColaborador = publicarTemposPorColaborador;
     global.obterTemposPorColaboradorPublicados = obterTemposPorColaboradorPublicados;
 })(window);

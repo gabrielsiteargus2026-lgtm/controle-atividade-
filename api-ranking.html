@@ -256,15 +256,6 @@
                         };
                     }
                     ranking[atividade.nome].total++;
-
-                    const reabertoPor = String(atividade.reaberto_por || '').trim();
-                    if (atividade.isReabertura && reabertoPor &&
-                        reabertoPor.toLocaleLowerCase('pt-BR') !== String(atividade.nome || '').trim().toLocaleLowerCase('pt-BR')) {
-                        if (!ranking[reabertoPor]) {
-                            ranking[reabertoPor] = { total: 0, finalizadas: 0 };
-                        }
-                        ranking[reabertoPor].total++;
-                    }
                 }
             });
 

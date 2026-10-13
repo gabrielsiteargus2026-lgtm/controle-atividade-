@@ -325,6 +325,7 @@
                     <thead>
                         <tr>
                             <th>Chave</th>
+                            <th>Período</th>
                             <th>Colaborador</th>
                             <th>Ticket</th>
                             <th>Data de Início</th>
@@ -340,7 +341,7 @@
                     </thead>
                     <tbody id="bodyTabela">
                         <tr>
-                            <td colspan="12" class="empty-state">Nenhuma atividade registrada ainda</td>
+                            <td colspan="13" class="empty-state">Nenhuma atividade registrada ainda</td>
                         </tr>
                     </tbody>
                 </table>
@@ -389,10 +390,12 @@
                     // Combinar ambos e remover duplicatas
                     atividades = [...atividadesFinalizadas, ...atividadesLocal];
                     
-                    // Remover duplicatas por ID ou Ticket
+                    // Remover a cópia local/Firebase sem ocultar colaboradores do mesmo período.
                     const unicos = {};
                     atividades.forEach(a => {
-                        const chave = a.id || a.ticket;
+                        const identidadePeriodo = a.id || `${a.ticket || ''}:${a.dataInicio || ''}:${a.horaInicio || ''}`;
+                        const colaborador = String(a.colaborador || a.nome || '').trim().toLocaleLowerCase('pt-BR');
+                        const chave = identidadePeriodo ? `${identidadePeriodo}:${colaborador}:${Boolean(a.ehAjudante)}` : '';
                         if (chave && !unicos[chave]) {
                             unicos[chave] = a;
                         }
@@ -456,20 +459,21 @@
         // Renderizar tabela
         function renderizarTabela() {
             if (atividades.length === 0) {
-                bodyTabela.innerHTML = '<tr><td colspan="12" class="empty-state">Nenhuma atividade registrada ainda</td></tr>';
+                bodyTabela.innerHTML = '<tr><td colspan="13" class="empty-state">Nenhuma atividade registrada ainda</td></tr>';
                 return;
             }
 
             bodyTabela.innerHTML = atividades.map((atividade, index) => `
                 <tr>
                     <td><strong style="color: #9c27b0;">${atividade.chaveAtividade || 'N/A'}</strong></td>
+                    <td>${atividade.periodoExecucao || (atividade.isReabertura ? 2 : 1)}</td>
                     <td>${atividade.nome || atividade.colaborador || '-'}</td>
                     <td>${atividade.ticket || '-'}</td>
                     <td>${atividade.dataInicio || '-'}</td>
                     <td>${atividade.horaInicio || '-'}</td>
                     <td>${atividade.dataFim || '-'}</td>
                     <td>${atividade.horaFim || '-'}</td>
-                    <td>${atividade.duracao || '-'}</td>
+                    <td>${atividade.duracaoAtiva || atividade.duracao || '-'}</td>
                     <td>${atividade.descricao || '-'}</td>
                     <td>${atividade.observacao || '-'}</td>
                     <td>${atividade.justificativa || '-'}</td>
@@ -485,20 +489,21 @@
                 return;
             }
 
-            const headers = ['Chave', 'Colaborador', 'Ticket', 'Data de Início', 'Hora de Início', 'Data de Fim', 'Hora de Fim', 'Duração', 'Descrição', 'Observação', 'Justificativa', 'Reaberta por'];
+            const headers = ['Chave', 'Período', 'Colaborador', 'Ticket', 'Data de Início', 'Hora de Início', 'Data de Fim', 'Hora de Fim', 'Duração', 'Descrição', 'Observação', 'Justificativa', 'Reaberta por'];
             const csv = [
                 headers.join(','),
                 ...atividades.map(a => [
-                    a.chaveAtividade || 'N/A', 
-                    a.nome || a.colaborador || '', 
-                    a.ticket || '', 
-                    a.dataInicio || '', 
-                    a.horaInicio || '', 
-                    a.dataFim || '', 
-                    a.horaFim || '', 
-                    a.duracao || '', 
-                    a.descricao || '', 
-                    a.observacao || '', 
+                    a.chaveAtividade || 'N/A',
+                    a.periodoExecucao || (a.isReabertura ? 2 : 1),
+                    a.nome || a.colaborador || '',
+                    a.ticket || '',
+                    a.dataInicio || '',
+                    a.horaInicio || '',
+                    a.dataFim || '',
+                    a.horaFim || '',
+                    a.duracaoAtiva || a.duracao || '',
+                    a.descricao || '',
+                    a.observacao || '',
                     a.justificativa || '',
                     a.isReabertura || a.reaberto_por || a.data_reaberta ? a.reaberto_por || 'Não informado' : ''
                 ].join(','))

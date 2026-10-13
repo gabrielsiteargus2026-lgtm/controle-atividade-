@@ -945,7 +945,8 @@
         // Calcular KPIs com dados do histórico (Performance)
         function calcularKPIs() {
             // Usar dados reais do histórico de atividades finalizadas
-            const atividades = normalizarDados(atividadesGlobais) || [];
+            const atividades = (normalizarDados(atividadesGlobais) || [])
+                .filter(atividade => atividade && !atividade.ehAjudante);
             
             // Total de atividades finalizadas
             const totalAtividades = atividades.length;
@@ -959,8 +960,9 @@
                 // Converter duração em formato HH:MM:SS para milissegundos
                 let totalMs = 0;
                 atividades.forEach(a => {
-                    if (a.duracao) {
-                        const partes = a.duracao.split(':');
+                    const duracaoAtiva = a.duracaoAtiva || a.duracao;
+                    if (duracaoAtiva) {
+                        const partes = duracaoAtiva.split(':');
                         if (partes.length === 3) {
                             const horas = parseInt(partes[0]) || 0;
                             const minutos = parseInt(partes[1]) || 0;
@@ -1050,10 +1052,17 @@
             }
         };
 
-        function isTicketFinalizado(ticketId) {
+        function isTicketFinalizado(ticketId, pausa = null) {
             const id = String(ticketId);
             const atividadesList = Array.isArray(atividadesGlobais) ? atividadesGlobais : Object.values(atividadesGlobais || {});
-            return atividadesList.some(a => a && String(a.ticket) === id);
+            if (pausa?.status === 'Finalizado') return true;
+            return atividadesList.some(a =>
+                a && String(a.ticket) === id &&
+                ((pausa?.id && a.id && String(pausa.id) === String(a.id)) ||
+                    (pausa?.chaveAtividade && a.chaveAtividade &&
+                        pausa.chaveAtividade === a.chaveAtividade) ||
+                    (!pausa?.id && !pausa?.chaveAtividade))
+            );
         }
 
         function obterPausasAtivasPorTicket() {
@@ -1068,7 +1077,7 @@
 
             Object.keys(ultimaPausaPorTicket).forEach(ticketId => {
                 const pausa = ultimaPausaPorTicket[ticketId];
-                if (!pausa || pausa.status !== 'Pausado' || pausa.horaRetomada || isTicketFinalizado(ticketId)) {
+                if (!pausa || pausa.status !== 'Pausado' || pausa.horaRetomada || isTicketFinalizado(ticketId, pausa)) {
                     delete ultimaPausaPorTicket[ticketId];
                 }
             });
@@ -1125,9 +1134,11 @@
             });
 
             // Calcular total de atividades criadas (mesma fórmula do card "Total Criadas")
-            const totalConcluidas = atividadesGlobais ? atividadesGlobais.filter(a => !a.isReabertura).length : 0;
+            const totalConcluidas = atividadesGlobais
+                ? atividadesGlobais.filter(a => a && !a.ehAjudante).length
+                : 0;
             const atividadesEmAndamentoSemPausa = atividadesEmAndamento.filter(a => 
-                a && a.ticket && !ticketsPausados.has(a.ticket) && !a.isReabertura
+                a && a.ticket && !ticketsPausados.has(a.ticket)
             );
             const totalEmAndamento = atividadesEmAndamentoSemPausa.length;
             const totalPausadas = ticketsPausados.size;
@@ -1237,7 +1248,7 @@
                 const grupo = pausa.grupo && pausa.grupo !== 'Não definido' ? pausa.grupo : identificarSetor(pausa.motivo);
                 
                 // Determinar status
-                const isFinalizado = isTicketFinalizado(pausa.ticket);
+                const isFinalizado = isTicketFinalizado(pausa.ticket, pausa);
                 const statusPausa = isFinalizado ? 'Finalizado' : (pausa.status === 'Pausado' ? 'Pausado' : 'Retomado');
                 const corStatus = isFinalizado ? '#38bdf8' : (pausa.status === 'Pausado' ? '#ffd700' : '#51cf66');
                 
@@ -1621,13 +1632,15 @@
             console.log('Renderizando gráfico de resumo consolidado...');
             
             // 1. Total de atividades concluídas (em atividadesGlobais)
-            const totalConcluidas = atividadesGlobais ? atividadesGlobais.filter(a => !a.isReabertura).length : 0;
+            const totalConcluidas = atividadesGlobais
+                ? atividadesGlobais.filter(a => a && !a.ehAjudante).length
+                : 0;
             
             // 2. Total de atividades em andamento (excluindo apenas as que têm pausas ATIVAS com status === 'Pausado')
             const pausasAtivas = obterPausasAtivasPorTicket();
             const ticketsPausados = new Set(Object.keys(pausasAtivas));
             const atividadesEmAndamentoSemPausa = atividadesEmAndamento.filter(a => 
-                a && a.ticket && !ticketsPausados.has(a.ticket) && !a.isReabertura
+                a && a.ticket && !ticketsPausados.has(a.ticket)
             );
             const totalEmAndamento = atividadesEmAndamentoSemPausa.length;
             
@@ -2078,7 +2091,7 @@
             } else {
                 // Resumo com 3 colunas
                 const tempoTotalHoras = atividades.reduce((acc, a) => {
-                    const partes = (a.duracao || '0h').split(':');
+                    const partes = (a.duracaoAtiva || a.duracao || '0h').split(':');
                     const h = parseInt(partes[0]) || 0;
                     const m = parseInt(partes[1]) || 0;
                     return acc + (h + m / 60);
@@ -2123,7 +2136,7 @@
                                 <span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px;">#${atividade.ticket}</span>
                             </td>
                             <td style="padding: 12px; color: #6b7280; font-size: 0.9em;">${atividade.dataInicio || '-'}</td>
-                            <td style="padding: 12px; color: #1f2937; font-weight: 600; font-size: 0.9em;">${atividade.duracao || '-'}</td>
+                            <td style="padding: 12px; color: #1f2937; font-weight: 600; font-size: 0.9em;">${atividade.duracaoAtiva || atividade.duracao || '-'}</td>
                             <td style="padding: 12px; color: #6b7280; font-size: 0.85em; max-width: 300px; word-wrap: break-word; white-space: normal;" title="${atividade.descricao || ''}">${atividade.descricao || '-'}</td>
                             <td style="padding: 12px; color: #6b7280; font-size: 0.85em; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${atividade.observacao || ''}">${atividade.observacao || '-'}</td>
                         </tr>

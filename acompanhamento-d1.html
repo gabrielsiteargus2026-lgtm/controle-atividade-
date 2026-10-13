@@ -84,8 +84,8 @@
         body.captura-ativa { padding: 0 !important; }
         .modo-captura { width: 100% !important; max-width: none !important; margin-left: 0 !important; margin-right: 0 !important; }
         .modo-captura .charts-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-        .modo-captura .charts-grid .card:nth-child(-n+3) { grid-column: span 2; }
-        .modo-captura .charts-grid .card:nth-child(n+4) { grid-column: span 2; }
+        .modo-captura .charts-grid > .card:nth-child(-n+3) { grid-column: span 2; }
+        .modo-captura .charts-grid > .card:nth-child(n+4) { grid-column: span 2; }
         .modo-captura .chart-container canvas { width: 100% !important; }
         .status-chart-wrap { position: relative; }
         .status-legenda { display: flex; justify-content: center; gap: 12px; margin-top: 8px; color: #4b5563; font-size: .72em; }
@@ -166,8 +166,8 @@
         .kanban-live-colaborador { overflow: hidden; margin-top: 5px; color: #64748b; font-size: .68em; text-overflow: ellipsis; white-space: nowrap; }
         .kanban-live-vazio { padding: 14px 4px; color: #94a3b8; font-size: .72em; text-align: center; }
         .charts-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 20px; }
-        .charts-grid .card:nth-child(-n+3) { grid-column: span 2; }
-        .charts-grid .card:nth-child(n+4) { grid-column: span 2; }
+        .charts-grid > .card:nth-child(-n+3) { grid-column: span 2; }
+        .charts-grid > .card:nth-child(n+4) { grid-column: span 2; }
         .charts-grid .card.linha-adaptavel { display: flex; flex-direction: column; }
         .charts-grid .card.linha-adaptavel .chart-container.small { flex: 1; height: auto; min-height: 300px; }
         .charts-grid .card.linha-adaptavel .tempo-lista { flex: 1; }
@@ -833,7 +833,13 @@
             });
             Object.keys(pausasPorTicket).forEach(ticket => {
                 const pausa = pausasPorTicket[ticket];
-                const finalizado = atividades.some(item => String(item.ticket) === ticket);
+                const finalizado = atividades.some(item =>
+                    String(item.ticket) === ticket &&
+                    ((pausa.id && item.id && String(pausa.id) === String(item.id)) ||
+                        (pausa.chaveAtividade && item.chaveAtividade &&
+                            pausa.chaveAtividade === item.chaveAtividade) ||
+                        (!pausa.id && !pausa.chaveAtividade))
+                );
                 if (pausa.status !== 'Pausado' || pausa.horaRetomada || finalizado) delete pausasPorTicket[ticket];
             });
             return pausasPorTicket;
@@ -841,7 +847,7 @@
 
         function calcularMinutosPausados(atividade) {
             return historicoPausas.reduce((total, pausa) => {
-                if (!pausa || (!pausa.horaRetomada && pausa.status !== 'Retomado')) return total;
+                if (!pausa || (!pausa.horaRetomada && !['Retomado', 'Finalizado'].includes(pausa.status))) return total;
                 const mesmaAtividade = (atividade.id && pausa.id && String(atividade.id) === String(pausa.id)) ||
                     (atividade.chaveAtividade && pausa.chaveAtividade && atividade.chaveAtividade === pausa.chaveAtividade) ||
                     (!atividade.id && !atividade.chaveAtividade && !pausa.id && !pausa.chaveAtividade && atividade.ticket && String(atividade.ticket) === String(pausa.ticket));
@@ -1625,8 +1631,10 @@
                 .flatMap(atividadesDoTicket => [...atividadesDoTicket.values()])
                 .reduce((total, item) =>
                     total + calcularMinutosAtivosAteFinalizacao(item.atividade, item.evento), 0);
-            const tempoMedioFinalizacao = finalizacoesPorTicket.size
-                ? tempoTotalTicketsFinalizados / finalizacoesPorTicket.size
+            const quantidadePeriodosFinalizados = [...finalizacoesPorTicket.values()]
+                .reduce((total, atividadesDoTicket) => total + atividadesDoTicket.size, 0);
+            const tempoMedioFinalizacao = quantidadePeriodosFinalizados
+                ? tempoTotalTicketsFinalizados / quantidadePeriodosFinalizados
                 : null;
             const colaboradoresTempoTotal = new Set();
             atividadesTempoTotal.forEach(atividade => {
@@ -1899,17 +1907,19 @@
                 .filter(evento => evento.tipo === 'INICIO')
                 .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))[0];
             const nomesColaborador = [
+                atividade.responsavel_periodo,
+                eventoInicio?.colaborador,
+                eventoInicio?.nome_usuario,
                 atividade.criador_atividade,
                 atividade.nome_usuario,
                 atividade.colaborador,
-                atividade.nome,
-                eventoInicio?.nome_usuario,
-                eventoInicio?.colaborador
+                atividade.nome
             ];
             const emailColaborador = [
+                atividade.email_responsavel_periodo,
+                eventoInicio?.email_usuario,
                 atividade.email_criador,
-                atividade.email_usuario,
-                eventoInicio?.email_usuario
+                atividade.email_usuario
             ].find(email => typeof email === 'string' && email.includes('@'));
             return obterNomeColaboradorTempo(nomesColaborador, emailColaborador);
         }
@@ -2074,19 +2084,20 @@
             const colaboradores = temposPublicados || agruparTempoAtivoPorColaborador(
                 obterAtividadesDaRastreabilidade().map(atividade => {
                     const eventoInicio = (atividade._eventosResumo || []).find(evento => evento.tipo === 'INICIO');
-                    const emailsColaborador = [
+                    const emailColaborador = [
+                        atividade.email_responsavel_periodo,
+                        eventoInicio?.email_usuario,
                         atividade.email_criador,
-                        atividade.email_usuario,
-                        eventoInicio?.email_usuario
-                    ];
-                    const emailColaborador = emailsColaborador.find(email =>
-                        typeof email === 'string' && email.includes('@')
-                    );
+                        atividade.email_usuario
+                    ].find(email => typeof email === 'string' && email.includes('@'));
                     const nomesColaborador = [
+                        atividade.responsavel_periodo,
+                        eventoInicio?.colaborador,
+                        eventoInicio?.nome_usuario,
                         atividade.criador_atividade,
                         atividade.nome_usuario,
-                        eventoInicio?.nome_usuario,
-                        eventoInicio?.colaborador
+                        atividade.colaborador,
+                        atividade.nome
                     ];
                     const pausas = atividade._pausasResumo || [];
                     const estaEmAndamento = atividadesEmAndamento.some(item =>

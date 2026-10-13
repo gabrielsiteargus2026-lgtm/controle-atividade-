@@ -1385,6 +1385,118 @@
         let historicoPausas = []; // Rastreamento de todas as pausas
         let colaboradoresSelecionados = []; // Armazenar colaboradores selecionados
 
+        const EMAIL_ADMIN_ATIVIDADES = 'gabriel.faria@argusolutions.com.br';
+
+        function usuarioEhAdminAtividades() {
+            return String(usuarioAtual?.email || '').trim().toLowerCase() === EMAIL_ADMIN_ATIVIDADES;
+        }
+
+        function usuarioPodeGerenciarAtividade(atividade) {
+            if (!atividade || !usuarioAtual?.uid || !usuarioAtual?.email) return false;
+            if (usuarioEhAdminAtividades()) return true;
+
+            const uidCriador = [
+                atividade.responsavel_usuario_id,
+                atividade.criador_usuario_id,
+                atividade.criador_uid,
+                atividade.usuario_id
+            ].map(uid => String(uid || '').trim())
+                .find(uid => uid && uid.toLowerCase() !== 'anonimo') || '';
+            if (uidCriador) {
+                return uidCriador === String(usuarioAtual.uid);
+            }
+
+            const emailCriador = [
+                atividade.email_responsavel_periodo,
+                atividade.email_criador,
+                atividade.email_usuario,
+                atividade.criador_ticket_email
+            ].map(email => String(email || '').trim().toLowerCase())
+                .find(email => email && email !== 'desconhecido') || '';
+            return Boolean(emailCriador && emailCriador === String(usuarioAtual.email).trim().toLowerCase());
+        }
+
+        function criarNovoPeriodoExecucao(atividadeAnterior, nomeResponsavel, motivoReabertura, agora) {
+            const atividadesExistentes = [...atividades, ...atividadesEmAndamento];
+            let novoId = agora.getTime();
+            while (atividadesExistentes.some(item => String(item.id) === String(novoId))) {
+                novoId++;
+            }
+
+            const novaChave = gerarChaveAtividade();
+            if (!novaChave) {
+                mostrarAlerta('erro', 'Não foi possível gerar uma chave exclusiva para o novo período.');
+                return null;
+            }
+
+            const criadorTicket = atividadeAnterior.criador_ticket ||
+                atividadeAnterior.criador_atividade ||
+                obterNomeColaborador(atividadeAnterior);
+            const emailCriador = atividadeAnterior.email_criador ||
+                atividadeAnterior.email_usuario ||
+                atividadeAnterior.criador_ticket_email ||
+                '';
+            const uidCriador = atividadeAnterior.criador_usuario_id ||
+                atividadeAnterior.criador_uid ||
+                (atividadeAnterior.usuario_id && atividadeAnterior.usuario_id !== 'anonimo'
+                    ? atividadeAnterior.usuario_id
+                    : '');
+            const periodoAnterior = Number(atividadeAnterior.periodoExecucao) ||
+                (atividadeAnterior.isReabertura ? 2 : 1);
+            const timestamp = agora.toISOString();
+
+            return {
+                ...atividadeAnterior,
+                id: novoId,
+                atividadeRaizId: atividadeAnterior.atividadeRaizId || atividadeAnterior.id,
+                chaveAtividadeOriginal: atividadeAnterior.chaveAtividadeOriginal || atividadeAnterior.chaveAtividade || '',
+                chaveAtividade: novaChave,
+                periodoExecucao: periodoAnterior + 1,
+                nome: nomeResponsavel,
+                colaborador: nomeResponsavel,
+                criador_ticket: criadorTicket,
+                criador_ticket_email: atividadeAnterior.criador_ticket_email || emailCriador,
+                dataInicio: agora.toLocaleDateString('pt-BR'),
+                horaInicio: agora.toLocaleTimeString('pt-BR'),
+                tempoInicio: agora.getTime(),
+                dataFim: null,
+                horaFim: null,
+                data_finalizacao: null,
+                duracao: null,
+                duracaoAtiva: null,
+                tempoAtivoMs: null,
+                intervaloTimer: null,
+                observacao: '',
+                justificativa: '',
+                finalizado_por: null,
+                usuario_finalizacao: null,
+                email_finalizacao: '',
+                colaboradoresAuxiliares: [],
+                isReabertura: true,
+                data_reaberta: timestamp,
+                motivo_reabertura: motivoReabertura || '',
+                reaberto_por: nomeResponsavel,
+                reaberto_por_email: usuarioAtual?.email || '',
+                data_criacao_original: atividadeAnterior.data_criacao_original ||
+                    atividadeAnterior.data_criacao ||
+                    obterDataCriacaoAtividade(atividadeAnterior),
+                data_criacao: timestamp,
+                responsavel_periodo: nomeResponsavel,
+                email_responsavel_periodo: usuarioAtual?.email || '',
+                responsavel_usuario_id: usuarioAtual?.uid || '',
+                criador_usuario_id: uidCriador,
+                email_criador: emailCriador,
+                usuario_id: uidCriador || 'anonimo',
+                email_usuario: emailCriador || 'desconhecido'
+            };
+        }
+
+        function exigirPermissaoAtividade(atividade) {
+            if (usuarioPodeGerenciarAtividade(atividade)) return true;
+            mostrarAlerta('erro', 'Somente o criador da atividade ou o administrador pode alterá-la.');
+            return false;
+        }
+
         // ✅ LISTENER GLOBAL PARA DEBUG
         window.addEventListener('beforeunload', function(e) {
             console.warn('⚠️ beforeunload disparado!', e);
@@ -1691,6 +1803,13 @@
                 isReabertura: Boolean(a.isReabertura),
                 data_reaberta: a.data_reaberta || null,
                 motivo_reabertura: a.motivo_reabertura || '',
+                atividadeRaizId: a.atividadeRaizId || a.id,
+                chaveAtividadeOriginal: a.chaveAtividadeOriginal || a.chaveAtividade || '',
+                periodoExecucao: Number(a.periodoExecucao) || (a.isReabertura ? 2 : 1),
+                responsavel_periodo: a.responsavel_periodo || obterNomeColaborador(a),
+                email_responsavel_periodo: a.email_responsavel_periodo || '',
+                responsavel_usuario_id: a.responsavel_usuario_id || '',
+                data_criacao_original: a.data_criacao_original || a.data_criacao || null,
                 ticket: a.ticket,
                 descricao: a.descricao || '',
                 titulo: a.titulo || '', // ✅ Incluir título
@@ -1699,11 +1818,12 @@
                 observacao: a.observacao || '',
                 tempoInicio: a.tempoInicio,
                 // ✅ Rastreamento de usuário
-                usuario_id: a.usuario_id || usuarioAtual?.uid || 'anonimo',
-                email_usuario: a.email_usuario || usuarioAtual?.email || 'desconhecido',
+                usuario_id: a.usuario_id || a.criador_usuario_id || a.criador_uid || 'anonimo',
+                criador_usuario_id: a.criador_usuario_id || a.criador_uid || (a.usuario_id && a.usuario_id !== 'anonimo' ? a.usuario_id : ''),
+                email_usuario: a.email_usuario || a.email_criador || 'desconhecido',
                 nome_usuario: a.nome_usuario || usuarioAtual?.nome || 'Usuário',
                 criador_atividade: a.criador_atividade || a.nome_usuario || usuarioAtual?.nome || 'Usuário',
-                email_criador: a.email_criador || a.email_usuario || usuarioAtual?.email || '',
+                email_criador: a.email_criador || a.email_usuario || '',
                 data_criacao: obterDataCriacaoAtividade(a),
                 data_atualizacao: new Date().toISOString()
             }));
@@ -1752,14 +1872,13 @@
 
         // ✅ NOVO: Encontrar atividade anterior pelo ticket
         function encontrarAtividadeAnterior(ticket) {
+            let atividade = atividadesEmAndamento.find(a => a.ticket === ticket);
+            if (atividade) return atividade;
+
             // Procurar em atividades finalizadas
-            let atividade = atividades.find(a => a.ticket === ticket);
+            atividade = atividades.find(a => a.ticket === ticket && !a.ehAjudante);
             if (atividade) return atividade;
-            
-            // Procurar em atividades em andamento
-            atividade = atividadesEmAndamento.find(a => a.ticket === ticket);
-            if (atividade) return atividade;
-            
+
             return null;
         }
 
@@ -1767,6 +1886,7 @@
         function mostrarModalReabertura(ticket) {
             const atividade = encontrarAtividadeAnterior(ticket);
             if (!atividade) return;
+            if (!exigirPermissaoAtividade(atividade)) return;
             
             ticketEmReabertura = ticket;
             const txtInfo = document.getElementById('txtInfoReabertura');
@@ -1797,51 +1917,56 @@
                 mostrarAlerta('erro', 'Atividade não encontrada');
                 return;
             }
+            if (!exigirPermissaoAtividade(atividade)) return;
+
+            const periodoAtivo = atividadesEmAndamento.find(a =>
+                String(a.ticket) === String(ticketEmReabertura)
+            );
+            if (periodoAtivo) {
+                if (kanbanState[periodoAtivo.id]?.status === 'pausado') {
+                    retomarAtividade(periodoAtivo.id);
+                } else {
+                    mostrarAlerta('aviso', 'Este ticket já possui um período em andamento.');
+                }
+                fecharModalReabertura();
+                modalIniciarAtividade.style.display = 'none';
+                limparCamposModal();
+                return;
+            }
             
             const nome = inputNome.value.trim();
-            const criadorTicket = obterNomeColaborador(atividade);
             const descricao = document.getElementById('descricaoModal').value.trim() || atividade.descricao;
             const titulo = checkboxTitulo.checked ? inputTitulo.value.trim() : (atividade.titulo || '');
             
             const agora = new Date();
+            let atividadePeriodo = atividade;
             
-            // ✅ Se estiver em atividades finalizadas, mover para em andamento
-            const indexFinalizadas = atividades.findIndex(a => a.ticket === ticketEmReabertura);
+            // A execução concluída permanece no histórico; a reabertura cria outro período.
+            const indexFinalizadas = atividades.findIndex(a =>
+                a.ticket === ticketEmReabertura && !a.ehAjudante
+            );
             if (indexFinalizadas !== -1) {
-                const atividadeReaberta = atividades[indexFinalizadas];
-                atividades.splice(indexFinalizadas, 1);
-                
-                // Atualizar com novos dados
-                atividadeReaberta.dataInicio = agora.toLocaleDateString('pt-BR');
-                atividadeReaberta.horaInicio = agora.toLocaleTimeString('pt-BR');
-                atividadeReaberta.tempoInicio = agora.getTime();
-                atividadeReaberta.dataFim = null;
-                atividadeReaberta.horaFim = null;
-                atividadeReaberta.duracao = null;
-                atividadeReaberta.intervaloTimer = null;
-                atividadeReaberta.isReabertura = true;  // ✅ Marcar como reabertura
-                atividadeReaberta.data_reaberta = agora.toISOString(); // Data de reabertura
-                atividadeReaberta.finalizado_por = obterNomeColaborador({
-                    nome: atividadeReaberta.finalizado_por
-                }, criadorTicket);
-                atividadeReaberta.criador_ticket = criadorTicket;
-                atividadeReaberta.reaberto_por = nome || usuarioAtual?.email || 'Desconhecido';
-                atividadeReaberta.reaberto_por_email = usuarioAtual?.email || atividadeReaberta.reaberto_por_email || '';
-                atividadeReaberta.data_reaberta = agora.toISOString();
-                atividadeReaberta.nome = criadorTicket;
-                atividadeReaberta.colaborador = criadorTicket;
-                
-                atividadesEmAndamento.push(atividadeReaberta);
-                kanbanState[atividadeReaberta.id] = { status: 'em_andamento', motivoPausa: '' };
-                
-                console.log('✅ Atividade reaberta:', atividadeReaberta);
+                atividadePeriodo = criarNovoPeriodoExecucao(
+                    atividades[indexFinalizadas],
+                    nome || obterNomeColaborador(atividade),
+                    '',
+                    agora
+                );
+                if (!atividadePeriodo) return;
+                atividadePeriodo.descricao = descricao;
+                atividadePeriodo.titulo = titulo;
+                atividadesEmAndamento.push(atividadePeriodo);
+                kanbanState[atividadePeriodo.id] = {
+                    status: 'em_andamento',
+                    motivoPausa: '',
+                    grupoPausa: '',
+                    tempoInicioPausa: null
+                };
             } else {
                 // Se já está em andamento, apenas restaurar se estava pausada
                 if (atividade.id && kanbanState[atividade.id]) {
                     kanbanState[atividade.id].status = 'em_andamento';
                     kanbanState[atividade.id].motivoPausa = '';
-                    atividade.isReabertura = true;
-                    atividade.data_reaberta = agora.toISOString();
                 }
             }
             
@@ -1859,19 +1984,31 @@
             }
             
             try {
-                iniciarCronometro(atividade.id);
+                iniciarCronometro(atividadePeriodo.id);
             } catch(err) {
                 console.error('❌ Erro em iniciarCronometro():', err);
             }
             
             // ✅ Registrar reabertura
             try {
+                if (atividadePeriodo !== atividade) {
                 registrarRastreioAtividade('REABRIU', ticketEmReabertura, descricao, {
-                    chaveAtividade: atividade.chaveAtividade,
-                    atividadeId: atividade.id,
-                    colaborador: nome,
+                    chaveAtividade: atividadePeriodo.chaveAtividade,
+                    atividadeId: atividadePeriodo.id,
+                    periodoExecucao: atividadePeriodo.periodoExecucao,
+                    atividadeRaizId: atividadePeriodo.atividadeRaizId,
+                    colaborador: atividadePeriodo.responsavel_periodo,
                     usuario_logado: usuarioAtual?.email
                 });
+                    registrarInicioAtividade(ticketEmReabertura, descricao, {
+                        chaveAtividade: atividadePeriodo.chaveAtividade,
+                        atividadeId: atividadePeriodo.id,
+                        periodoExecucao: atividadePeriodo.periodoExecucao,
+                        atividadeRaizId: atividadePeriodo.atividadeRaizId,
+                        colaborador: atividadePeriodo.responsavel_periodo,
+                        usuario_logado: usuarioAtual?.email
+                    });
+                }
             } catch(err) {
                 console.error('❌ Erro em registrarRastreioAtividade():', err);
             }
@@ -2089,7 +2226,8 @@
 
             // Ordenar por data mais recente
             const atividadesOrdenadas = [...atividadesArray]
-                .filter(atividade => !buscaTicket || String(atividade.ticket || '').includes(buscaTicket))
+                .filter(atividade => !atividade.ehAjudante &&
+                    (!buscaTicket || String(atividade.ticket || '').includes(buscaTicket)))
                 .sort((a, b) => {
                 const dataA = new Date(`${a.dataInicio} ${a.horaInicio || '00:00:00'}`);
                 const dataB = new Date(`${b.dataInicio} ${b.horaInicio || '00:00:00'}`);
@@ -2110,7 +2248,7 @@
             atividadesOrdenadas.forEach(atividade => {
                 const option = document.createElement('option');
                 option.value = atividade.id;
-                option.textContent = `🎟️ Ticket #${atividade.ticket} | ${obterNomeColaborador(atividade)} | ${atividade.descricao || 'Sem descrição'}`;
+                option.textContent = `🎟️ Ticket #${atividade.ticket} | Período ${atividade.periodoExecucao || 1} | ${atividade.responsavel_periodo || obterNomeColaborador(atividade)} | ${atividade.descricao || 'Sem descrição'}`;
                 selectReabrir.appendChild(option);
 
                 const itemLista = document.createElement('button');
@@ -2152,7 +2290,7 @@
             console.log('🔍 Buscando atividade com ID:', idBuscado);
             
             const indexAtividade = atividades.findIndex(a =>
-                a && a.id !== undefined && String(a.id) === idBuscado
+                a && !a.ehAjudante && a.id !== undefined && String(a.id) === idBuscado
             );
             
             console.log('✓ findIndex resultado:', indexAtividade);
@@ -2163,36 +2301,20 @@
                 return false;
             }
 
-            const atividadeReaberta = atividades[indexAtividade];
+            const atividadeAnterior = atividades[indexAtividade];
+            if (!exigirPermissaoAtividade(atividadeAnterior)) return false;
+            if (atividadesEmAndamento.some(a => String(a.ticket) === String(atividadeAnterior.ticket))) {
+                mostrarAlerta('aviso', 'Este ticket já possui um período em andamento.');
+                return false;
+            }
             const agora = new Date();
-            const criadorTicket = obterNomeColaborador(atividadeReaberta);
-
-            console.log('✅ Atividade encontrada:', atividadeReaberta.ticket);
-
-            // Remover do array de concluídas
-            atividades.splice(indexAtividade, 1);
-
-            // Atualizar dados de tempo
-            atividadeReaberta.dataInicio = agora.toLocaleDateString('pt-BR');
-            atividadeReaberta.horaInicio = agora.toLocaleTimeString('pt-BR');
-            atividadeReaberta.tempoInicio = agora.getTime();
-            atividadeReaberta.dataFim = null;
-            atividadeReaberta.horaFim = null;
-            atividadeReaberta.duracao = null;
-            atividadeReaberta.intervaloTimer = null;
-            atividadeReaberta.isReabertura = true;
-            atividadeReaberta.data_reaberta = agora.toISOString();
-            atividadeReaberta.motivo_reabertura = motivoReabertura;
-            atividadeReaberta.chaveAtividade = atividadeReaberta.chaveAtividade || gerarChaveAtividade();
-            atividadeReaberta.finalizado_por = obterNomeColaborador({
-                nome: atividadeReaberta.finalizado_por
-            }, criadorTicket);
-            atividadeReaberta.criador_ticket = criadorTicket;
-            atividadeReaberta.criador_ticket_email = atividadeReaberta.criador_ticket_email || atividadeReaberta.email_usuario || '';
-            atividadeReaberta.reaberto_por = nomeColaborador || usuarioAtual?.email || 'Desconhecido';
-            atividadeReaberta.reaberto_por_email = usuarioAtual?.email || atividadeReaberta.reaberto_por_email || '';
-            atividadeReaberta.nome = criadorTicket;
-            atividadeReaberta.colaborador = criadorTicket;
+            const atividadeReaberta = criarNovoPeriodoExecucao(
+                atividadeAnterior,
+                nomeColaborador,
+                motivoReabertura,
+                agora
+            );
+            if (!atividadeReaberta) return false;
 
             // Adicionar ao array de em andamento
             atividadesEmAndamento.push(atividadeReaberta);
@@ -2231,11 +2353,22 @@
                 registrarRastreioAtividade('REABRIU_DO_CONCLUIDO', atividadeReaberta.ticket, atividadeReaberta.descricao, {
                     chaveAtividade: atividadeReaberta.chaveAtividade,
                     atividadeId: atividadeReaberta.id,
-                    colaborador: atividadeReaberta.criador_ticket,
+                    colaborador: atividadeReaberta.responsavel_periodo,
+                    responsavel_periodo: atividadeReaberta.responsavel_periodo,
+                    periodoExecucao: atividadeReaberta.periodoExecucao,
+                    atividadeRaizId: atividadeReaberta.atividadeRaizId,
                     criador_ticket: atividadeReaberta.criador_ticket,
                     reaberto_por: atividadeReaberta.reaberto_por,
                     usuario_logado: usuarioAtual?.email,
                     motivo_reabertura: motivoReabertura
+                });
+                registrarInicioAtividade(atividadeReaberta.ticket, atividadeReaberta.descricao, {
+                    chaveAtividade: atividadeReaberta.chaveAtividade,
+                    atividadeId: atividadeReaberta.id,
+                    periodoExecucao: atividadeReaberta.periodoExecucao,
+                    atividadeRaizId: atividadeReaberta.atividadeRaizId,
+                    colaborador: atividadeReaberta.responsavel_periodo,
+                    usuario_logado: usuarioAtual?.email
                 });
             } catch(err) {
                 console.error('❌ Erro em registrarRastreioAtividade():', err);
@@ -2311,10 +2444,23 @@
                 }
 
                 const agora = new Date();
+                const idAtividade = agora.getTime();
+                const chaveAtividade = gerarChaveAtividade();
+                if (!chaveAtividade) {
+                    mostrarAlerta('erro', 'Não foi possível gerar uma chave exclusiva para a atividade.');
+                    return;
+                }
                 const novaAtividade = {
-                    id: Date.now(),
-                    chaveAtividade: gerarChaveAtividade(), // ✅ Gerar chave única
+                    id: idAtividade,
+                    chaveAtividade: chaveAtividade, // ✅ Gerar chave única
+                    atividadeRaizId: idAtividade,
+                    chaveAtividadeOriginal: chaveAtividade,
+                    periodoExecucao: 1,
                     nome: nome,
+                    colaborador: nome,
+                    responsavel_periodo: nome,
+                    responsavel_usuario_id: usuarioAtual?.uid || '',
+                    email_responsavel_periodo: usuarioAtual?.email || '',
                     ticket: ticket,
                     descricao: descricao,
                     titulo: titulo, // ✅ Armazenar título do ticket
@@ -2325,10 +2471,13 @@
                     intervaloTimer: null,
                     // ✅ Adicionar rastreamento de usuário no início
                     usuario_id: usuarioAtual?.uid || 'anonimo',
+                    criador_usuario_id: usuarioAtual?.uid || '',
                     email_usuario: usuarioAtual?.email || 'desconhecido',
                     nome_usuario: usuarioAtual?.nome || 'Usuário',
                     criador_atividade: usuarioAtual?.nome || usuarioAtual?.email || 'Usuário',
                     email_criador: usuarioAtual?.email || '',
+                    responsavel_usuario_id: usuarioAtual?.uid || '',
+                    email_responsavel_periodo: usuarioAtual?.email || '',
                     criador_ticket: nome,
                     criador_ticket_email: usuarioAtual?.email || '',
                     data_criacao: agora.toISOString()
@@ -2401,6 +2550,7 @@
             if (index === -1) return;
 
             const atividade = atividadesEmAndamento[index];
+            if (!exigirPermissaoAtividade(atividade)) return;
             const agora = new Date();
             const duracao = agora.getTime() - atividade.tempoInicio;
             
@@ -2423,28 +2573,83 @@
             finalizarComDados(index, atividade, duracao, agora.toLocaleDateString('pt-BR'), agora.toLocaleTimeString('pt-BR'), '', [], agora.toISOString());
         }
 
+        function obterTimestampHistoricoPausa(pausa, retomada = false) {
+            const timestamp = retomada ? pausa.dataHoraRetomada : pausa.dataHoraPausa;
+            if (timestamp) {
+                const valor = new Date(timestamp).getTime();
+                if (Number.isFinite(valor)) return valor;
+            }
+
+            const data = retomada
+                ? pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio
+                : pausa.dataPausa || pausa.dataInicio;
+            const hora = retomada ? pausa.horaRetomada : pausa.horaPausa;
+            const partesData = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(data || ''));
+            const partesHora = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(String(hora || ''));
+            if (!partesData || !partesHora) return null;
+
+            const valor = new Date(
+                Number(partesData[3]),
+                Number(partesData[2]) - 1,
+                Number(partesData[1]),
+                Number(partesHora[1]),
+                Number(partesHora[2]),
+                Number(partesHora[3] || 0)
+            ).getTime();
+            return Number.isFinite(valor) ? valor : null;
+        }
+
+        function finalizarPausasDoPeriodo(atividade, dataFinalizacao) {
+            const fimPeriodo = new Date(dataFinalizacao).getTime();
+            let totalPausadoMs = 0;
+            if (!Array.isArray(historicoPausas)) {
+                historicoPausas = normalizarAtividades(historicoPausas);
+            }
+            const pausasDoPeriodo = historicoPausas.filter(pausa => {
+                if (!pausa) return false;
+                if (atividade.id != null && pausa.id != null) {
+                    return String(atividade.id) === String(pausa.id);
+                }
+                return Boolean(atividade.chaveAtividade && pausa.chaveAtividade &&
+                    atividade.chaveAtividade === pausa.chaveAtividade);
+            });
+
+            pausasDoPeriodo.forEach(pausa => {
+                const inicio = obterTimestampHistoricoPausa(pausa);
+                let fim = obterTimestampHistoricoPausa(pausa, true);
+                if (fim === null && pausa.status === 'Pausado' && Number.isFinite(fimPeriodo)) {
+                    fim = fimPeriodo;
+                    const duracao = Math.max(0, fim - (inicio !== null ? inicio : fim));
+                    pausa.status = 'Finalizado';
+                    pausa.ativa = false;
+                    pausa.dataHoraFimPausa = new Date(fim).toISOString();
+                    pausa.dataFimPausa = new Date(fim).toLocaleDateString('pt-BR');
+                    pausa.horaFimPausa = new Date(fim).toLocaleTimeString('pt-BR');
+                    pausa.tempoPausaMs = duracao;
+                    pausa.tempoPausaFormatado = formatarTempo(duracao);
+                }
+
+                const duracao = inicio !== null && fim !== null
+                    ? Math.max(0, fim - inicio)
+                    : Math.max(0, Number(pausa.tempoPausaMs) || 0);
+                totalPausadoMs += duracao;
+            });
+            return totalPausadoMs;
+        }
+
         // Finalizar com dados completos
         function finalizarComDados(index, atividade, duracao, dataFim, horaFim, justificativa, colaboradoresAuxiliares = [], dataFinalizacao = new Date().toISOString()) {
+            if (!exigirPermissaoAtividade(atividade)) return false;
             clearInterval(atividade.intervaloTimer);
+            const tempoPausadoMs = finalizarPausasDoPeriodo(atividade, dataFinalizacao);
+            const tempoAtivoMs = Math.max(0, duracao - tempoPausadoMs);
 
-            const criadorTicket = obterNomeColaborador(atividade);
+            const criadorTicket = atividade.criador_ticket ||
+                atividade.criador_atividade ||
+                obterNomeColaborador(atividade);
+            const responsavelPeriodo = atividade.responsavel_periodo ||
+                (atividade.isReabertura ? atividade.reaberto_por : obterNomeColaborador(atividade));
             const colaboradoresParaContabilizar = Array.isArray(colaboradoresAuxiliares) ? [...colaboradoresAuxiliares] : [];
-            if (atividade.isReabertura) {
-                const normalizarNome = nome => String(nome || '').trim().toLocaleLowerCase('pt-BR');
-                const criadorNormalizado = normalizarNome(criadorTicket);
-                const reabertoPor = String(atividade.reaberto_por || '').trim();
-
-                for (let indice = colaboradoresParaContabilizar.length - 1; indice >= 0; indice--) {
-                    if (normalizarNome(colaboradoresParaContabilizar[indice]) === criadorNormalizado) {
-                        colaboradoresParaContabilizar.splice(indice, 1);
-                    }
-                }
-
-                if (reabertoPor && normalizarNome(reabertoPor) !== criadorNormalizado &&
-                    !colaboradoresParaContabilizar.some(nome => normalizarNome(nome) === normalizarNome(reabertoPor))) {
-                    colaboradoresParaContabilizar.push(reabertoPor);
-                }
-            }
 
             // ✅ Garantir que atividades é um array
             if (!Array.isArray(atividades)) {
@@ -2456,14 +2661,17 @@
             atividades.unshift({
                 id: atividade.id,
                 chaveAtividade: atividade.chaveAtividade, // ✅ SEMPRE preservar chave
-                nome: criadorTicket,
-                colaborador: criadorTicket,
+                atividadeRaizId: atividade.atividadeRaizId || atividade.id,
+                chaveAtividadeOriginal: atividade.chaveAtividadeOriginal || atividade.chaveAtividade || '',
+                periodoExecucao: Number(atividade.periodoExecucao) || 1,
+                nome: responsavelPeriodo,
+                colaborador: responsavelPeriodo,
+                responsavel_periodo: responsavelPeriodo,
+                responsavel_usuario_id: atividade.responsavel_usuario_id || atividade.usuario_id || '',
+                email_responsavel_periodo: atividade.email_responsavel_periodo || atividade.email_usuario || '',
                 criador_ticket: criadorTicket,
                 criador_ticket_email: atividade.criador_ticket_email || atividade.email_usuario || '',
-                finalizado_por: obterNomeColaborador({
-                    colaborador: atividade.finalizado_por,
-                    nome: criadorTicket
-                }, criadorTicket),
+                finalizado_por: responsavelPeriodo,
                 reaberto_por: atividade.reaberto_por || null,
                 reaberto_por_email: atividade.reaberto_por_email || '',
                 isReabertura: Boolean(atividade.isReabertura),
@@ -2478,18 +2686,22 @@
                 usuario_finalizacao: usuarioAtual?.nome || usuarioAtual?.email || 'Desconhecido',
                 email_finalizacao: usuarioAtual?.email || '',
                 duracao: formatarTempo(duracao),
+                duracaoAtiva: formatarTempo(tempoAtivoMs),
+                tempoAtivoMs: tempoAtivoMs,
                 descricao: atividade.descricao || '',
                 titulo: atividade.titulo || '', // ✅ Armazenar título
                 observacao: atividade.observacao || '',
                 justificativa: justificativa,
                 colaboradoresAuxiliares: colaboradoresParaContabilizar,
                 // ✅ Rastreamento de usuário (preservar do início)
-                usuario_id: atividade.usuario_id || usuarioAtual?.uid || 'anonimo',
-                email_usuario: atividade.email_usuario || usuarioAtual?.email || 'desconhecido',
+                usuario_id: atividade.usuario_id || atividade.criador_usuario_id || atividade.criador_uid || 'anonimo',
+                criador_usuario_id: atividade.criador_usuario_id || atividade.criador_uid || (atividade.usuario_id && atividade.usuario_id !== 'anonimo' ? atividade.usuario_id : ''),
+                email_usuario: atividade.email_usuario || atividade.email_criador || 'desconhecido',
                 nome_usuario: atividade.nome_usuario || usuarioAtual?.nome || 'Usuário',
                 data_criacao: obterDataCriacaoAtividade(atividade),
+                data_criacao_original: atividade.data_criacao_original || atividade.data_criacao || null,
                 criador_atividade: atividade.criador_atividade || atividade.nome_usuario || usuarioAtual?.nome || 'Usuário',
-                email_criador: atividade.email_criador || atividade.email_usuario || usuarioAtual?.email || '',
+                email_criador: atividade.email_criador || atividade.email_usuario || '',
                 data_atualizacao: new Date().toISOString()
             });
 
@@ -2504,7 +2716,13 @@
                     atividades.unshift({
                         id: atividade.id,
                         chaveAtividade: atividade.chaveAtividade, // ✅ SEMPRE preservar chave
+                        atividadeRaizId: atividade.atividadeRaizId || atividade.id,
+                        chaveAtividadeOriginal: atividade.chaveAtividadeOriginal || atividade.chaveAtividade || '',
+                        periodoExecucao: Number(atividade.periodoExecucao) || 1,
                         colaborador: colaboradorAux,
+                        responsavel_periodo: responsavelPeriodo,
+                        responsavel_usuario_id: atividade.responsavel_usuario_id || atividade.usuario_id || '',
+                        email_responsavel_periodo: atividade.email_responsavel_periodo || atividade.email_usuario || '',
                         criador_ticket: criadorTicket,
                         criador_ticket_email: atividade.criador_ticket_email || atividade.email_usuario || '',
                         reaberto_por: atividade.reaberto_por || null,
@@ -2521,6 +2739,8 @@
                         usuario_finalizacao: usuarioAtual?.nome || usuarioAtual?.email || 'Desconhecido',
                         email_finalizacao: usuarioAtual?.email || '',
                         duracao: formatarTempo(duracao),
+                        duracaoAtiva: formatarTempo(tempoAtivoMs),
+                        tempoAtivoMs: tempoAtivoMs,
                         descricao: atividade.descricao || '',
                         titulo: atividade.titulo || '', // ✅ Armazenar título
                         observacao: `[AJUDA] ${atividade.observacao || ''}`,
@@ -2528,12 +2748,14 @@
                         ehAjudante: true,
                         colaboradorPrincipal: criadorTicket,
                         // ✅ Rastreamento de usuário também para colaboradores auxiliares
-                        usuario_id: atividade.usuario_id || usuarioAtual?.uid || 'anonimo',
-                        email_usuario: atividade.email_usuario || usuarioAtual?.email || 'desconhecido',
+                        usuario_id: atividade.usuario_id || atividade.criador_usuario_id || atividade.criador_uid || 'anonimo',
+                        criador_usuario_id: atividade.criador_usuario_id || atividade.criador_uid || (atividade.usuario_id && atividade.usuario_id !== 'anonimo' ? atividade.usuario_id : ''),
+                        email_usuario: atividade.email_usuario || atividade.email_criador || 'desconhecido',
                         nome_usuario: atividade.nome_usuario || usuarioAtual?.nome || 'Usuário',
                         data_criacao: obterDataCriacaoAtividade(atividade),
+                        data_criacao_original: atividade.data_criacao_original || atividade.data_criacao || null,
                         criador_atividade: atividade.criador_atividade || atividade.nome_usuario || usuarioAtual?.nome || 'Usuário',
-                        email_criador: atividade.email_criador || atividade.email_usuario || usuarioAtual?.email || '',
+                        email_criador: atividade.email_criador || atividade.email_usuario || '',
                         data_atualizacao: new Date().toISOString()
                     });
                 });
@@ -2553,6 +2775,9 @@
             registrarFimAtividade(atividade.ticket, atividade.descricao, {
                 chaveAtividade: atividade.chaveAtividade,
                 atividadeId: atividade.id,
+                atividadeRaizId: atividade.atividadeRaizId || atividade.id,
+                periodoExecucao: Number(atividade.periodoExecucao) || 1,
+                responsavel_periodo: responsavelPeriodo,
                 duracao: formatarTempo(duracao),
                 observacao: atividade.observacao,
                 colaboradores: colaboradoresParaContabilizar,
@@ -2752,6 +2977,8 @@
         function confirmarJustificativa() {
             if (!atividadeEmFinalizacao) return;
 
+            if (!exigirPermissaoAtividade(atividadeEmFinalizacao.atividade)) return;
+
             const justificativa = txtJustificativa.value.trim();
             if (!justificativa) {
                 mostrarAlerta('erro', 'Por favor, forneça uma justificativa');
@@ -2759,7 +2986,7 @@
             }
 
             const { atividade, index, duracao, dataFim, horaFim, dataFinalizacao } = atividadeEmFinalizacao;
-            finalizarComDados(index, atividade, duracao, dataFim, horaFim, justificativa, [], dataFinalizacao);
+            if (finalizarComDados(index, atividade, duracao, dataFim, horaFim, justificativa, [], dataFinalizacao) === false) return;
 
             modalJustificativa.style.display = 'none';
             txtJustificativa.value = '';
@@ -2768,6 +2995,8 @@
 
         // Pausar atividade
         function abrirModalPausarAtividade(atividadeId) {
+            const atividade = atividadesEmAndamento.find(a => a && String(a.id) === String(atividadeId));
+            if (!exigirPermissaoAtividade(atividade)) return;
             atividadePausando = atividadeId;
             txtMotivoPausa.value = '';
             document.getElementById('selectGrupoPausa').value = '';
@@ -2786,6 +3015,9 @@
         function confirmarPausarAtividade() {
             if (!atividadePausando) return;
 
+            const atividadePausa = atividadesEmAndamento.find(a => a && String(a.id) === String(atividadePausando));
+            if (!exigirPermissaoAtividade(atividadePausa)) return;
+
             const motivo = txtMotivoPausa.value.trim();
             const grupo = document.getElementById('selectGrupoPausa').value.trim();
             
@@ -2800,8 +3032,6 @@
             }
 
             const agora = new Date();
-            const atividadePausa = atividadesEmAndamento.find(a => a && a.id === atividadePausando);
-            
             // ✅ Garantir que o kanbanState existe para esta atividade
             if (!kanbanState[atividadePausando]) {
                 kanbanState[atividadePausando] = { 
@@ -2860,6 +3090,9 @@
                 registrarPausaAtividade(atividadePausa.ticket, atividadePausa.descricao, motivo, {
                     chaveAtividade: atividadePausa.chaveAtividade,
                     atividadeId: atividadePausa.id,
+                    atividadeRaizId: atividadePausa.atividadeRaizId || atividadePausa.id,
+                    periodoExecucao: Number(atividadePausa.periodoExecucao) || 1,
+                    responsavel_periodo: atividadePausa.responsavel_periodo || obterNomeColaborador(atividadePausa),
                     grupo: grupoNormalizado,
                     usuario_logado: usuarioAtual?.email
                 });
@@ -2870,6 +3103,9 @@
 
         // Retomar atividade
         function retomarAtividade(atividadeId) {
+            const atividade = atividadesEmAndamento.find(a => a && String(a.id) === String(atividadeId));
+            if (!exigirPermissaoAtividade(atividade)) return;
+
             const agora = new Date();
             const estadoPausa = kanbanState[atividadeId];
             
@@ -2949,6 +3185,9 @@
                 registrarRastreioAtividade('RETOMOU', atividadeRetoma.ticket, atividadeRetoma.descricao, {
                     chaveAtividade: atividadeRetoma.chaveAtividade,
                     atividadeId: atividadeRetoma.id,
+                    atividadeRaizId: atividadeRetoma.atividadeRaizId || atividadeRetoma.id,
+                    periodoExecucao: Number(atividadeRetoma.periodoExecucao) || 1,
+                    responsavel_periodo: atividadeRetoma.responsavel_periodo || obterNomeColaborador(atividadeRetoma),
                     tempoPausa: estadoPausa && estadoPausa.tempoInicioPausa ? formatarTempo(agora.getTime() - estadoPausa.tempoInicioPausa) : '-',
                     usuario_logado: usuarioAtual?.email
                 });
@@ -2959,6 +3198,8 @@
 
         // Abrir modal para observação ao concluir
         function abrirModalObservacao(atividadeId) {
+            const atividade = atividadesEmAndamento.find(a => a && String(a.id) === String(atividadeId));
+            if (!exigirPermissaoAtividade(atividade)) return;
             atividadeConcluindo = atividadeId;
             txtObservacaoConcluir.value = '';
             modalObservacaoConcluir.style.display = 'block';
@@ -2978,9 +3219,12 @@
                 console.warn('⚠️ atividadeEmObservacao inválido');
                 return;
             }
+            const atividade = atividadesEmAndamento.find(a =>
+                a && String(a.id) === String(atividadeEmObservacao.atividadeId)
+            );
+            if (!exigirPermissaoAtividade(atividade)) return;
             
             colaboradoresSelecionados = [];
-            const atividade = atividadesEmAndamento.find(a => a && a.id === atividadeEmObservacao.atividadeId);
             
             // Criar checkboxes para cada colaborador, exceto o principal
             checkboxColaboradores.innerHTML = '';
@@ -3041,11 +3285,12 @@
             }
 
             const ativ = atividadesEmAndamento[index];
+            if (!exigirPermissaoAtividade(ativ)) return;
             const agora = new Date();
             const duracao = agora.getTime() - ativ.tempoInicio;
             
             // Finalizar sem colaboradores auxiliares
-            finalizarComDados(index, ativ, duracao, agora.toLocaleDateString('pt-BR'), agora.toLocaleTimeString('pt-BR'), '', []);
+            if (finalizarComDados(index, ativ, duracao, agora.toLocaleDateString('pt-BR'), agora.toLocaleTimeString('pt-BR'), '', []) === false) return;
             fecharModalAtribuirColaboradores();
         }
 
@@ -3066,11 +3311,12 @@
             }
 
             const ativ = atividadesEmAndamento[index];
+            if (!exigirPermissaoAtividade(ativ)) return;
             const agora = new Date();
             const duracao = agora.getTime() - ativ.tempoInicio;
             
             // Finalizar com colaboradores auxiliares
-            finalizarComDados(index, ativ, duracao, agora.toLocaleDateString('pt-BR'), agora.toLocaleTimeString('pt-BR'), '', colaboradoresSelecionados);
+            if (finalizarComDados(index, ativ, duracao, agora.toLocaleDateString('pt-BR'), agora.toLocaleTimeString('pt-BR'), '', colaboradoresSelecionados) === false) return;
             fecharModalAtribuirColaboradores();
         }
 
@@ -3087,10 +3333,9 @@
             }
             
             const atividade = atividadesEmAndamento.find(a => a && a.id === atividadeConcluindo);
-            
-            if (atividade) {
-                atividade.observacao = observacao;
-            }
+
+            if (!exigirPermissaoAtividade(atividade)) return;
+            atividade.observacao = observacao;
             
             atividadeEmObservacao = {
                 atividadeId: atividadeConcluindo,
@@ -3161,6 +3406,7 @@
             } else {
                 const cardsEmAndamento = atividadesGrupadasPorStatus.em_andamento.map(atividade => {
                     const duracao = new Date().getTime() - atividade.tempoInicio;
+                    const podeGerenciar = usuarioPodeGerenciarAtividade(atividade);
                     return `
                         <div class="kanban-card" data-kanban-atividade-id="${atividade.id}">
                             <div class="kanban-card-content">
@@ -3180,10 +3426,10 @@
                                 <div class="kanban-card-subtitle"><strong>Início:</strong> ${atividade.horaInicio}</div>
                                 <div class="kanban-card-subtitle kanban-duracao-display" style="color: #667eea; font-weight: bold; margin-top: 2px;">⏱️ ${formatarTempo(duracao)}</div>
                             </div>
-                            <div class="kanban-card-actions">
+                            ${podeGerenciar ? `<div class="kanban-card-actions">
                                 <button class="btn-danger btn-small" onclick="abrirModalPausarAtividade(${atividade.id})">⏸️ Pausar</button>
                                 <button class="btn-success btn-small" onclick="marcarComoConcluido(${atividade.id})">✓ Concluir</button>
-                            </div>
+                            </div>` : ''}
                         </div>
                     `;
                 }).join('');
@@ -3195,6 +3441,7 @@
                 kanbanPausado.innerHTML = '<div class="kanban-empty">Nenhuma atividade pausada</div>';
             } else {
                 const cardsPausado = atividadesGrupadasPorStatus.pausado.map(atividade => {
+                    const podeGerenciar = usuarioPodeGerenciarAtividade(atividade);
                     return `
                         <div class="kanban-card">
                             <div class="kanban-card-content">
@@ -3213,10 +3460,10 @@
                                 <div class="kanban-card-subtitle"><strong>Setor da pausa:</strong> ${kanbanState[atividade.id]?.grupoPausa || 'Não definido'}</div>
                                 <div class="kanban-pause-reason">💬 ${kanbanState[atividade.id]?.motivoPausa || ''}</div>
                             </div>
-                            <div class="kanban-card-actions">
+                            ${podeGerenciar ? `<div class="kanban-card-actions">
                                 <button class="btn-primary btn-small" onclick="retomarAtividade(${atividade.id})">▶️ Retomar</button>
                                 <button class="btn-success btn-small" onclick="marcarComoConcluido(${atividade.id})">✓ Concluir</button>
-                            </div>
+                            </div>` : ''}
                         </div>
                     `;
                 }).join('');
