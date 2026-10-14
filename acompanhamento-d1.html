@@ -2080,8 +2080,9 @@
         function renderizarGraficoTempoMedio() {
             if (!window.chartPronto || typeof Chart === 'undefined') return;
             const data = obterDiaGrafico();
+            const temposEfetivosPublicados = obterTemposEfetivosPorColaboradorPublicados(data);
             const temposPublicados = obterTemposPorColaboradorPublicados(data);
-            const colaboradores = temposPublicados || agruparTempoAtivoPorColaborador(
+            const colaboradores = temposEfetivosPublicados || temposPublicados || agruparTempoAtivoPorColaborador(
                 obterAtividadesDaRastreabilidade().map(atividade => {
                     const eventoInicio = (atividade._eventosResumo || []).find(evento => evento.tipo === 'INICIO');
                     const emailColaborador = [
@@ -2176,7 +2177,7 @@
                 data: {
                     labels,
                     datasets: [{
-                        label: 'Total ativo',
+                        label: 'Tempo efetivo',
                         data: valores,
                         backgroundColor: '#5b8ec6',
                         borderColor: '#1e3a5f',
@@ -2190,7 +2191,7 @@
                     layout: { padding: { top: 32 } },
                     plugins: {
                         legend: { display: false },
-                        tooltip: { callbacks: { label: contexto => `Total ativo: ${formatarTempoTotalAtividades(contexto.parsed.y)}` } }
+                        tooltip: { callbacks: { label: contexto => `Tempo efetivo: ${formatarTempoTotalAtividades(contexto.parsed.y)}` } }
                     },
                     scales: {
                         y: { beginAtZero: true, ticks: { callback: valor => formatarTempoTotalAtividades(Number(valor)) } },

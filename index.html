@@ -1240,6 +1240,22 @@
             </div>
         </div>
 
+        <!-- Modal para justificar retomada de atividade de outro colaborador -->
+        <div id="modalRetomarAtividadeOutroColaborador" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">Retomar atividade de outro colaborador</div>
+                <div class="modal-body">
+                    <p id="txtInfoRetomadaOutroColaborador" style="margin-bottom: 15px;"></p>
+                    <label for="txtJustificativaRetomada"><strong>Justificativa da retomada:</strong></label>
+                    <textarea id="txtJustificativaRetomada" placeholder="Explique por que está retomando esta atividade..." style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 1em; min-height: 100px; resize: vertical; margin-top: 8px;"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-danger" id="btnCancelarRetomadaOutroColaborador" style="background: #999;">Cancelar</button>
+                    <button type="button" class="btn-primary" id="btnConfirmarRetomadaOutroColaborador">Confirmar retomada</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal para Observação ao Concluir -->
         <div id="modalObservacaoConcluir" class="modal">
             <div class="modal-content">
@@ -1377,6 +1393,7 @@
         let atividadeEmFinalizacao = null;
         let kanbanState = {}; // { id: { status: 'em_andamento'|'pausado'|'concluido', motivoPausa: '', tempoInicioPausa: null } }
         let atividadePausando = null;
+        let atividadeRetomandoOutroColaborador = null;
         let atividadeConcluindo = null;
         let atividadeEmObservacao = null; // Rastrear atividade em observação para depois atribuir
         let filtroAtivo = false;
@@ -1384,37 +1401,6 @@
         let ticketEmReabertura = null; // Rastrear ticket que está sendo analisado para reabertura
         let historicoPausas = []; // Rastreamento de todas as pausas
         let colaboradoresSelecionados = []; // Armazenar colaboradores selecionados
-
-        const EMAIL_ADMIN_ATIVIDADES = 'gabriel.faria@argusolutions.com.br';
-
-        function usuarioEhAdminAtividades() {
-            return String(usuarioAtual?.email || '').trim().toLowerCase() === EMAIL_ADMIN_ATIVIDADES;
-        }
-
-        function usuarioPodeGerenciarAtividade(atividade) {
-            if (!atividade || !usuarioAtual?.uid || !usuarioAtual?.email) return false;
-            if (usuarioEhAdminAtividades()) return true;
-
-            const uidCriador = [
-                atividade.responsavel_usuario_id,
-                atividade.criador_usuario_id,
-                atividade.criador_uid,
-                atividade.usuario_id
-            ].map(uid => String(uid || '').trim())
-                .find(uid => uid && uid.toLowerCase() !== 'anonimo') || '';
-            if (uidCriador) {
-                return uidCriador === String(usuarioAtual.uid);
-            }
-
-            const emailCriador = [
-                atividade.email_responsavel_periodo,
-                atividade.email_criador,
-                atividade.email_usuario,
-                atividade.criador_ticket_email
-            ].map(email => String(email || '').trim().toLowerCase())
-                .find(email => email && email !== 'desconhecido') || '';
-            return Boolean(emailCriador && emailCriador === String(usuarioAtual.email).trim().toLowerCase());
-        }
 
         function criarNovoPeriodoExecucao(atividadeAnterior, nomeResponsavel, motivoReabertura, agora) {
             const atividadesExistentes = [...atividades, ...atividadesEmAndamento];
@@ -1489,12 +1475,6 @@
                 usuario_id: uidCriador || 'anonimo',
                 email_usuario: emailCriador || 'desconhecido'
             };
-        }
-
-        function exigirPermissaoAtividade(atividade) {
-            if (usuarioPodeGerenciarAtividade(atividade)) return true;
-            mostrarAlerta('erro', 'Somente o criador da atividade ou o administrador pode alterá-la.');
-            return false;
         }
 
         // ✅ LISTENER GLOBAL PARA DEBUG
@@ -1590,6 +1570,11 @@
         const txtMotivoPausa = document.getElementById('txtMotivoPausa');
         const btnCancelarPausa = document.getElementById('btnCancelarPausa');
         const btnConfirmarPausa = document.getElementById('btnConfirmarPausa');
+        const modalRetomarAtividadeOutroColaborador = document.getElementById('modalRetomarAtividadeOutroColaborador');
+        const txtInfoRetomadaOutroColaborador = document.getElementById('txtInfoRetomadaOutroColaborador');
+        const txtJustificativaRetomada = document.getElementById('txtJustificativaRetomada');
+        const btnCancelarRetomadaOutroColaborador = document.getElementById('btnCancelarRetomadaOutroColaborador');
+        const btnConfirmarRetomadaOutroColaborador = document.getElementById('btnConfirmarRetomadaOutroColaborador');
         const kanbanEmAndamento = document.getElementById('kanbanEmAndamento');
         const kanbanPausado = document.getElementById('kanbanPausado');
         const kanbanConcluido = document.getElementById('kanbanConcluido');
@@ -1626,7 +1611,9 @@
                 'user',
                 'desconhecido',
                 'unknown',
-                'nao informado'
+                'nao informado',
+                'nao identificado',
+                'usuario nao identificado'
             ]);
             const nomes = [
                 atividade?.colaborador,
@@ -1640,6 +1627,122 @@
                     const nomeNormalizado = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
                     return nome && !nomesInvalidos.has(nomeNormalizado);
                 }) || fallback;
+        }
+
+        function obterPrimeiroNomeDoEmail(email, fallback = 'Não informado') {
+            const emailNormalizado = String(email || '').trim();
+            const partesEmail = /^([^@\s]+)@[^@\s]+\.[^@\s]+$/.exec(emailNormalizado);
+            if (!partesEmail) return fallback;
+
+            const primeiroNome = partesEmail[1].split(/[._+-]/).find(parte => parte.length > 0);
+            if (!primeiroNome) return fallback;
+            return primeiroNome.charAt(0).toLocaleUpperCase('pt-BR') +
+                primeiroNome.slice(1).toLocaleLowerCase('pt-BR');
+        }
+
+        function obterNomeUsuarioAtual(fallback = 'Não informado') {
+            return obterPrimeiroNomeDoEmail(usuarioAtual?.email, fallback);
+        }
+
+        function obterResponsavelAtividade(atividade) {
+            const nome = [
+                atividade?.responsavel_periodo,
+                atividade?.colaborador,
+                atividade?.nome,
+                atividade?.criador_ticket
+            ].map(valor => String(valor || '').trim())
+                .find(valor => valor && !['desconhecido', 'unknown', 'usuario', 'user'].includes(
+                    valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR')
+                )) || '';
+            const uid = String(
+                atividade?.responsavel_usuario_id ||
+                atividade?.usuario_id ||
+                atividade?.criador_usuario_id ||
+                atividade?.criador_uid ||
+                ''
+            ).trim();
+            const email = String(
+                atividade?.email_responsavel_periodo ||
+                atividade?.email_usuario ||
+                atividade?.email_criador ||
+                atividade?.criador_ticket_email ||
+                ''
+            ).trim().toLocaleLowerCase('pt-BR');
+            const usuarioUid = String(usuarioAtual?.uid || '').trim();
+            const usuarioEmail = String(usuarioAtual?.email || '').trim().toLocaleLowerCase('pt-BR');
+
+            let pertenceAoUsuario = false;
+            if (uid && usuarioUid) {
+                pertenceAoUsuario = uid === usuarioUid;
+            } else if (email && usuarioEmail) {
+                pertenceAoUsuario = email === usuarioEmail;
+            } else {
+                const normalizarNome = valor => String(valor || '')
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .trim()
+                    .toLocaleLowerCase('pt-BR');
+                pertenceAoUsuario = Boolean(nome && usuarioAtual?.nome &&
+                    normalizarNome(nome) === normalizarNome(usuarioAtual.nome));
+            }
+
+            return { nome: nome || 'Responsável não identificado', uid, email, pertenceAoUsuario };
+        }
+
+        function obterRegistroRetomadaPorOutroColaborador(atividade) {
+            if (!atividade) return null;
+            const pausas = Array.isArray(historicoPausas) ? historicoPausas : normalizarAtividades(historicoPausas);
+            const timestampsPeriodo = [
+                atividade.data_reaberta,
+                atividade.data_criacao
+            ].map(timestamp => {
+                const valor = timestamp ? new Date(timestamp).getTime() : NaN;
+                return Number.isFinite(valor) ? valor : null;
+            }).filter(timestamp => timestamp !== null);
+
+            return [...pausas].reverse().find(pausa => {
+                if (!pausa?.retomadaPorOutroColaborador) return false;
+                if (pausa.periodoTransferidoId != null && atividade.id != null) {
+                    if (String(pausa.periodoTransferidoId) === String(atividade.id)) return true;
+                }
+                if (pausa.chavePeriodoTransferido && atividade.chaveAtividade) {
+                    if (String(pausa.chavePeriodoTransferido) === String(atividade.chaveAtividade)) return true;
+                }
+                if (String(pausa.ticket || '') !== String(atividade.ticket || '')) return false;
+                const retomada = pausa.dataHoraRetomada ? new Date(pausa.dataHoraRetomada).getTime() : NaN;
+                return Number.isFinite(retomada) && timestampsPeriodo.some(timestamp =>
+                    Math.abs(timestamp - retomada) < 5000
+                );
+            }) || null;
+        }
+
+        function atividadeFoiRetomadaPorOutroColaborador(atividade) {
+            return Boolean(
+                atividade?.retomadaPorOutroColaborador ||
+                atividade?.retomado_por ||
+                atividade?.retomado_por_email ||
+                atividade?.motivoRetomadaOutroColaborador ||
+                atividade?.responsavelPeriodoAnterior ||
+                atividade?.responsavelPeriodoAnteriorEmail ||
+                obterRegistroRetomadaPorOutroColaborador(atividade)
+            );
+        }
+
+        function obterNomeCriadorAtividade(atividade, fallback = 'Não informado') {
+            const nomeCriador = atividade?.criador_ticket ||
+                atividade?.criador_atividade ||
+                atividade?.nome_usuario;
+            return obterNomeColaborador({ nome: nomeCriador }, fallback);
+        }
+
+        function obterNomeRetomadorAtividade(atividade, fallback = 'Não informado') {
+            const registroRetomada = obterRegistroRetomadaPorOutroColaborador(atividade);
+            return obterPrimeiroNomeDoEmail(
+                registroRetomada?.retomado_por_email ||
+                    registroRetomada?.emailRetomadoPor ||
+                    atividade?.retomado_por_email,
+                fallback
+            );
         }
 
         function obterDataCriacaoAtividade(atividade) {
@@ -1796,7 +1899,7 @@
                 chaveAtividade: a.chaveAtividade, // ✅ SEMPRE preservar chave como está
                 nome: obterNomeColaborador(a),
                 colaborador: obterNomeColaborador(a),
-                criador_ticket: obterNomeColaborador(a),
+                criador_ticket: a.criador_ticket || obterNomeColaborador(a),
                 criador_ticket_email: a.criador_ticket_email || '',
                 reaberto_por: a.reaberto_por || null,
                 reaberto_por_email: a.reaberto_por_email || '',
@@ -1805,10 +1908,16 @@
                 motivo_reabertura: a.motivo_reabertura || '',
                 atividadeRaizId: a.atividadeRaizId || a.id,
                 chaveAtividadeOriginal: a.chaveAtividadeOriginal || a.chaveAtividade || '',
+                retomadaPorOutroColaborador: Boolean(a.retomadaPorOutroColaborador),
+                retomado_por: a.retomado_por || '',
+                retomado_por_email: a.retomado_por_email || '',
                 periodoExecucao: Number(a.periodoExecucao) || (a.isReabertura ? 2 : 1),
                 responsavel_periodo: a.responsavel_periodo || obterNomeColaborador(a),
                 email_responsavel_periodo: a.email_responsavel_periodo || '',
                 responsavel_usuario_id: a.responsavel_usuario_id || '',
+                motivoRetomadaOutroColaborador: a.motivoRetomadaOutroColaborador || '',
+                responsavelPeriodoAnterior: a.responsavelPeriodoAnterior || '',
+                responsavelPeriodoAnteriorEmail: a.responsavelPeriodoAnteriorEmail || '',
                 data_criacao_original: a.data_criacao_original || a.data_criacao || null,
                 ticket: a.ticket,
                 descricao: a.descricao || '',
@@ -1886,7 +1995,6 @@
         function mostrarModalReabertura(ticket) {
             const atividade = encontrarAtividadeAnterior(ticket);
             if (!atividade) return;
-            if (!exigirPermissaoAtividade(atividade)) return;
             
             ticketEmReabertura = ticket;
             const txtInfo = document.getElementById('txtInfoReabertura');
@@ -1917,7 +2025,6 @@
                 mostrarAlerta('erro', 'Atividade não encontrada');
                 return;
             }
-            if (!exigirPermissaoAtividade(atividade)) return;
 
             const periodoAtivo = atividadesEmAndamento.find(a =>
                 String(a.ticket) === String(ticketEmReabertura)
@@ -2302,7 +2409,6 @@
             }
 
             const atividadeAnterior = atividades[indexAtividade];
-            if (!exigirPermissaoAtividade(atividadeAnterior)) return false;
             if (atividadesEmAndamento.some(a => String(a.ticket) === String(atividadeAnterior.ticket))) {
                 mostrarAlerta('aviso', 'Este ticket já possui um período em andamento.');
                 return false;
@@ -2550,7 +2656,6 @@
             if (index === -1) return;
 
             const atividade = atividadesEmAndamento[index];
-            if (!exigirPermissaoAtividade(atividade)) return;
             const agora = new Date();
             const duracao = agora.getTime() - atividade.tempoInicio;
             
@@ -2574,6 +2679,7 @@
         }
 
         function obterTimestampHistoricoPausa(pausa, retomada = false) {
+            if (!pausa) return null;
             const timestamp = retomada ? pausa.dataHoraRetomada : pausa.dataHoraPausa;
             if (timestamp) {
                 const valor = new Date(timestamp).getTime();
@@ -2637,9 +2743,67 @@
             return totalPausadoMs;
         }
 
+        function criarPeriodoEncerradoPorTransferencia(atividade, dataFim, justificativa, transferidoPara) {
+            const inicio = atividade.tempoInicio === null || atividade.tempoInicio === ''
+                ? NaN
+                : Number(atividade.tempoInicio);
+            const fim = Number(dataFim);
+            if (!Number.isFinite(inicio) || !Number.isFinite(fim) || fim < inicio) return null;
+
+            const pausasDoPeriodo = historicoPausas.filter(pausa => {
+                if (!pausa) return false;
+                if (atividade.id != null && pausa.id != null) {
+                    return String(atividade.id) === String(pausa.id);
+                }
+                return Boolean(atividade.chaveAtividade && pausa.chaveAtividade &&
+                    atividade.chaveAtividade === pausa.chaveAtividade);
+            });
+            const tempoPausadoMs = pausasDoPeriodo.reduce((total, pausa) => {
+                const inicioPausa = obterTimestampHistoricoPausa(pausa);
+                if (inicioPausa === null) return total;
+                const fimPausa = obterTimestampHistoricoPausa(pausa, true);
+                const limitePausa = fimPausa === null ? fim : fimPausa;
+                const inicioContabilizado = Math.max(inicio, inicioPausa);
+                const fimContabilizado = Math.min(fim, limitePausa);
+                return total + Math.max(0, fimContabilizado - inicioContabilizado);
+            }, 0);
+            const duracaoMs = fim - inicio;
+            const tempoAtivoMs = Math.max(0, duracaoMs - tempoPausadoMs);
+            const dataFimLocal = new Date(fim);
+            const responsavelPeriodo = atividade.responsavel_periodo || obterNomeColaborador(atividade);
+            const criadorTicket = atividade.criador_ticket ||
+                atividade.criador_atividade ||
+                obterNomeColaborador(atividade);
+
+            return {
+                ...atividade,
+                intervaloTimer: null,
+                dataFim: dataFimLocal.toLocaleDateString('pt-BR'),
+                horaFim: dataFimLocal.toLocaleTimeString('pt-BR'),
+                data_finalizacao: dataFimLocal.toISOString(),
+                finalizado_por: responsavelPeriodo,
+                finalizado_por_email: atividade.email_responsavel_periodo || atividade.email_usuario || '',
+                usuario_finalizacao: usuarioAtual?.nome || usuarioAtual?.email || 'Desconhecido',
+                email_finalizacao: usuarioAtual?.email || '',
+                duracao: formatarTempo(duracaoMs),
+                duracaoAtiva: formatarTempo(tempoAtivoMs),
+                tempoAtivoMs,
+                justificativa: '',
+                encerradoPorTransferencia: true,
+                transferidoPara,
+                motivoTransferencia: justificativa,
+                dataTransferencia: new Date().toISOString(),
+                colaboradoresAuxiliares: [],
+                nome: responsavelPeriodo,
+                colaborador: responsavelPeriodo,
+                responsavel_periodo: responsavelPeriodo,
+                criador_ticket: criadorTicket,
+                data_atualizacao: new Date().toISOString()
+            };
+        }
+
         // Finalizar com dados completos
         function finalizarComDados(index, atividade, duracao, dataFim, horaFim, justificativa, colaboradoresAuxiliares = [], dataFinalizacao = new Date().toISOString()) {
-            if (!exigirPermissaoAtividade(atividade)) return false;
             clearInterval(atividade.intervaloTimer);
             const tempoPausadoMs = finalizarPausasDoPeriodo(atividade, dataFinalizacao);
             const tempoAtivoMs = Math.max(0, duracao - tempoPausadoMs);
@@ -2675,6 +2839,12 @@
                 reaberto_por: atividade.reaberto_por || null,
                 reaberto_por_email: atividade.reaberto_por_email || '',
                 isReabertura: Boolean(atividade.isReabertura),
+                retomadaPorOutroColaborador: Boolean(atividade.retomadaPorOutroColaborador),
+                retomado_por: atividade.retomado_por || '',
+                retomado_por_email: atividade.retomado_por_email || '',
+                motivoRetomadaOutroColaborador: atividade.motivoRetomadaOutroColaborador || '',
+                responsavelPeriodoAnterior: atividade.responsavelPeriodoAnterior || '',
+                responsavelPeriodoAnteriorEmail: atividade.responsavelPeriodoAnteriorEmail || '',
                 data_reaberta: atividade.data_reaberta || null,
                 motivo_reabertura: atividade.motivo_reabertura || '',
                 ticket: atividade.ticket,
@@ -2977,8 +3147,6 @@
         function confirmarJustificativa() {
             if (!atividadeEmFinalizacao) return;
 
-            if (!exigirPermissaoAtividade(atividadeEmFinalizacao.atividade)) return;
-
             const justificativa = txtJustificativa.value.trim();
             if (!justificativa) {
                 mostrarAlerta('erro', 'Por favor, forneça uma justificativa');
@@ -2996,7 +3164,6 @@
         // Pausar atividade
         function abrirModalPausarAtividade(atividadeId) {
             const atividade = atividadesEmAndamento.find(a => a && String(a.id) === String(atividadeId));
-            if (!exigirPermissaoAtividade(atividade)) return;
             atividadePausando = atividadeId;
             txtMotivoPausa.value = '';
             document.getElementById('selectGrupoPausa').value = '';
@@ -3016,7 +3183,6 @@
             if (!atividadePausando) return;
 
             const atividadePausa = atividadesEmAndamento.find(a => a && String(a.id) === String(atividadePausando));
-            if (!exigirPermissaoAtividade(atividadePausa)) return;
 
             const motivo = txtMotivoPausa.value.trim();
             const grupo = document.getElementById('selectGrupoPausa').value.trim();
@@ -3102,12 +3268,16 @@
         }
 
         // Retomar atividade
-        function retomarAtividade(atividadeId) {
+        function retomarAtividade(atividadeId, justificativaRetomada = '') {
             const atividade = atividadesEmAndamento.find(a => a && String(a.id) === String(atividadeId));
-            if (!exigirPermissaoAtividade(atividade)) return;
+            if (!atividade) {
+                mostrarAlerta('erro', 'Atividade não encontrada para retomada.');
+                return false;
+            }
 
             const agora = new Date();
             const estadoPausa = kanbanState[atividadeId];
+            const nomeRetomadorAtual = obterNomeUsuarioAtual('Usuário não identificado');
             
             // ✅ Garantir que kanbanState existe
             if (!kanbanState[atividadeId]) {
@@ -3116,12 +3286,76 @@
                 salvarDados();
                 atualizarKanban();
                 mostrarAlerta('aviso', 'Atividade já estava retomada');
-                return;
+                return false;
+            }
+
+            const responsavel = obterResponsavelAtividade(atividade);
+            const retomadaPorOutroColaborador = !responsavel.pertenceAoUsuario;
+            const justificativa = String(justificativaRetomada || '').trim();
+            const pausaAtual = [...historicoPausas].reverse().find(pausa =>
+                pausa && String(pausa.id) === String(atividadeId) &&
+                (pausa.status === 'Pausado' || pausa.ativa === true)
+            );
+            const tempoInicioPausaEstado = estadoPausa.tempoInicioPausa;
+            const tempoInicioPausa = tempoInicioPausaEstado !== null &&
+                tempoInicioPausaEstado !== '' &&
+                Number.isFinite(Number(tempoInicioPausaEstado))
+                ? Number(tempoInicioPausaEstado)
+                : obterTimestampHistoricoPausa(pausaAtual);
+            if (retomadaPorOutroColaborador && !justificativa) {
+                atividadeRetomandoOutroColaborador = String(atividadeId);
+                const nomeRetomador = nomeRetomadorAtual;
+                const emailRetomador = usuarioAtual?.email ? ` (${usuarioAtual.email})` : '';
+                const emailResponsavel = responsavel.email ? ` (${responsavel.email})` : '';
+                txtInfoRetomadaOutroColaborador.textContent =
+                    `${nomeRetomador}${emailRetomador} está retomando a atividade #${atividade.ticket}, ` +
+                    `que pertence a ${responsavel.nome}${emailResponsavel}. O período original será preservado ` +
+                    `até a pausa e um novo período começará para ${nomeRetomador} agora. Informe o motivo para continuar.`;
+                txtJustificativaRetomada.value = '';
+                modalRetomarAtividadeOutroColaborador.style.display = 'block';
+                txtJustificativaRetomada.focus();
+                return false;
+            }
+
+            let novoPeriodoTransferido = null;
+            let periodoOriginalEncerrado = null;
+            let limitePeriodoOriginal = null;
+            if (retomadaPorOutroColaborador) {
+                limitePeriodoOriginal = tempoInicioPausa;
+                if (!Number.isFinite(limitePeriodoOriginal)) {
+                    mostrarAlerta('erro', 'Não foi possível identificar quando a atividade foi pausada. Ela continua pausada.');
+                    return false;
+                }
+
+                periodoOriginalEncerrado = criarPeriodoEncerradoPorTransferencia(
+                    atividade,
+                    limitePeriodoOriginal,
+                    justificativa,
+                    nomeRetomadorAtual
+                );
+                if (!periodoOriginalEncerrado) {
+                    mostrarAlerta('erro', 'Não foi possível preservar o período original da atividade. Ela continua pausada.');
+                    return false;
+                }
+
+                novoPeriodoTransferido = criarNovoPeriodoExecucao(
+                    atividade,
+                    nomeRetomadorAtual,
+                    justificativa,
+                    agora
+                );
+                if (!novoPeriodoTransferido) return false;
+                novoPeriodoTransferido.retomadaPorOutroColaborador = true;
+                novoPeriodoTransferido.retomado_por = nomeRetomadorAtual;
+                novoPeriodoTransferido.retomado_por_email = usuarioAtual?.email || '';
+                novoPeriodoTransferido.motivoRetomadaOutroColaborador = justificativa;
+                novoPeriodoTransferido.responsavelPeriodoAnterior = responsavel.nome;
+                novoPeriodoTransferido.responsavelPeriodoAnteriorEmail = responsavel.email;
             }
             
             // ✅ NOVO: Encontrar e ATUALIZAR o registro de pausa existente
-            if (estadoPausa && estadoPausa.tempoInicioPausa) {
-                const tempoPausaMs = agora.getTime() - estadoPausa.tempoInicioPausa;
+            if (Number.isFinite(tempoInicioPausa)) {
+                const tempoPausaMs = agora.getTime() - tempoInicioPausa;
                 
                 // Procurar o registro de pausa para esta atividade no histórico
                 const indicePausa = historicoPausas.findIndex(p => p && String(p.id) === String(atividadeId) && p.status === 'Pausado');
@@ -3132,8 +3366,19 @@
                     historicoPausas[indicePausa].horaRetomada = agora.toLocaleTimeString('pt-BR');
                     historicoPausas[indicePausa].dataRetomada = agora.toLocaleDateString('pt-BR');
                     historicoPausas[indicePausa].dataHoraRetomada = agora.toISOString();
-                    historicoPausas[indicePausa].retomadoPor = usuarioAtual?.nome || usuarioAtual?.email || 'Desconhecido';
+                    historicoPausas[indicePausa].retomadoPor = nomeRetomadorAtual;
                     historicoPausas[indicePausa].emailRetomadoPor = usuarioAtual?.email || '';
+                    historicoPausas[indicePausa].retomado_por = nomeRetomadorAtual;
+                    historicoPausas[indicePausa].retomado_por_email = usuarioAtual?.email || '';
+                    historicoPausas[indicePausa].responsavelAtividade = responsavel.nome;
+                    historicoPausas[indicePausa].emailResponsavelAtividade = responsavel.email;
+                    historicoPausas[indicePausa].retomadaPorOutroColaborador = retomadaPorOutroColaborador;
+                    historicoPausas[indicePausa].justificativaRetomada = justificativa;
+                    if (novoPeriodoTransferido) {
+                        historicoPausas[indicePausa].periodoTransferidoId = novoPeriodoTransferido.id;
+                        historicoPausas[indicePausa].chavePeriodoTransferido = novoPeriodoTransferido.chaveAtividade;
+                        historicoPausas[indicePausa].periodoTransferido = novoPeriodoTransferido.periodoExecucao;
+                    }
                     historicoPausas[indicePausa].tempoPausaMs = tempoPausaMs;
                     historicoPausas[indicePausa].tempoPausaFormatado = formatarTempo(tempoPausaMs);
                     historicoPausas[indicePausa].ativa = false;
@@ -3152,16 +3397,25 @@
                             grupo: estadoPausa.grupoPausa || 'Não definido',
                             status: 'Retomado',
                             dataInicio: atividade.dataInicio || '-',
-                            dataPausa: new Date(estadoPausa.tempoInicioPausa).toLocaleDateString('pt-BR'),
-                            horaPausa: new Date(estadoPausa.tempoInicioPausa).toLocaleTimeString('pt-BR'),
-                            dataHoraPausa: new Date(estadoPausa.tempoInicioPausa).toISOString(),
+                            dataPausa: new Date(tempoInicioPausa).toLocaleDateString('pt-BR'),
+                            horaPausa: new Date(tempoInicioPausa).toLocaleTimeString('pt-BR'),
+                            dataHoraPausa: new Date(tempoInicioPausa).toISOString(),
                             pausadoPor: usuarioAtual?.nome || usuarioAtual?.email || 'Desconhecido',
                             emailPausadoPor: usuarioAtual?.email || '',
                             horaRetomada: agora.toLocaleTimeString('pt-BR'),
                             dataRetomada: agora.toLocaleDateString('pt-BR'),
                             dataHoraRetomada: agora.toISOString(),
-                            retomadoPor: usuarioAtual?.nome || usuarioAtual?.email || 'Desconhecido',
+                            retomadoPor: nomeRetomadorAtual,
                             emailRetomadoPor: usuarioAtual?.email || '',
+                            retomado_por: nomeRetomadorAtual,
+                            retomado_por_email: usuarioAtual?.email || '',
+                            responsavelAtividade: responsavel.nome,
+                            emailResponsavelAtividade: responsavel.email,
+                            retomadaPorOutroColaborador: retomadaPorOutroColaborador,
+                            justificativaRetomada: justificativa,
+                            periodoTransferidoId: novoPeriodoTransferido?.id || '',
+                            chavePeriodoTransferido: novoPeriodoTransferido?.chaveAtividade || '',
+                            periodoTransferido: novoPeriodoTransferido?.periodoExecucao || null,
                             tempoPausaMs: tempoPausaMs,
                             tempoPausaFormatado: formatarTempo(tempoPausaMs),
                             duracao: atividade.duracao || '00:00:00',
@@ -3169,6 +3423,82 @@
                         });
                     }
                 }
+            }
+
+            if (retomadaPorOutroColaborador) {
+                const indexAtividade = atividadesEmAndamento.findIndex(a =>
+                    a && String(a.id) === String(atividadeId)
+                );
+                if (indexAtividade === -1) {
+                    mostrarAlerta('erro', 'A atividade original não está mais em andamento. Atualize a página e tente novamente.');
+                    return false;
+                }
+
+                clearInterval(atividade.intervaloTimer);
+                atividades.unshift(periodoOriginalEncerrado);
+                atividadesEmAndamento.splice(indexAtividade, 1, novoPeriodoTransferido);
+                delete kanbanState[atividade.id];
+                kanbanState[novoPeriodoTransferido.id] = {
+                    status: 'em_andamento',
+                    motivoPausa: '',
+                    grupoPausa: '',
+                    tempoInicioPausa: null
+                };
+
+                salvarDados();
+                atualizarKanban();
+                iniciarCronometro(novoPeriodoTransferido.id);
+
+                registrarRastreioAtividade('FIM', atividade.ticket, atividade.descricao, {
+                    timestamp: new Date(limitePeriodoOriginal + 1).toISOString(),
+                    chaveAtividade: atividade.chaveAtividade,
+                    atividadeId: atividade.id,
+                    atividadeRaizId: atividade.atividadeRaizId || atividade.id,
+                    periodoExecucao: Number(atividade.periodoExecucao) || 1,
+                    responsavel_periodo: responsavel.nome,
+                    duracao: periodoOriginalEncerrado.duracao,
+                    duracaoAtiva: periodoOriginalEncerrado.duracaoAtiva,
+                    encerradoPorTransferencia: true,
+                    transferidoPara: novoPeriodoTransferido.responsavel_periodo,
+                    usuario_logado: usuarioAtual?.email
+                });
+                registrarRastreioAtividade('RETOMOU', atividade.ticket, atividade.descricao, {
+                    chaveAtividade: atividade.chaveAtividade,
+                    atividadeId: atividade.id,
+                    atividadeRaizId: atividade.atividadeRaizId || atividade.id,
+                    periodoExecucao: Number(atividade.periodoExecucao) || 1,
+                    responsavel_periodo: responsavel.nome,
+                    responsavelAtividade: responsavel.nome,
+                    emailResponsavelAtividade: responsavel.email,
+                    retomadaPorOutroColaborador: true,
+                    justificativaRetomada: justificativa,
+                    tempoPausa: formatarTempo(agora.getTime() - limitePeriodoOriginal),
+                    usuario_logado: usuarioAtual?.email
+                });
+                registrarRastreioAtividade('REABRIU', novoPeriodoTransferido.ticket, novoPeriodoTransferido.descricao, {
+                    chaveAtividade: novoPeriodoTransferido.chaveAtividade,
+                    atividadeId: novoPeriodoTransferido.id,
+                    atividadeRaizId: novoPeriodoTransferido.atividadeRaizId,
+                    periodoExecucao: novoPeriodoTransferido.periodoExecucao,
+                    responsavel_periodo: novoPeriodoTransferido.responsavel_periodo,
+                    reaberto_por: novoPeriodoTransferido.reaberto_por,
+                    responsavelPeriodoAnterior: responsavel.nome,
+                    justificativaRetomada: justificativa,
+                    usuario_logado: usuarioAtual?.email
+                });
+                registrarInicioAtividade(novoPeriodoTransferido.ticket, novoPeriodoTransferido.descricao, {
+                    chaveAtividade: novoPeriodoTransferido.chaveAtividade,
+                    atividadeId: novoPeriodoTransferido.id,
+                    atividadeRaizId: novoPeriodoTransferido.atividadeRaizId,
+                    periodoExecucao: novoPeriodoTransferido.periodoExecucao,
+                    colaborador: novoPeriodoTransferido.responsavel_periodo,
+                    responsavel_periodo: novoPeriodoTransferido.responsavel_periodo,
+                    motivoRetomadaOutroColaborador: justificativa,
+                    usuario_logado: usuarioAtual?.email
+                });
+
+                mostrarAlerta('sucesso', `Atividade retomada por ${novoPeriodoTransferido.responsavel_periodo}. O novo período foi iniciado.`);
+                return true;
             }
             
             kanbanState[atividadeId].status = 'em_andamento';
@@ -3188,18 +3518,49 @@
                     atividadeRaizId: atividadeRetoma.atividadeRaizId || atividadeRetoma.id,
                     periodoExecucao: Number(atividadeRetoma.periodoExecucao) || 1,
                     responsavel_periodo: atividadeRetoma.responsavel_periodo || obterNomeColaborador(atividadeRetoma),
-                    tempoPausa: estadoPausa && estadoPausa.tempoInicioPausa ? formatarTempo(agora.getTime() - estadoPausa.tempoInicioPausa) : '-',
+                    responsavelAtividade: responsavel.nome,
+                    emailResponsavelAtividade: responsavel.email,
+                    retomadaPorOutroColaborador: retomadaPorOutroColaborador,
+                    justificativaRetomada: justificativa,
+                    tempoPausa: Number.isFinite(tempoInicioPausa)
+                        ? formatarTempo(agora.getTime() - tempoInicioPausa)
+                        : '-',
                     usuario_logado: usuarioAtual?.email
                 });
             }
 
             mostrarAlerta('sucesso', 'Atividade retomada!');
+            return true;
+        }
+
+        function cancelarRetomadaOutroColaborador() {
+            modalRetomarAtividadeOutroColaborador.style.display = 'none';
+            txtJustificativaRetomada.value = '';
+            atividadeRetomandoOutroColaborador = null;
+        }
+
+        function confirmarRetomadaOutroColaborador() {
+            const justificativa = txtJustificativaRetomada.value.trim();
+            if (!justificativa) {
+                mostrarAlerta('erro', 'Informe o motivo para retomar a atividade de outro colaborador.');
+                txtJustificativaRetomada.focus();
+                return;
+            }
+
+            if (atividadeRetomandoOutroColaborador === null) {
+                mostrarAlerta('erro', 'Não foi possível identificar a atividade para retomada.');
+                cancelarRetomadaOutroColaborador();
+                return;
+            }
+
+            if (retomarAtividade(atividadeRetomandoOutroColaborador, justificativa)) {
+                cancelarRetomadaOutroColaborador();
+            }
         }
 
         // Abrir modal para observação ao concluir
         function abrirModalObservacao(atividadeId) {
             const atividade = atividadesEmAndamento.find(a => a && String(a.id) === String(atividadeId));
-            if (!exigirPermissaoAtividade(atividade)) return;
             atividadeConcluindo = atividadeId;
             txtObservacaoConcluir.value = '';
             modalObservacaoConcluir.style.display = 'block';
@@ -3222,7 +3583,6 @@
             const atividade = atividadesEmAndamento.find(a =>
                 a && String(a.id) === String(atividadeEmObservacao.atividadeId)
             );
-            if (!exigirPermissaoAtividade(atividade)) return;
             
             colaboradoresSelecionados = [];
             
@@ -3285,7 +3645,6 @@
             }
 
             const ativ = atividadesEmAndamento[index];
-            if (!exigirPermissaoAtividade(ativ)) return;
             const agora = new Date();
             const duracao = agora.getTime() - ativ.tempoInicio;
             
@@ -3311,7 +3670,6 @@
             }
 
             const ativ = atividadesEmAndamento[index];
-            if (!exigirPermissaoAtividade(ativ)) return;
             const agora = new Date();
             const duracao = agora.getTime() - ativ.tempoInicio;
             
@@ -3333,8 +3691,6 @@
             }
             
             const atividade = atividadesEmAndamento.find(a => a && a.id === atividadeConcluindo);
-
-            if (!exigirPermissaoAtividade(atividade)) return;
             atividade.observacao = observacao;
             
             atividadeEmObservacao = {
@@ -3406,17 +3762,19 @@
             } else {
                 const cardsEmAndamento = atividadesGrupadasPorStatus.em_andamento.map(atividade => {
                     const duracao = new Date().getTime() - atividade.tempoInicio;
-                    const podeGerenciar = usuarioPodeGerenciarAtividade(atividade);
                     return `
                         <div class="kanban-card" data-kanban-atividade-id="${atividade.id}">
                             <div class="kanban-card-content">
                                 <div class="kanban-card-header">
-                                    <span class="kanban-card-title">${atividade.isReabertura ? `TICKET: ${atividade.ticket} Reaberto` : `🎟️ Ticket: ${atividade.ticket}`}</span>
+                                    <span class="kanban-card-title">${atividadeFoiRetomadaPorOutroColaborador(atividade) ? `TICKET: ${atividade.ticket} Retomado` : atividade.isReabertura ? `TICKET: ${atividade.ticket} Reaberto` : `🎟️ Ticket: ${atividade.ticket}`}</span>
                                 </div>
                                 ${atividade.chaveAtividade ? `<div class="kanban-card-subtitle" style="color: #9c27b0; font-weight: 600; font-size: 0.8em; margin-bottom: 3px; padding: 3px 6px; background: #f3e5f5; border-radius: 3px; display: inline-block;">🔑 ${atividade.chaveAtividade}</div>` : ''}
                                 ${atividade.titulo ? `<div class="kanban-card-subtitle" style="color: #51cf66; font-weight: 600; margin-bottom: 3px;">📌 ${atividade.titulo}</div>` : ''}
                                 <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
-                                ${atividade.isReabertura ? `
+                                ${atividadeFoiRetomadaPorOutroColaborador(atividade) ? `
+                                <div class="kanban-card-subtitle"><strong>Criado por:</strong> ${obterNomeCriadorAtividade(atividade)}</div>
+                                <div class="kanban-card-subtitle"><strong>Retomado por:</strong> ${obterNomeRetomadorAtividade(atividade)}</div>
+                                ` : atividade.isReabertura ? `
                                 <div class="kanban-card-subtitle"><strong>Ticket criado por:</strong> ${obterNomeColaborador(atividade)}</div>
                                 <div class="kanban-card-subtitle"><strong>Reaberto por:</strong> ${obterNomeColaborador({ nome: atividade.reaberto_por }, obterNomeColaborador(atividade))}</div>
                                 ` : `
@@ -3426,10 +3784,10 @@
                                 <div class="kanban-card-subtitle"><strong>Início:</strong> ${atividade.horaInicio}</div>
                                 <div class="kanban-card-subtitle kanban-duracao-display" style="color: #667eea; font-weight: bold; margin-top: 2px;">⏱️ ${formatarTempo(duracao)}</div>
                             </div>
-                            ${podeGerenciar ? `<div class="kanban-card-actions">
+                            <div class="kanban-card-actions">
                                 <button class="btn-danger btn-small" onclick="abrirModalPausarAtividade(${atividade.id})">⏸️ Pausar</button>
                                 <button class="btn-success btn-small" onclick="marcarComoConcluido(${atividade.id})">✓ Concluir</button>
-                            </div>` : ''}
+                            </div>
                         </div>
                     `;
                 }).join('');
@@ -3441,17 +3799,19 @@
                 kanbanPausado.innerHTML = '<div class="kanban-empty">Nenhuma atividade pausada</div>';
             } else {
                 const cardsPausado = atividadesGrupadasPorStatus.pausado.map(atividade => {
-                    const podeGerenciar = usuarioPodeGerenciarAtividade(atividade);
                     return `
                         <div class="kanban-card">
                             <div class="kanban-card-content">
                                 <div class="kanban-card-header">
-                                    <span class="kanban-card-title">${atividade.isReabertura ? `TICKET: ${atividade.ticket} Reaberto` : `🎟️ ${atividade.ticket}`}</span>
+                                    <span class="kanban-card-title">${atividadeFoiRetomadaPorOutroColaborador(atividade) ? `TICKET: ${atividade.ticket} Retomado` : atividade.isReabertura ? `TICKET: ${atividade.ticket} Reaberto` : `🎟️ ${atividade.ticket}`}</span>
                                 </div>
                                 ${atividade.chaveAtividade ? `<div class="kanban-card-subtitle" style="color: #9c27b0; font-weight: 600; font-size: 0.8em; margin-bottom: 3px; padding: 3px 6px; background: #f3e5f5; border-radius: 3px; display: inline-block;">🔑 ${atividade.chaveAtividade}</div>` : ''}
                                 ${atividade.titulo ? `<div class="kanban-card-subtitle" style="color: #51cf66; font-weight: 600; margin-bottom: 3px;">📌 ${atividade.titulo}</div>` : ''}
                                 <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
-                                ${atividade.isReabertura ? `
+                                ${atividadeFoiRetomadaPorOutroColaborador(atividade) ? `
+                                <div class="kanban-card-subtitle"><strong>Criado por:</strong> ${obterNomeCriadorAtividade(atividade)}</div>
+                                <div class="kanban-card-subtitle"><strong>Retomado por:</strong> ${obterNomeRetomadorAtividade(atividade)}</div>
+                                ` : atividade.isReabertura ? `
                                 <div class="kanban-card-subtitle"><strong>Ticket criado por:</strong> ${obterNomeColaborador(atividade)}</div>
                                 <div class="kanban-card-subtitle"><strong>Reaberto por:</strong> ${obterNomeColaborador({ nome: atividade.reaberto_por }, obterNomeColaborador(atividade))}</div>
                                 ` : `
@@ -3460,10 +3820,10 @@
                                 <div class="kanban-card-subtitle"><strong>Setor da pausa:</strong> ${kanbanState[atividade.id]?.grupoPausa || 'Não definido'}</div>
                                 <div class="kanban-pause-reason">💬 ${kanbanState[atividade.id]?.motivoPausa || ''}</div>
                             </div>
-                            ${podeGerenciar ? `<div class="kanban-card-actions">
+                            <div class="kanban-card-actions">
                                 <button class="btn-primary btn-small" onclick="retomarAtividade(${atividade.id})">▶️ Retomar</button>
                                 <button class="btn-success btn-small" onclick="marcarComoConcluido(${atividade.id})">✓ Concluir</button>
-                            </div>` : ''}
+                            </div>
                         </div>
                     `;
                 }).join('');
@@ -3509,12 +3869,15 @@
                         <div class="kanban-card" style="opacity: 0.7;">
                             <div class="kanban-card-content">
                                 <div class="kanban-card-header">
-                                    <span class="kanban-card-title">${atividade.isReabertura ? `TICKET: ${atividade.ticket} Reaberto` : `🎟️ ${atividade.ticket}`}</span>
+                                    <span class="kanban-card-title">${atividadeFoiRetomadaPorOutroColaborador(atividade) ? `TICKET: ${atividade.ticket} Retomado` : atividade.isReabertura ? `TICKET: ${atividade.ticket} Reaberto` : `🎟️ ${atividade.ticket}`}</span>
                                 </div>
                                 ${atividade.chaveAtividade ? `<div class="kanban-card-subtitle" style="color: #9c27b0; font-weight: 600; font-size: 0.8em; margin-bottom: 3px; padding: 3px 6px; background: #f3e5f5; border-radius: 3px; display: inline-block;">🔑 ${atividade.chaveAtividade}</div>` : ''}
                                 ${atividade.titulo ? `<div class="kanban-card-subtitle" style="color: #51cf66; font-weight: 600; margin-bottom: 3px;">📌 ${atividade.titulo}</div>` : ''}
                                 <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.descricao || 'Sem descrição'}</div>
-                                ${atividade.isReabertura || atividade.reaberto_por || atividade.data_reaberta ? `
+                                ${atividadeFoiRetomadaPorOutroColaborador(atividade) ? `
+                                <div class="kanban-card-subtitle"><strong>Criado por:</strong> ${obterNomeCriadorAtividade(atividade)}</div>
+                                <div class="kanban-card-subtitle"><strong>Retomado por:</strong> ${obterNomeRetomadorAtividade(atividade)}</div>
+                                ` : atividade.isReabertura || atividade.reaberto_por || atividade.data_reaberta ? `
                                 <div class="kanban-card-subtitle"><strong>Ticket criado por:</strong> ${obterNomeColaborador(atividade)}</div>
                                 <div class="kanban-card-subtitle"><strong>Reaberto por:</strong> ${obterNomeColaborador({ nome: atividade.reaberto_por }, obterNomeColaborador(atividade))}</div>
                                 ` : atividade.finalizado_por ? `
@@ -3542,6 +3905,9 @@
             if (event.target === modalPausarAtividade) {
                 fecharModalPausarAtividade();
             }
+            if (event.target === modalRetomarAtividadeOutroColaborador) {
+                cancelarRetomadaOutroColaborador();
+            }
             if (event.target === modalObservacaoConcluir) {
                 fecharModalObservacao();
             }
@@ -3564,11 +3930,28 @@
                 const status = kanbanState[atividade.id]?.status || 'em_andamento';
                 todasAsAtividades.push({
                     id: atividade.id,
+                    chaveAtividade: atividade.chaveAtividade || '',
                     colaborador: obterNomeColaborador(atividade),
+                    criador_ticket: atividade.criador_ticket || '',
+                    criador_atividade: atividade.criador_atividade || '',
+                    nome_usuario: atividade.nome_usuario || '',
                     ticket: atividade.ticket,
                     data: atividade.dataInicio,
                     hora: atividade.horaInicio,
                     status: status,
+                    retomadaPorOutroColaborador: Boolean(atividade.retomadaPorOutroColaborador),
+                    retomado_por: atividade.retomado_por || '',
+                    retomado_por_email: atividade.retomado_por_email || '',
+                    responsavel_periodo: atividade.responsavel_periodo || '',
+                    responsavelPeriodoAnterior: atividade.responsavelPeriodoAnterior || '',
+                    responsavelPeriodoAnteriorEmail: atividade.responsavelPeriodoAnteriorEmail || '',
+                    motivoRetomadaOutroColaborador: atividade.motivoRetomadaOutroColaborador || '',
+                    data_reaberta: atividade.data_reaberta || null,
+                    data_criacao: atividade.data_criacao || null,
+                    periodoExecucao: atividade.periodoExecucao || null,
+                    isReabertura: Boolean(atividade.isReabertura),
+                    reaberto_por: atividade.reaberto_por || '',
+                    isReabertura: Boolean(atividade.isReabertura),
                     observacao: atividade.observacao,
                     motivoPausa: kanbanState[atividade.id]?.motivoPausa || '',
                     grupoPausa: kanbanState[atividade.id]?.grupoPausa || 'Não definido'
@@ -3581,7 +3964,7 @@
             atividadesParaIterar.filter(atividade => !atividade.ehAjudante).forEach(atividade => {
                 todasAsAtividades.push({
                     ...atividade,
-                    id: Math.random(),
+                    id: atividade.id || Math.random(),
                     colaborador: obterNomeColaborador(atividade),
                     ticket: atividade.ticket,
                     data: atividade.dataInicio,
@@ -3681,10 +4064,14 @@
                         <div class="kanban-card">
                             <div class="kanban-card-content">
                                 <div class="kanban-card-header">
-                                    <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
+                                    <span class="kanban-card-title">${atividadeFoiRetomadaPorOutroColaborador(atividade) ? `Ticket: ${atividade.ticket} Retomado` : atividade.isReabertura ? `Ticket: ${atividade.ticket} Reaberto` : `🎟️ Ticket: ${atividade.ticket}`}</span>
                                 </div>
                                 <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.observacao || 'Sem descrição'}</div>
-                                <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.colaborador}</div>
+                                ${atividadeFoiRetomadaPorOutroColaborador(atividade)
+                                    ? `<div class="kanban-card-subtitle"><strong>Criado por:</strong> ${obterNomeCriadorAtividade(atividade)}</div><div class="kanban-card-subtitle"><strong>Retomado por:</strong> ${obterNomeRetomadorAtividade(atividade)}</div>`
+                                    : atividade.isReabertura
+                                        ? `<div class="kanban-card-subtitle"><strong>Reaberto por:</strong> ${obterNomeColaborador({ nome: atividade.reaberto_por }, atividade.colaborador)}</div>`
+                                        : `<div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.colaborador}</div>`}
                                 <div class="kanban-card-subtitle"><strong>Data:</strong> ${atividade.data}</div>
                                 <div class="kanban-card-subtitle"><strong>Início:</strong> ${atividade.hora}</div>
                                 <div class="kanban-card-subtitle" style="color: #667eea; font-weight: bold; margin-top: 2px;">
@@ -3706,10 +4093,14 @@
                         <div class="kanban-card">
                             <div class="kanban-card-content">
                                 <div class="kanban-card-header">
-                                    <span class="kanban-card-title">🎟️ Ticket: ${atividade.ticket}</span>
+                                    <span class="kanban-card-title">${atividadeFoiRetomadaPorOutroColaborador(atividade) ? `Ticket: ${atividade.ticket} Retomado` : atividade.isReabertura ? `Ticket: ${atividade.ticket} Reaberto` : `🎟️ Ticket: ${atividade.ticket}`}</span>
                                 </div>
                                 <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.observacao || 'Sem descrição'}</div>
-                                <div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.colaborador}</div>
+                                ${atividadeFoiRetomadaPorOutroColaborador(atividade)
+                                    ? `<div class="kanban-card-subtitle"><strong>Criado por:</strong> ${obterNomeCriadorAtividade(atividade)}</div><div class="kanban-card-subtitle"><strong>Retomado por:</strong> ${obterNomeRetomadorAtividade(atividade)}</div>`
+                                    : atividade.isReabertura
+                                        ? `<div class="kanban-card-subtitle"><strong>Reaberto por:</strong> ${obterNomeColaborador({ nome: atividade.reaberto_por }, atividade.colaborador)}</div>`
+                                        : `<div class="kanban-card-subtitle"><strong>Colaborador:</strong> ${atividade.colaborador}</div>`}
                                 <div class="kanban-card-subtitle"><strong>Setor da pausa:</strong> ${atividade.grupoPausa || 'Não definido'}</div>
                                 <div class="kanban-pause-reason">💬 ${atividade.motivoPausa || ''}</div>
                             </div>
@@ -3728,10 +4119,12 @@
                         <div class="kanban-card" style="opacity: 0.7;">
                             <div class="kanban-card-content">
                                 <div class="kanban-card-header">
-                                    <span class="kanban-card-title">${atividade.isReabertura ? `Ticket: ${atividade.ticket} Reaberto` : `🎟️ Ticket: ${atividade.ticket}`}</span>
+                                    <span class="kanban-card-title">${atividadeFoiRetomadaPorOutroColaborador(atividade) ? `Ticket: ${atividade.ticket} Retomado` : atividade.isReabertura ? `Ticket: ${atividade.ticket} Reaberto` : `🎟️ Ticket: ${atividade.ticket}`}</span>
                                 </div>
                                 <div class="kanban-card-subtitle" style="color: #667eea; font-style: italic; margin-bottom: 3px;">📝 ${atividade.observacao || 'Sem descrição'}</div>
-                                ${atividade.isReabertura || atividade.reaberto_por || atividade.data_reaberta
+                                ${atividadeFoiRetomadaPorOutroColaborador(atividade)
+                                    ? `<div class="kanban-card-subtitle"><strong>Criado por:</strong> ${obterNomeCriadorAtividade(atividade)}</div><div class="kanban-card-subtitle"><strong>Retomado por:</strong> ${obterNomeRetomadorAtividade(atividade)}</div>`
+                                    : atividade.isReabertura || atividade.reaberto_por || atividade.data_reaberta
                                     ? `<div class="kanban-card-subtitle"><strong>Reaberto por:</strong> ${obterNomeColaborador({ nome: atividade.reaberto_por }, 'Não informado')}</div>`
                                     : `<div class="kanban-card-subtitle"><strong>Por:</strong> ${atividade.colaborador}</div>`}
                                 <div style="text-align: center; color: #51cf66; font-weight: bold; margin-top: 2px;">✓ Concluído</div>
@@ -3806,6 +4199,8 @@
         btnConfirmarJustificativa.addEventListener('click', confirmarJustificativa);
         btnCancelarPausa.addEventListener('click', fecharModalPausarAtividade);
         btnConfirmarPausa.addEventListener('click', confirmarPausarAtividade);
+        btnCancelarRetomadaOutroColaborador.addEventListener('click', cancelarRetomadaOutroColaborador);
+        btnConfirmarRetomadaOutroColaborador.addEventListener('click', confirmarRetomadaOutroColaborador);
         btnCancelarObsConcluir.addEventListener('click', fecharModalObservacao);
         btnConfirmarComObs.addEventListener('click', confirmarConcluirComObs);
         btnCancelarColaboradores.addEventListener('click', fecharModalAtribuirColaboradores);
@@ -3814,6 +4209,11 @@
         txtMotivoPausa.addEventListener('keypress', function(e) {
             if (e.key === 'Enter' && e.ctrlKey) {
                 confirmarPausarAtividade();
+            }
+        });
+        txtJustificativaRetomada.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                confirmarRetomadaOutroColaborador();
             }
         });
         txtObservacaoConcluir.addEventListener('keypress', function(e) {

@@ -1,5 +1,6 @@
 (function(global) {
     const CHAVE_TEMPOS_COLABORADORES = 'tempoTotalPorColaboradorRastreabilidade';
+    const CHAVE_TEMPOS_EFETIVOS_COLABORADORES = 'tempoEfetivoPorColaboradorRastreabilidade';
 
     function obterNomeColaborador(nomes, email) {
         const nomeGenerico = /^(usu[aá]rio|user|desconhecido|n[aã]o informado)$/i;
@@ -143,7 +144,11 @@
             if (!nome || !Array.isArray(registro.intervalos)) return;
 
             const chave = String(registro.identificador || `nome:${nome}`).trim().toLocaleLowerCase('pt-BR');
-            const resumo = intervalosPorColaborador.get(chave) || { nome, intervalos: [] };
+            const resumo = intervalosPorColaborador.get(chave) || {
+                nome,
+                identificador: String(registro.identificador || ''),
+                intervalos: []
+            };
             registro.intervalos.forEach(intervalo => {
                 const inicio = Number(intervalo?.inicio);
                 const fim = Number(intervalo?.fim);
@@ -173,7 +178,7 @@
                     }
                 });
                 if (inicioAtual !== null) totalMs += fimAtual - inicioAtual;
-                return { nome: resumo.nome, totalMs };
+                return { nome: resumo.nome, identificador: resumo.identificador, totalMs };
             })
             .filter(resumo => resumo.totalMs > 0)
             .sort((a, b) => b.totalMs - a.totalMs || a.nome.localeCompare(b.nome, 'pt-BR'));
@@ -214,6 +219,43 @@
         }
     }
 
+    function publicarTemposEfetivosPorColaborador(data, colaboradores) {
+        const snapshot = {
+            data,
+            atualizadoEm: Date.now(),
+            colaboradores: colaboradores.map(({ nome, identificador, totalMs }) => ({
+                nome: String(nome),
+                identificador: String(identificador || ''),
+                totalMs: Number(totalMs)
+            }))
+        };
+        try {
+            global.localStorage.setItem(CHAVE_TEMPOS_EFETIVOS_COLABORADORES, JSON.stringify(snapshot));
+        } catch (erro) {
+            console.error('Não foi possível sincronizar os tempos efetivos por colaborador.', erro);
+        }
+    }
+
+    function obterTemposEfetivosPorColaboradorPublicados(data) {
+        try {
+            const conteudo = global.localStorage.getItem(CHAVE_TEMPOS_EFETIVOS_COLABORADORES);
+            if (!conteudo) return null;
+            const snapshot = JSON.parse(conteudo);
+            if (snapshot.data !== data || !Array.isArray(snapshot.colaboradores)) return null;
+            if (snapshot.colaboradores.some(item =>
+                !item || typeof item.nome !== 'string' || !Number.isFinite(Number(item.totalMs))
+            )) return null;
+            return snapshot.colaboradores.map(item => ({
+                nome: item.nome,
+                identificador: String(item.identificador || ''),
+                totalMs: Number(item.totalMs)
+            }));
+        } catch (erro) {
+            console.error('Não foi possível ler os tempos efetivos por colaborador sincronizados.', erro);
+            return null;
+        }
+    }
+
     global.obterNomeColaboradorTempo = obterNomeColaborador;
     global.agruparTempoAtivoPorColaborador = agruparTempoAtivoPorColaborador;
     global.obterIntervalosAtivosDiarios = obterIntervalosAtivosDiarios;
@@ -221,4 +263,6 @@
     global.agruparTempoEfetivoPorColaborador = agruparTempoEfetivoPorColaborador;
     global.publicarTemposPorColaborador = publicarTemposPorColaborador;
     global.obterTemposPorColaboradorPublicados = obterTemposPorColaboradorPublicados;
+    global.publicarTemposEfetivosPorColaborador = publicarTemposEfetivosPorColaborador;
+    global.obterTemposEfetivosPorColaboradorPublicados = obterTemposEfetivosPorColaboradorPublicados;
 })(window);

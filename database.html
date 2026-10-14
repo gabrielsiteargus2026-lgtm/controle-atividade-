@@ -1627,10 +1627,12 @@
                     intervalos,
                     ehAjudante: atividade.ehAjudante
                 };
-            })).slice(0, 3);
+            }));
+            publicarTemposEfetivosPorColaborador(dataSelecionada, colaboradores);
+            const colaboradoresDosCards = colaboradores.slice(0, 3);
 
             container.replaceChildren();
-            if (!colaboradores.length) {
+            if (!colaboradoresDosCards.length) {
                 const vazio = document.createElement('span');
                 vazio.className = 'collaborator-time-name';
                 vazio.textContent = 'Sem tempo efetivo registrado nesta data';
@@ -1638,7 +1640,7 @@
                 return;
             }
 
-            colaboradores.forEach((colaborador, indice) => {
+            colaboradoresDosCards.forEach((colaborador, indice) => {
                 const percentual = colaborador.totalMs / jornadaReferenciaMs * 100;
                 const card = document.createElement('div');
                 card.className = 'effective-time-card';
