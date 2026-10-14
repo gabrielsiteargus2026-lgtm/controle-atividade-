@@ -762,6 +762,86 @@
             return Object.values(dados).filter(a => a && typeof a === 'object');
         }
 
+        const COLABORADORES_CANONICOS = [
+            'Gabriel Oliveira',
+            'Julia Barros',
+            'Nome (Teste)',
+            'Angelica Luz',
+            'Ellen Ferreira'
+        ];
+
+        function normalizarNomeColaborador(nome) {
+            return String(nome || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .trim()
+                .replace(/\s+/g, ' ')
+                .toLocaleLowerCase('pt-BR');
+        }
+
+        function nomeValidoColaborador(nome) {
+            const normalizado = normalizarNomeColaborador(nome);
+            return Boolean(normalizado && ![
+                'usuario',
+                'user',
+                'desconhecido',
+                'unknown',
+                'nao informado',
+                'nao identificado',
+                'usuario nao identificado'
+            ].includes(normalizado));
+        }
+
+        function primeiroNomeDoEmail(email) {
+            const match = /^([^@\s]+)@[^@\s]+\.[^@\s]+$/.exec(String(email || '').trim());
+            if (!match) return '';
+            const primeiroNome = match[1].split(/[._+-]/).find(parte => parte.length > 0);
+            return primeiroNome
+                ? primeiroNome.charAt(0).toLocaleUpperCase('pt-BR') + primeiroNome.slice(1).toLocaleLowerCase('pt-BR')
+                : '';
+        }
+
+        function obterNomeCanonicoColaborador(nome) {
+            const nomeNormalizado = normalizarNomeColaborador(nome);
+            if (!nomeValidoColaborador(nome)) return '';
+
+            const correspondencias = COLABORADORES_CANONICOS.filter(colaborador => {
+                const nomeCanonico = normalizarNomeColaborador(colaborador);
+                return nomeCanonico === nomeNormalizado || nomeCanonico.startsWith(`${nomeNormalizado} `);
+            });
+            return correspondencias.length === 1 ? correspondencias[0] : '';
+        }
+
+        function obterNomeContabilizador(atividade) {
+            if (!atividade || atividade.ehAjudante) return '';
+            const periodoTransferido = Boolean(
+                atividade?.retomadaPorOutroColaborador ||
+                atividade?.retomado_por_email ||
+                atividade?.motivoRetomadaOutroColaborador
+            );
+            if (periodoTransferido) {
+                const nomeEmailRetomador = primeiroNomeDoEmail(atividade.retomado_por_email);
+                return obterNomeCanonicoColaborador(nomeEmailRetomador);
+            }
+
+            const nomesResponsavel = [
+                atividade.responsavel_periodo,
+                atividade.colaborador,
+                atividade.nome,
+                atividade.finalizado_por,
+                atividade.criador_ticket
+            ];
+            for (const nome of nomesResponsavel) {
+                const nomeCanonico = obterNomeCanonicoColaborador(nome);
+                if (nomeCanonico) return nomeCanonico;
+            }
+
+            const emailResponsavel = atividade.email_responsavel_periodo ||
+                atividade.email_usuario ||
+                atividade.email_criador;
+            return obterNomeCanonicoColaborador(primeiroNomeDoEmail(emailResponsavel));
+        }
+
         // Carregar dados ao iniciar
         // ⭐ Flag para controlar se dados iniciais foram carregados
         let dadosIniciaisCarregados = false;
@@ -1101,33 +1181,33 @@
             const ticketsPausados = new Set(Object.keys(pausasAtivas));
             
             const colaboradores = {};
+            const contarParaColaborador = atividade => {
+                const nome = obterNomeContabilizador(atividade);
+                if (!nome) return;
+                colaboradores[nome] = (colaboradores[nome] || 0) + 1;
+            };
             
             // Contar atividades por colaborador (concluídas)
             atividadesGlobais.forEach(a => {
-                if (!a || !a.colaborador) return;
-                if (!colaboradores[a.colaborador]) {
-                    colaboradores[a.colaborador] = 0;
-                }
-                colaboradores[a.colaborador]++;
+                if (!a || a.ehAjudante) return;
+                contarParaColaborador(a);
             });
             
             // Contar atividades por colaborador (em andamento SEM pausas)
             atividadesEmAndamento.forEach(a => {
-                if (!a || !a.colaborador) return;
+                if (!a) return;
                 // Pular atividades que têm pausas registradas
                 if (a.ticket && ticketsPausados.has(a.ticket)) return;
-                if (!colaboradores[a.colaborador]) {
-                    colaboradores[a.colaborador] = 0;
-                }
-                colaboradores[a.colaborador]++;
+                contarParaColaborador(a);
             });
             
             // Contar atividades por colaborador (pausadas - apenas tickets ativos em pausa)
             const ticketsPausadosPorColaborador = {};
             Object.values(pausasAtivas).forEach(p => {
-                if (!p || !p.ticket || !p.colaborador) return;
+                if (!p || !p.ticket) return;
                 if (ticketsPausadosPorColaborador[p.ticket]) return;
-                ticketsPausadosPorColaborador[p.ticket] = p.colaborador;
+                const nomeColaborador = obterNomeContabilizador(p);
+                if (nomeColaborador) ticketsPausadosPorColaborador[p.ticket] = nomeColaborador;
             });
             Object.values(ticketsPausadosPorColaborador).forEach(colaborador => {
                 colaboradores[colaborador] = (colaboradores[colaborador] || 0) + 1;
@@ -1549,9 +1629,8 @@
             
             const contagem = {};
             atividadesArray.forEach(a => {
-                if (a && a.colaborador) {
-                    contagem[a.colaborador] = (contagem[a.colaborador] || 0) + 1;
-                }
+                const nome = obterNomeContabilizador(a);
+                if (nome) contagem[nome] = (contagem[nome] || 0) + 1;
             });
 
             const todosList = Object.entries(contagem).sort((a, b) => b[1] - a[1]);
@@ -2073,7 +2152,7 @@
             
             // Filtrar atividades do colaborador
             const atividades = Array.isArray(atividadesGlobais) ? 
-                atividadesGlobais.filter(a => a && a.colaborador === nomeColaborador) :
+                atividadesGlobais.filter(a => obterNomeContabilizador(a) === nomeColaborador) :
                 [];
             
             // Ordenar por data (mais recentes primeiro)
