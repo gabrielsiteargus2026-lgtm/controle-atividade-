@@ -312,10 +312,10 @@
             </div>
             <div class="summary-grid">
                 <div class="summary-card"><div class="summary-value" id="totalAtividadesCriadas">0</div><div class="summary-label">Total de Atividades Criadas</div></div>
-                <div class="summary-card"><div class="summary-value" id="totalConcluidas">0</div><div class="summary-label">Total Concluídas no Dia</div></div>
-                <div class="summary-card"><div class="summary-value" id="totalEmAndamento">0</div><div class="summary-label">Total de Atividades em Andamento</div></div>
-                <div class="summary-card"><div class="summary-value" id="totalPausadas">0</div><div class="summary-label">Total Atividades Pausadas</div></div>
-                <div class="summary-card"><div class="summary-value" id="tempoTotalAtividades">--</div><div class="summary-label">Tempo total das atividades</div></div>
+                <div class="summary-card"><div class="summary-value" id="totalConcluidas">0</div><div class="summary-label">Concluídas no Dia</div></div>
+                <div class="summary-card"><div class="summary-value" id="totalEmAndamento">0</div><div class="summary-label">Atividades em Andamento</div></div>
+                <div class="summary-card"><div class="summary-value" id="totalPausadas">0</div><div class="summary-label">Atividades Pausadas</div></div>
+                <div class="summary-card"><div class="summary-value" id="tempoTotalAtividades">--</div><div class="summary-label">Tempo total nas atividades</div></div>
                 <div class="summary-card"><div class="summary-value" id="tempoMedioFinalizacao">--</div><div class="summary-label">Média de Finalização por Ticket</div></div>
                 <div class="summary-card"><div class="summary-value" id="mediaPorColaboradorDia">--</div><div class="summary-label">Média por Colaborador</div></div>
                 <div class="summary-card"><div class="summary-value" id="tempoMedioPausa">--</div><div class="summary-label">Média de Pausa por dia</div></div>
@@ -1812,9 +1812,9 @@
                 data: {
                     labels,
                     datasets: [
-                        { label: 'Atividades criadas', data: contagensPorSerie[0], borderColor: PALETA_GRAFICOS[1], backgroundColor: 'rgba(30, 58, 95, 0.12)', borderWidth: 1.5, fill: true, tension: 0.4, pointBackgroundColor: PALETA_GRAFICOS[1], pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5, pointHitRadius: 22 },
-                        { label: 'Atividades finalizadas (criadas no dia)', data: contagensPorSerie[1], borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', borderWidth: 1.5, fill: false, tension: 0.4, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5, pointHitRadius: 22 },
-                        { label: 'Atividades retroativas finalizadas', data: contagensPorSerie[2], borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', borderWidth: 1.5, fill: false, tension: 0.4, pointBackgroundColor: '#8b5cf6', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5, pointHitRadius: 22 }
+                        { label: 'Atividades criadas', data: contagensPorSerie[0], borderColor: '#4b5563', backgroundColor: 'rgba(75, 85, 99, 0.12)', borderWidth: 1.5, fill: true, tension: 0.4, pointBackgroundColor: '#4b5563', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5, pointHitRadius: 22 },
+                        { label: 'Atividades finalizadas (criadas no dia)', data: contagensPorSerie[1], borderColor: '#93c5fd', backgroundColor: 'rgba(147, 197, 253, 0.1)', borderWidth: 1.5, fill: false, tension: 0.4, pointBackgroundColor: '#93c5fd', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5, pointHitRadius: 22 },
+                        { label: 'Atividades retroativas finalizadas', data: contagensPorSerie[2], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 1.5, fill: false, tension: 0.4, pointBackgroundColor: '#3b82f6', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5, pointHitRadius: 22 }
                     ]
                 },
                 options: {
@@ -1941,7 +1941,7 @@
             graficoAtividadesRetroativas = new Chart(canvas.getContext('2d'), {
                 type: 'bar',
                 data: { labels: nomes, datasets: [{ label: 'Atividades retroativas finalizadas', data: nomes.map(nome => porColaborador[nome]), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[1], borderWidth: 1, borderRadius: 5 }] },
-                options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 20 } }, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0, stepSize: 1 } } } },
+                options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 20 } }, plugins: { legend: { display: false } }, scales: { x: { grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' } }, y: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0, stepSize: 1 } } } },
                 plugins: [PLUGIN_VALORES_RETROATIVAS]
             });
         }
@@ -2179,8 +2179,8 @@
                     datasets: [{
                         label: 'Tempo efetivo',
                         data: valores,
-                        backgroundColor: '#5b8ec6',
-                        borderColor: '#1e3a5f',
+                        backgroundColor: PALETA_GRAFICOS[1],
+                        borderColor: PALETA_GRAFICOS[1],
                         borderWidth: 1,
                         borderRadius: 5
                     }]
@@ -2194,8 +2194,8 @@
                         tooltip: { callbacks: { label: contexto => `Tempo efetivo: ${formatarTempoTotalAtividades(contexto.parsed.y)}` } }
                     },
                     scales: {
-                        y: { beginAtZero: true, ticks: { callback: valor => formatarTempoTotalAtividades(Number(valor)) } },
-                        x: { ticks: { autoSkip: true, maxRotation: 35, minRotation: 0 } }
+                        y: { beginAtZero: true, grid: { display: false }, ticks: { callback: valor => formatarTempoTotalAtividades(Number(valor)) } },
+                        x: { grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' }, ticks: { autoSkip: true, maxRotation: 35, minRotation: 0 } }
                     }
                 },
                 plugins: [PLUGIN_VALORES_TEMPO_MEDIO]
@@ -2215,7 +2215,7 @@
             graficoPausasSetor = new Chart(canvas.getContext('2d'), {
                 type: 'bar',
                 data: { labels: setores, datasets: [{ label: 'Quantidade de pausas', data: setores.map(setor => porSetor[setor]), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[2], borderWidth: 1, borderRadius: 5 }] },
-                options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 28 } }, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grace: '15%', grid: { display: false }, ticks: { precision: 0, stepSize: 1 } } } },
+                options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 28 } }, plugins: { legend: { display: false } }, scales: { x: { grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' } }, y: { beginAtZero: true, grace: '15%', grid: { display: false }, ticks: { precision: 0, stepSize: 1 } } } },
                 plugins: [PLUGIN_VALORES_COLUNAS]
             });
         }

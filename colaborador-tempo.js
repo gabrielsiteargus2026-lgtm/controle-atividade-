@@ -136,6 +136,47 @@
         );
     }
 
+    function separarIntervalosForaAtuacao(intervalos) {
+        const intervalosAtivos = [];
+        const periodosForaAtuacao = [];
+
+        intervalos.forEach(intervalo => {
+            const inicio = Number(intervalo?.inicio);
+            const fim = Number(intervalo?.fim);
+            if (!Number.isFinite(inicio) || !Number.isFinite(fim) || fim <= inicio) return;
+
+            const periodosExcluidos = [];
+            const meiaNoite = new Date(inicio);
+            meiaNoite.setHours(0, 0, 0, 0);
+            if (meiaNoite.getTime() <= inicio) meiaNoite.setDate(meiaNoite.getDate() + 1);
+
+            while (meiaNoite.getTime() < fim) {
+                const fimDiaAnterior = new Date(meiaNoite);
+                fimDiaAnterior.setDate(fimDiaAnterior.getDate() - 1);
+                fimDiaAnterior.setHours(18, 0, 0, 0);
+                const inicioDiaSeguinte = new Date(meiaNoite);
+                inicioDiaSeguinte.setHours(8, 0, 0, 0);
+                const inicioExcluido = Math.max(inicio, fimDiaAnterior.getTime());
+                const fimExcluido = Math.min(fim, inicioDiaSeguinte.getTime());
+
+                if (fimExcluido > inicioExcluido) {
+                    periodosExcluidos.push({ inicio: inicioExcluido, fim: fimExcluido });
+                    periodosForaAtuacao.push({ inicio: inicioExcluido, fim: fimExcluido });
+                }
+                meiaNoite.setDate(meiaNoite.getDate() + 1);
+            }
+
+            let cursor = inicio;
+            periodosExcluidos.forEach(periodo => {
+                if (periodo.inicio > cursor) intervalosAtivos.push({ inicio: cursor, fim: periodo.inicio });
+                cursor = Math.max(cursor, periodo.fim);
+            });
+            if (cursor < fim) intervalosAtivos.push({ inicio: cursor, fim });
+        });
+
+        return { intervalosAtivos, periodosForaAtuacao };
+    }
+
     function agruparTempoEfetivoPorColaborador(registros) {
         const intervalosPorColaborador = new Map();
         registros.forEach(registro => {
@@ -260,6 +301,7 @@
     global.agruparTempoAtivoPorColaborador = agruparTempoAtivoPorColaborador;
     global.obterIntervalosAtivosDiarios = obterIntervalosAtivosDiarios;
     global.calcularTempoAtivoDiarioMs = calcularTempoAtivoDiarioMs;
+    global.separarIntervalosForaAtuacao = separarIntervalosForaAtuacao;
     global.agruparTempoEfetivoPorColaborador = agruparTempoEfetivoPorColaborador;
     global.publicarTemposPorColaborador = publicarTemposPorColaborador;
     global.obterTemposPorColaboradorPublicados = obterTemposPorColaboradorPublicados;

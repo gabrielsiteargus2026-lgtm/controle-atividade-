@@ -613,20 +613,18 @@
             font-size: 0.9em;
         }
 
-        .movement-table thead th:nth-child(6),
-        .movement-table thead th:nth-child(7),
-        .movement-table thead th:nth-child(8),
-        .movement-table thead th:nth-child(9) {
-            background: #f4a3a8;
-            color: #000;
+        .movement-collaborator-group td {
+            padding: 10px 12px;
+            background: #e8eef5;
+            color: #1f2937;
+            font-weight: 700;
+            border-top: 2px solid #cbd5e1;
         }
 
-        .movement-table tbody td:nth-child(6),
-        .movement-table tbody td:nth-child(7),
-        .movement-table tbody td:nth-child(8),
-        .movement-table tbody td:nth-child(9) {
-            background: #fff1f2;
-            color: #000;
+        .movement-collaborator-group-email {
+            margin-left: 8px;
+            color: #5f6b78;
+            font-weight: 400;
         }
 
         .pause-flag-cell {
@@ -641,10 +639,8 @@
         .pause-period-value {
             display: block;
             margin-bottom: 6px;
-            padding: 6px 8px;
-            border: 1px solid #f5c6cb;
-            border-radius: 5px;
-            background: #fff7f7;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #e5e7eb;
         }
 
         .pause-period-value:last-child {
@@ -765,26 +761,24 @@
                 <table class="movement-table">
                     <thead>
                         <tr>
-                            <th>Chave / Ticket</th>
-                            <th>Período</th>
+                            <th>Ticket</th>
                             <th>Colaborador</th>
                             <th>Data de criação</th>
                             <th>Hora de criação</th>
                             <th>Foi pausada?</th>
-                            <th>Data da pausa</th>
-                            <th>Hora da pausa</th>
-                            <th>Data da retomada</th>
-                            <th>Hora da retomada</th>
+                            <th>Data / hora da pausa</th>
+                            <th>Tempo total até a pausa</th>
+                            <th>Data / hora da retomada</th>
                             <th>Tempo total pausada</th>
-                            <th>Data de finalização</th>
-                            <th>Hora de finalização</th>
+                            <th>Data / hora de finalização</th>
+                            <th>Tempo total da retomada até a finalização</th>
                             <th>Tempo total em andamento</th>
                             <th>Status atual</th>
                             <th>Movimentações / responsáveis</th>
                         </tr>
                     </thead>
                     <tbody id="tableBodyMovimentacoes">
-                        <tr><td colspan="16" class="empty-state">Carregando movimentações...</td></tr>
+                        <tr><td colspan="14" class="empty-state">Carregando movimentações...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1297,37 +1291,17 @@
             };
         }
 
-        function criarCelulasPeriodosPausa(pausas) {
-            const colunas = Array.from({ length: 4 }, () => {
-                const celula = document.createElement('td');
-                celula.className = 'pause-period-cell pause-period-highlight';
-                return celula;
+        function criarCelulaValoresPausa(valores, className = 'pause-period-cell') {
+            const celula = document.createElement('td');
+            celula.className = className;
+            const valoresExibidos = valores.length ? valores : ['-'];
+            valoresExibidos.forEach(valor => {
+                const linha = document.createElement('span');
+                linha.className = 'pause-period-value';
+                linha.textContent = valor || '-';
+                celula.appendChild(linha);
             });
-            const pausasExibidas = pausas.length ? pausas : [null];
-
-            pausasExibidas.forEach(pausa => {
-                const inicio = pausa
-                    ? separarDataHoraRastreio(pausa.dataHoraPausa, pausa.dataPausa || pausa.dataInicio, pausa.horaPausa)
-                    : { data: '-', hora: '-' };
-                const fim = pausa
-                    ? separarDataHoraRastreio(
-                        pausa.dataHoraRetomada,
-                        pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio,
-                        pausa.horaRetomada
-                    )
-                    : { data: '-', hora: '-' };
-                const temRetomada = Boolean(pausa && (pausa.dataHoraRetomada || pausa.horaRetomada || pausa.dataRetomada));
-                const valores = [inicio.data, inicio.hora, temRetomada ? fim.data : '-', temRetomada ? fim.hora : '-'];
-
-                valores.forEach((valor, indice) => {
-                    const linha = document.createElement('span');
-                    linha.className = 'pause-period-value';
-                    linha.textContent = valor;
-                    colunas[indice].appendChild(linha);
-                });
-            });
-
-            return colunas;
+            return celula;
         }
 
         function formatarDataLocalISO(data) {
@@ -1398,6 +1372,26 @@
             });
         }
 
+        function correspondeAtividade(atividade, registro, idRegistro = registro?.id) {
+            const idAtividade = atividade?.id;
+            const temIdAtividade = idAtividade !== null && idAtividade !== undefined && String(idAtividade) !== '';
+            const temIdRegistro = idRegistro !== null && idRegistro !== undefined && String(idRegistro) !== '';
+            if (temIdAtividade && temIdRegistro) {
+                if (String(idAtividade) === String(idRegistro)) return true;
+            }
+
+            const chaveAtividade = String(atividade?.chaveAtividade || '');
+            const chaveRegistro = String(registro?.chaveAtividade || '');
+            if (chaveAtividade && chaveRegistro) {
+                return chaveAtividade === chaveRegistro;
+            }
+            if (chaveAtividade || chaveRegistro) return false;
+            if (temIdAtividade && temIdRegistro) return false;
+
+            return Boolean(atividade?.ticket && registro?.ticket &&
+                String(atividade.ticket) === String(registro.ticket));
+        }
+
         function obterRegistrosRastreabilidade() {
             const atividadesPorId = new Map();
             const idsAbertos = new Set(atividadesEmAndamentoGlobal.map(atividade => String(atividade.id)));
@@ -1416,12 +1410,7 @@
                 const chave = String(atividade.chaveAtividade || '');
                 const ticket = String(atividade.ticket || '');
                 const eventos = registrosMovimentacoesGlobal.filter(evento => {
-                    const mesmaId = evento.atividadeId !== undefined && evento.atividadeId !== null &&
-                        String(evento.atividadeId) === String(atividade.id);
-                    const mesmaChave = chave && evento.chaveAtividade && String(evento.chaveAtividade) === chave;
-                    const mesmoTicketLegado = !evento.atividadeId && !evento.chaveAtividade &&
-                        ticket && String(evento.ticket || '') === ticket;
-                    return mesmaId || mesmaChave || mesmoTicketLegado;
+                    return correspondeAtividade(atividade, evento, evento.atividadeId);
                 }).sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
 
                 const eventosCriacao = eventos.filter(evento => evento.tipo === 'INICIO');
@@ -1429,11 +1418,7 @@
                 const eventosRetomada = eventos.filter(evento => evento.tipo === 'RETOMOU');
                 const eventosFinalizacao = eventos.filter(evento => evento.tipo === 'FIM');
                 let pausas = historicoPausasGlobal.filter(pausa => {
-                    if (pausa.id !== undefined && pausa.id !== null && atividade.id !== undefined && atividade.id !== null) {
-                        return String(pausa.id) === String(atividade.id);
-                    }
-                    if (chave && pausa.chaveAtividade) return String(pausa.chaveAtividade) === chave;
-                    return ticket && String(pausa.ticket || '') === ticket;
+                    return correspondeAtividade(atividade, pausa, pausa.atividadeId ?? pausa.id);
                 }).sort((a, b) => new Date(a.dataHoraPausa || 0) - new Date(b.dataHoraPausa || 0));
 
                 if (pausas.length === 0) {
@@ -1450,8 +1435,7 @@
 
                 const estado = kanbanStateGlobal[atividade.id] || kanbanStateGlobal[chave] || {};
                 const estaAberta = atividadesEmAndamentoGlobal.some(item =>
-                    (atividade.id !== undefined && atividade.id !== null && String(item.id) === String(atividade.id)) ||
-                    (chave && item.chaveAtividade && String(item.chaveAtividade) === chave)
+                    correspondeAtividade(atividade, item)
                 );
                 const pausadaAtualmente = pausas.some(pausa =>
                     !(pausa.dataHoraRetomada || pausa.horaRetomada) &&
@@ -1582,45 +1566,7 @@
                     : email
                         ? `email:${email.trim().toLocaleLowerCase('pt-BR')}`
                         : '';
-                const estaEmAndamento = atividadeEstaAberta(registro);
-                const estado = kanbanStateGlobal[atividade.id] ||
-                    (atividade.chaveAtividade && kanbanStateGlobal[atividade.chaveAtividade]);
-                const pausaAtual = [...registro.pausas].reverse().find(pausa =>
-                    !(pausa.dataHoraRetomada || pausa.horaRetomada || pausa.dataRetomada) &&
-                    (pausa.status === 'Pausado' || pausa.ativa !== false)
-                );
-                const inicioPausa = pausaAtual
-                    ? obterTimestampAtividade(pausaAtual.dataHoraPausa, pausaAtual.dataPausa, pausaAtual.horaPausa)
-                    : estado?.tempoInicioPausa ?? null;
-                const intervalos = obterIntervalosAtivosDiarios({
-                    data: dataSelecionada,
-                    eventos: registro.eventos,
-                    pausas: registro.pausas.map(pausa => ({
-                        inicio: obterTimestampAtividade(
-                            pausa.dataHoraPausa,
-                            pausa.dataPausa,
-                            pausa.horaPausa
-                        ),
-                        retomada: obterTimestampAtividade(
-                            pausa.dataHoraRetomada,
-                            pausa.dataRetomada,
-                            pausa.horaRetomada
-                        )
-                    })),
-                    inicio: obterTimestampAtividade(
-                        atividade.data_criacao || eventoInicio?.timestamp,
-                        atividade.dataInicio,
-                        atividade.horaInicio
-                    ),
-                    fim: obterTimestampAtividade(
-                        atividade.data_finalizacao || atividade.dataFim,
-                        atividade.dataFim,
-                        atividade.horaFim
-                    ),
-                    aberta: estaEmAndamento,
-                    pausada: registro.status === 'pausado' || estado?.status === 'pausado',
-                    inicioPausa
-                });
+                const intervalos = obterIntervalosAtivosRastreabilidade(registro, dataSelecionada);
                 return {
                     nome: registro.nomeCriador,
                     identificador,
@@ -1679,7 +1625,7 @@
             if (registros.length === 0) {
                 const linha = document.createElement('tr');
                 const celula = document.createElement('td');
-                celula.colSpan = 16;
+                celula.colSpan = 14;
                 celula.className = 'empty-state';
                 celula.textContent = 'Nenhuma movimentação encontrada para esta data.';
                 linha.appendChild(celula);
@@ -1688,7 +1634,29 @@
                 return;
             }
 
+            const registrosAgrupados = new Map();
             registros.forEach((registro, indiceRegistro) => {
+                const nome = registro.nomeCriador || 'Colaborador não identificado';
+                const email = registro.emailCriador || '';
+                const chaveColaborador = (email || nome).trim().toLocaleLowerCase('pt-BR');
+                if (!registrosAgrupados.has(chaveColaborador)) {
+                    registrosAgrupados.set(chaveColaborador, { nome, email, registros: [] });
+                }
+                registrosAgrupados.get(chaveColaborador).registros.push({ registro, indiceRegistro });
+            });
+
+            [...registrosAgrupados.values()]
+                .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+                .forEach(grupo => {
+                const linhaGrupo = document.createElement('tr');
+                linhaGrupo.className = 'movement-collaborator-group';
+                const tituloGrupo = document.createElement('td');
+                tituloGrupo.colSpan = 14;
+                tituloGrupo.textContent = `${grupo.nome}${grupo.email ? ` — ${grupo.email}` : ''} · ${grupo.registros.length} ${grupo.registros.length === 1 ? 'atividade' : 'atividades'}`;
+                linhaGrupo.appendChild(tituloGrupo);
+                tbody.appendChild(linhaGrupo);
+
+                grupo.registros.forEach(({ registro, indiceRegistro }) => {
                 const linha = document.createElement('tr');
                 linha.dataset.rastreabilidadeIndex = String(indiceRegistro);
                 const pausas = registro.pausas;
@@ -1696,30 +1664,46 @@
                 const tempoAtivo = calcularTempoTotalAtividade(registro.atividade, registro, dataSelecionada);
                 totalTempoAtivoMs += converterTempoAtividadeParaMilissegundos(tempoAtivo);
                 const tempoPausado = calcularTempoTotalPausada(pausas, atividadeAberta);
+                const resumoPausas = obterResumoTemposPausa(registro);
                 const valores = [
-                    `${registro.chave || '-'}\nTicket: ${registro.ticket || '-'}`,
-                    registro.atividade.periodoExecucao || (registro.atividade.isReabertura ? 2 : 1),
-                    `${registro.nomeCriador}${registro.emailCriador ? `\n${registro.emailCriador}` : ''}`,
+                    registro.ticket || '-',
+                    registro.nomeCriador || '-',
                     registro.dataCriacao.split(' ')[0] || '-',
                     registro.dataCriacao.split(' ').slice(1).join(' ') || '-',
                     pausas.length ? 'Sim' : 'Não',
-                    tempoPausado,
-                    registro.dataFinalizacao.split(' ')[0] || '-',
-                    registro.dataFinalizacao.split(' ').slice(1).join(' ') || '-',
+                    pausas.map(pausa => formatarDataHoraRastreio(
+                        pausa.dataHoraPausa,
+                        pausa.dataPausa || pausa.dataInicio,
+                        pausa.horaPausa
+                    )),
+                    resumoPausas.temposAtePausa,
+                    pausas.map(pausa => pausa.dataHoraRetomada || pausa.dataRetomada || pausa.horaRetomada
+                        ? formatarDataHoraRastreio(
+                            pausa.dataHoraRetomada,
+                            pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio,
+                            pausa.horaRetomada
+                        )
+                        : '-'),
+                    [tempoPausado],
+                    [registro.dataFinalizacao === '-' ? '-' : registro.dataFinalizacao],
+                    [resumoPausas.tempoAposUltimaRetomada],
                     tempoAtivo
                 ];
                 valores.forEach((valor, indice) => {
                     const celula = document.createElement('td');
                     if (indice === 0) {
                         celula.className = 'movement-identity-cell';
-                        const chave = document.createElement('span');
-                        chave.className = 'movement-key';
-                        chave.textContent = registro.chave || '-';
                         const ticket = document.createElement('span');
                         ticket.className = 'movement-ticket';
-                        ticket.textContent = `Ticket: ${registro.ticket || '-'}`;
-                        celula.append(chave, document.createElement('br'), ticket);
-                    } else if (indice === 2) {
+                        ticket.textContent = registro.ticket || '-';
+                        celula.appendChild(ticket);
+                        if (registro.chave) {
+                            const chave = document.createElement('span');
+                            chave.className = 'movement-key';
+                            chave.textContent = registro.chave;
+                            celula.append(document.createElement('br'), chave);
+                        }
+                    } else if (indice === 1) {
                         celula.className = 'movement-colaborador-cell';
                         const nome = document.createElement('strong');
                         nome.className = 'movement-colaborador-name';
@@ -1731,21 +1715,27 @@
                             email.textContent = registro.emailCriador;
                             celula.appendChild(email);
                         }
-                    } else if (indice === 5) {
+                    } else if (indice === 4) {
                         celula.className = 'pause-flag-cell';
                         const indicador = document.createElement('span');
                         indicador.className = `status-badge ${pausas.length ? 'status-pausado' : 'status-concluido'}`;
                         indicador.textContent = valor;
                         celula.appendChild(indicador);
+                    } else if ([5, 6, 7, 8, 9, 10].includes(indice)) {
+                        const className = indice === 8
+                            ? 'rastreio-tempo-pausada'
+                            : indice === 6
+                                ? 'rastreio-tempo-ate-pausa'
+                                : indice === 10
+                                    ? 'rastreio-tempo-retomada'
+                                    : 'pause-period-cell';
+                        linha.appendChild(criarCelulaValoresPausa(valor, className));
+                        return;
                     } else {
-                        if (indice === 6) celula.className = 'rastreio-tempo-pausada';
                         celula.textContent = valor || '-';
                     }
                     linha.appendChild(celula);
-                    if (indice === 5) {
-                        criarCelulasPeriodosPausa(pausas).forEach(celulaPausa => linha.appendChild(celulaPausa));
-                    }
-                    if (indice === 9) celula.className = 'rastreio-tempo-ativo';
+                    if (indice === 11) celula.className = 'rastreio-tempo-ativo';
                 });
 
                 const celulaStatus = document.createElement('td');
@@ -1759,15 +1749,31 @@
 
                 const celulaMovimentacoes = document.createElement('td');
                 celulaMovimentacoes.className = 'movement-timeline';
-                if (registro.eventos.length) {
+                const periodosForaAtuacao = obterPeriodosForaAtuacaoRastreabilidade(registro)
+                    .filter(periodo => {
+                        if (!dataSelecionada) return true;
+                        return obterDataLocalMovimentacao(periodo.inicio) === dataSelecionada ||
+                            obterDataLocalMovimentacao(periodo.fim) === dataSelecionada;
+                    })
+                    .map(periodo => ({
+                        timestamp: periodo.inicio,
+                        descricao: `Fora de Atuação da torre — Provável esquecimento — ${formatarDataHoraRastreio(periodo.inicio)} até ${formatarDataHoraRastreio(periodo.fim)}`
+                    }));
+                const movimentacoesTimeline = [
+                    ...registro.eventos.map(evento => ({
+                        timestamp: obterTimestampAtividade(evento.timestamp),
+                        descricao: `${rotuloTipoMovimentacao(evento.tipo)} — ${formatarDataHoraRastreio(evento.timestamp)} — ${evento.nome_usuario || evento.usuario_logado || evento.email_usuario || 'Responsável não identificado'}`
+                    })),
+                    ...periodosForaAtuacao
+                ].sort((a, b) => a.timestamp - b.timestamp);
+                if (movimentacoesTimeline.length) {
                     const detalhes = document.createElement('details');
                     const resumo = document.createElement('summary');
-                    resumo.textContent = `${registro.eventos.length} movimentação(ões)`;
+                    resumo.textContent = `${movimentacoesTimeline.length} movimentação(ões)`;
                     const lista = document.createElement('ol');
-                    registro.eventos.forEach(evento => {
+                    movimentacoesTimeline.forEach(movimentacao => {
                         const item = document.createElement('li');
-                        const responsavel = evento.nome_usuario || evento.usuario_logado || evento.email_usuario || 'Responsável não identificado';
-                        item.textContent = `${rotuloTipoMovimentacao(evento.tipo)} — ${formatarDataHoraRastreio(evento.timestamp)} — ${responsavel}`;
+                        item.textContent = movimentacao.descricao;
                         lista.appendChild(item);
                     });
                     detalhes.append(resumo, lista);
@@ -1778,15 +1784,135 @@
                 linha.appendChild(celulaMovimentacoes);
                 tbody.appendChild(linha);
             });
+            });
             totalTempo.textContent = `Tempo total em andamento: ${formatarTempoTotalAtividade(totalTempoAtivoMs)}`;
             renderizarTemposPorColaboradorRastreabilidade(registros, dataSelecionada);
         }
 
         function atividadeEstaAberta(registro) {
             return atividadesEmAndamentoGlobal.some(atividade =>
-                (registro.atividade.id !== undefined && String(atividade.id) === String(registro.atividade.id)) ||
-                (registro.chave && atividade.chaveAtividade === registro.chave)
+                correspondeAtividade(registro.atividade, atividade)
             );
+        }
+
+        function obterIntervalosAtivosBrutosRastreabilidade(registro) {
+            const atividade = registro.atividade;
+            const estado = kanbanStateGlobal[atividade.id] ||
+                (atividade.chaveAtividade && kanbanStateGlobal[atividade.chaveAtividade]);
+            const pausaAtual = [...(registro.pausas || [])].reverse().find(pausa =>
+                !(pausa.dataHoraRetomada || pausa.horaRetomada || pausa.dataRetomada) &&
+                (pausa.status === 'Pausado' || pausa.ativa !== false)
+            );
+
+            return obterIntervalosAtivosDiarios({
+                data: '',
+                eventos: registro.eventos || [],
+                pausas: (registro.pausas || []).map(pausa => ({
+                    inicio: obterTimestampAtividade(pausa.dataHoraPausa, pausa.dataPausa, pausa.horaPausa),
+                    retomada: obterTimestampAtividade(pausa.dataHoraRetomada, pausa.dataRetomada, pausa.horaRetomada)
+                })),
+                inicio: obterTimestampAtividade(atividade.data_criacao, atividade.dataInicio, atividade.horaInicio),
+                fim: obterTimestampAtividade(
+                    atividade.data_finalizacao || atividade.dataFim,
+                    atividade.dataFim,
+                    atividade.horaFim
+                ),
+                aberta: atividadeEstaAberta(registro),
+                pausada: registro.status === 'pausado' || estado?.status === 'pausado',
+                inicioPausa: obterTimestampAtividade(
+                    pausaAtual?.dataHoraPausa,
+                    pausaAtual?.dataPausa,
+                    pausaAtual?.horaPausa
+                ) ?? Number(estado?.tempoInicioPausa)
+            });
+        }
+
+        function limitarIntervalosAtivosPorData(intervalos, data) {
+            const partesData = /^(\d{4})-(\d{2})-(\d{2})$/.exec(data || '');
+            if (!partesData) return intervalos;
+
+            const inicioDia = new Date(
+                Number(partesData[1]),
+                Number(partesData[2]) - 1,
+                Number(partesData[3])
+            ).getTime();
+            const fimDia = new Date(
+                Number(partesData[1]),
+                Number(partesData[2]) - 1,
+                Number(partesData[3]) + 1
+            ).getTime();
+            return intervalos.flatMap(intervalo => {
+                const inicio = Math.max(intervalo.inicio, inicioDia);
+                const fim = Math.min(intervalo.fim, fimDia);
+                return fim > inicio ? [{ inicio, fim }] : [];
+            });
+        }
+
+        function obterIntervalosAtivosRastreabilidade(registro, data = '') {
+            const intervalos = obterIntervalosAtivosBrutosRastreabilidade(registro);
+            const intervalosSemForaAtuacao = separarIntervalosForaAtuacao(intervalos).intervalosAtivos;
+            return limitarIntervalosAtivosPorData(intervalosSemForaAtuacao, data);
+        }
+
+        function obterPeriodosForaAtuacaoRastreabilidade(registro) {
+            return separarIntervalosForaAtuacao(
+                obterIntervalosAtivosBrutosRastreabilidade(registro)
+            ).periodosForaAtuacao;
+        }
+
+        function obterResumoTemposPausa(registro) {
+            const intervalosAtivos = separarIntervalosForaAtuacao(
+                obterIntervalosAtivosBrutosRastreabilidade(registro)
+            ).intervalosAtivos;
+            const calcularTempoNoIntervalo = (inicio, fim) => {
+                if (!Number.isFinite(inicio) || !Number.isFinite(fim) || fim <= inicio) return 0;
+                return intervalosAtivos.reduce((total, intervalo) => {
+                    const inicioSobreposto = Math.max(inicio, intervalo.inicio);
+                    const fimSobreposto = Math.min(fim, intervalo.fim);
+                    return total + Math.max(0, fimSobreposto - inicioSobreposto);
+                }, 0);
+            };
+            const atividade = registro.atividade;
+            const eventoInicio = registro.eventos.find(evento =>
+                ['INICIO', 'REABRIU', 'REABRIU_DO_CONCLUIDO'].includes(evento.tipo)
+            );
+            let inicioTrecho = obterTimestampAtividade(
+                atividade.data_criacao || eventoInicio?.timestamp,
+                atividade.dataInicio,
+                atividade.horaInicio
+            );
+            const temposAtePausa = [];
+            let ultimaRetomada = null;
+
+            (registro.pausas || []).forEach(pausa => {
+                const inicioPausa = obterTimestampAtividade(
+                    pausa.dataHoraPausa,
+                    pausa.dataPausa || pausa.dataInicio,
+                    pausa.horaPausa
+                );
+                temposAtePausa.push(inicioPausa === null || inicioTrecho === null
+                    ? '-'
+                    : formatarTempoTotalAtividade(calcularTempoNoIntervalo(inicioTrecho, inicioPausa)));
+                const retomada = obterTimestampAtividade(
+                    pausa.dataHoraRetomada,
+                    pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio,
+                    pausa.horaRetomada
+                );
+                inicioTrecho = retomada;
+                if (retomada !== null) ultimaRetomada = retomada;
+            });
+
+            const fim = obterTimestampAtividade(
+                atividade.data_finalizacao || atividade.dataFim ||
+                    [...registro.eventos].reverse().find(evento => evento.tipo === 'FIM')?.timestamp,
+                atividade.dataFim,
+                atividade.horaFim
+            ) ?? (atividadeEstaAberta(registro) && registro.status !== 'pausado' ? Date.now() : null);
+            const tempoAposUltimaRetomada = ultimaRetomada === null || fim === null
+                ? '-'
+                : formatarTempoTotalAtividade(calcularTempoNoIntervalo(ultimaRetomada, fim));
+
+            return { temposAtePausa, tempoAposUltimaRetomada };
         }
 
         function atualizarTemposRastreabilidade() {
@@ -1817,6 +1943,13 @@
                         atividadeEstaAberta(registro)
                     );
                 }
+                const resumoPausas = obterResumoTemposPausa(registro);
+                const celulasTempoAtePausa = linha.querySelectorAll('.rastreio-tempo-ate-pausa .pause-period-value');
+                resumoPausas.temposAtePausa.forEach((tempo, indice) => {
+                    if (celulasTempoAtePausa[indice]) celulasTempoAtePausa[indice].textContent = tempo;
+                });
+                const celulaTempoRetomada = linha.querySelector('.rastreio-tempo-retomada .pause-period-value');
+                if (celulaTempoRetomada) celulaTempoRetomada.textContent = resumoPausas.tempoAposUltimaRetomada;
             });
 
             totalTempo.textContent = `Tempo total em andamento: ${formatarTempoTotalAtividade(totalTempoAtivoMs)}`;
@@ -1887,43 +2020,16 @@
             const tiposInicio = new Set(['INICIO', 'REABRIU', 'REABRIU_DO_CONCLUIDO']);
             const partesData = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dataSelecionada);
             if (partesData) {
-                const estaEmAndamento = atividadesEmAndamentoGlobal.some(item =>
-                    (atividade.id && String(item.id) === String(atividade.id)) ||
-                    (atividade.chaveAtividade && item.chaveAtividade === atividade.chaveAtividade) ||
-                    (!atividade.id && !atividade.chaveAtividade && atividade.ticket &&
-                        String(item.ticket) === String(atividade.ticket))
+                const registroAtual = registro || { atividade, pausas: [], eventos: [] };
+                const intervalosAtivos = obterIntervalosAtivosRastreabilidade(registroAtual, dataSelecionada);
+                const totalAtivoMs = intervalosAtivos.reduce(
+                    (total, intervalo) => total + intervalo.fim - intervalo.inicio,
+                    0
                 );
-                const estado = kanbanStateGlobal[atividade.id] ||
-                    (atividade.chaveAtividade && kanbanStateGlobal[atividade.chaveAtividade]);
-                const pausaAtual = [...(registro?.pausas || [])].reverse().find(pausa =>
-                    pausa.status === 'Pausado' &&
-                    !(pausa.dataHoraRetomada || pausa.horaRetomada || pausa.dataRetomada)
-                );
-                const totalAtivoMs = calcularTempoAtivoDiarioMs({
-                    data: dataSelecionada,
-                    eventos: registro?.eventos || [],
-                    pausas: (registro?.pausas || []).map(pausa => ({
-                        inicio: obterTimestampAtividade(pausa.dataHoraPausa, pausa.dataPausa, pausa.horaPausa),
-                        retomada: obterTimestampAtividade(pausa.dataHoraRetomada, pausa.dataRetomada, pausa.horaRetomada)
-                    })),
-                    inicio: obterTimestampAtividade(atividade.data_criacao, atividade.dataInicio, atividade.horaInicio),
-                    fim: obterTimestampAtividade(atividade.data_finalizacao, atividade.dataFim, atividade.horaFim),
-                    aberta: estaEmAndamento,
-                    pausada: registro?.status === 'pausado' || estado?.status === 'pausado',
-                    inicioPausa: obterTimestampAtividade(
-                        pausaAtual?.dataHoraPausa,
-                        pausaAtual?.dataPausa,
-                        pausaAtual?.horaPausa
-                    ) ?? Number(estado?.tempoInicioPausa)
-                });
                 return formatarTempoTotalAtividade(totalAtivoMs);
             }
-            const inicioDia = partesData
-                ? new Date(Number(partesData[1]), Number(partesData[2]) - 1, Number(partesData[3])).getTime()
-                : null;
-            const fimDia = inicioDia === null
-                ? null
-                : new Date(Number(partesData[1]), Number(partesData[2]) - 1, Number(partesData[3]) + 1).getTime();
+            const inicioDia = null;
+            const fimDia = null;
 
             (registro?.eventos || []).forEach(evento => {
                 adicionarEvento(evento.tipo, obterTimestampAtividade(evento.timestamp), evento.duracao);
@@ -1969,7 +2075,14 @@
             const acumularIntervaloAtivo = (inicio, fim) => {
                 const inicioContabilizado = inicioDia === null ? inicio : Math.max(inicio, inicioDia);
                 const fimContabilizado = fimDia === null ? fim : Math.min(fim, fimDia);
-                tempoAtivoMs += Math.max(0, fimContabilizado - inicioContabilizado);
+                const intervalosAtivos = separarIntervalosForaAtuacao([{
+                    inicio: inicioContabilizado,
+                    fim: fimContabilizado
+                }]).intervalosAtivos;
+                tempoAtivoMs += intervalosAtivos.reduce(
+                    (total, intervalo) => total + intervalo.fim - intervalo.inicio,
+                    0
+                );
             };
             eventosOrdenados.forEach(evento => {
                 if (tiposInicio.has(evento.tipo)) {
@@ -1998,8 +2111,7 @@
             });
 
             const estaEmAndamento = atividadesEmAndamentoGlobal.some(item =>
-                (atividade.id !== undefined && String(item.id) === String(atividade.id)) ||
-                (atividade.chaveAtividade && item.chaveAtividade === atividade.chaveAtividade)
+                correspondeAtividade(atividade, item)
             );
             if (atividadeAberta && inicioAtivo !== null && estaEmAndamento) {
                 const estado = kanbanStateGlobal[atividade.id] ||
@@ -2073,9 +2185,7 @@
                 if (!atividade) return;
 
                 const registro = registrosRastreabilidade.find(item =>
-                    (atividade.id !== undefined && String(item.atividade.id) === String(atividade.id)) ||
-                    (atividade.chaveAtividade && item.chave === String(atividade.chaveAtividade)) ||
-                    (!atividade.id && !atividade.chaveAtividade && atividade.ticket && item.ticket === String(atividade.ticket))
+                    correspondeAtividade(atividade, item.atividade)
                 );
                 const datasAtividade = registro
                     ? obterDatasDaRastreabilidade(registro)
@@ -2126,8 +2236,7 @@
         // Obter status da atividade
         function obterStatus(atividade) {
             const estaAberta = atividadesEmAndamentoGlobal.some(item =>
-                (atividade.id !== undefined && String(item.id) === String(atividade.id)) ||
-                (atividade.chaveAtividade && item.chaveAtividade === atividade.chaveAtividade)
+                correspondeAtividade(atividade, item)
             );
             if (!estaAberta) return 'Encerrada';
 
@@ -2323,44 +2432,47 @@
             }
 
             const colunas = [
-                'Chave', 'Ticket', 'Período', 'Colaborador responsável', 'Data de início do período', 'Hora de início do período',
-                'Foi pausada?', 'Períodos de pausa', 'Tempo total pausada',
-                'Responsável pela pausa',
-                'Data/hora da retomada', 'Responsável pela retomada',
-                'Data de finalização', 'Hora de finalização', 'Tempo total em andamento',
-                'Status atual', 'Movimentações'
+                'Ticket', 'Colaborador', 'Data de criação', 'Hora de criação', 'Foi pausada?',
+                'Data / hora da pausa', 'Tempo total até a pausa', 'Data / hora da retomada',
+                'Tempo total pausada', 'Data / hora de finalização',
+                'Tempo total da retomada até a finalização', 'Tempo total em andamento',
+                'Status atual', 'Movimentações / responsáveis'
             ];
             const linhas = registros.map(registro => {
-                const pausas = registro.pausas.map(pausa => [
-                    formatarDataHoraRastreio(pausa.dataHoraPausa, pausa.dataPausa, pausa.horaPausa),
-                    pausa.pausadoPor || '-',
-                    formatarDataHoraRastreio(pausa.dataHoraRetomada, pausa.dataRetomada, pausa.horaRetomada),
-                    pausa.retomadoPor || '-'
-                ].join(' — ')).join(' | ');
-                const dataFinalizacao = registro.dataFinalizacao.split(' ');
-                const atividadeAberta = atividadesEmAndamentoGlobal.some(atividade =>
-                    (registro.atividade.id !== undefined && String(atividade.id) === String(registro.atividade.id)) ||
-                    (registro.chave && atividade.chaveAtividade === registro.chave)
-                );
+                const atividadeAberta = atividadeEstaAberta(registro);
                 const tempoAtivo = calcularTempoTotalAtividade(
                     registro.atividade,
                     registro,
                     document.getElementById('filtroDataRastreabilidade').value
                 );
                 const tempoPausado = calcularTempoTotalPausada(registro.pausas, atividadeAberta);
+                const resumoPausas = obterResumoTemposPausa(registro);
                 const eventos = registro.eventos.map(evento =>
                     `${rotuloTipoMovimentacao(evento.tipo)}: ${formatarDataHoraRastreio(evento.timestamp)} (${evento.nome_usuario || evento.email_usuario || 'Responsável não identificado'})`
                 ).join(' | ');
                 return [
-                    registro.chave, registro.ticket,
-                    registro.atividade.periodoExecucao || (registro.atividade.isReabertura ? 2 : 1),
+                    registro.ticket,
                     `${registro.nomeCriador}${registro.emailCriador ? ` <${registro.emailCriador}>` : ''}`,
-                    registro.dataCriacao.split(' ')[0], registro.dataCriacao.split(' ').slice(1).join(' '),
-                    registro.pausas.length ? 'Sim' : 'Não', pausas, tempoPausado,
-                    registro.pausas.map(pausa => pausa.pausadoPor || '-').join(' | '),
-                    registro.pausas.map(pausa => formatarDataHoraRastreio(pausa.dataHoraRetomada, pausa.dataRetomada, pausa.horaRetomada)).join(' | '),
-                    registro.pausas.map(pausa => pausa.retomadoPor || '-').join(' | '),
-                    dataFinalizacao[0], dataFinalizacao.slice(1).join(' '), tempoAtivo,
+                    registro.dataCriacao.split(' ')[0],
+                    registro.dataCriacao.split(' ').slice(1).join(' '),
+                    registro.pausas.length ? 'Sim' : 'Não',
+                    registro.pausas.map(pausa => formatarDataHoraRastreio(
+                        pausa.dataHoraPausa,
+                        pausa.dataPausa || pausa.dataInicio,
+                        pausa.horaPausa
+                    )).join(' | '),
+                    resumoPausas.temposAtePausa.join(' | '),
+                    registro.pausas.map(pausa => pausa.dataHoraRetomada || pausa.dataRetomada || pausa.horaRetomada
+                        ? formatarDataHoraRastreio(
+                            pausa.dataHoraRetomada,
+                            pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio,
+                            pausa.horaRetomada
+                        )
+                        : '-').join(' | '),
+                    tempoPausado,
+                    registro.dataFinalizacao,
+                    resumoPausas.tempoAposUltimaRetomada,
+                    tempoAtivo,
                     registro.status === 'em_andamento' ? 'Em andamento' :
                         registro.status === 'pausado' ? 'Pausada' : 'Encerrada',
                     eventos
