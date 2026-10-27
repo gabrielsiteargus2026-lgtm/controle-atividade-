@@ -447,6 +447,31 @@
             flex-wrap: wrap;
         }
 
+        .movement-created-count {
+            min-width: 190px;
+            padding: 8px 14px;
+            border: 1px solid #dbe4ef;
+            border-left: 3px solid #5b8ec6;
+            border-radius: 7px;
+            background: #f8fafc;
+        }
+
+        .movement-created-count-label {
+            display: block;
+            color: #475569;
+            font-size: .78em;
+            font-weight: 600;
+        }
+
+        .movement-created-count-value {
+            display: block;
+            margin-top: 2px;
+            color: #1e3a5f;
+            font-size: 1.15em;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
         .collaborator-time-cards {
             display: flex;
             justify-content: flex-start;
@@ -746,6 +771,22 @@
                     Data das movimentações
                     <input type="date" id="filtroDataRastreabilidade" aria-label="Filtrar movimentações por data">
                 </label>
+                <div class="movement-created-count" aria-live="polite">
+                    <span class="movement-created-count-label">Atividades criadas na data</span>
+                    <span class="movement-created-count-value" id="totalAtividadesCriadasRastreabilidade">0</span>
+                </div>
+                <div class="movement-created-count" aria-live="polite">
+                    <span class="movement-created-count-label">Criadas na data e encerradas</span>
+                    <span class="movement-created-count-value" id="totalAtividadesFinalizadasRastreabilidade">0</span>
+                </div>
+                <div class="movement-created-count" aria-live="polite">
+                    <span class="movement-created-count-label">Criadas na data e pausadas ao final do dia</span>
+                    <span class="movement-created-count-value" id="totalAtividadesPausadasRastreabilidade">0</span>
+                </div>
+                <div class="movement-created-count" aria-live="polite">
+                    <span class="movement-created-count-label">Criadas na data e em andamento</span>
+                    <span class="movement-created-count-value" id="totalAtividadesEmAndamentoRastreabilidade">0</span>
+                </div>
             </div>
             <div class="collaborator-time-layout">
                 <section class="collaborator-time-panel" aria-labelledby="tituloTempoTotalColaborador">
@@ -1372,6 +1413,62 @@
             });
         }
 
+        function contarAtividadesCriadasNaData(registros, dataSelecionada) {
+            return registros.filter(registro => {
+                if (registro.atividade.ehAjudante) return false;
+                const eventosCriacao = registro.eventos.filter(evento => evento.tipo === 'INICIO');
+                if (eventosCriacao.length) {
+                    return eventosCriacao.some(evento =>
+                        !dataSelecionada || obterDataLocalMovimentacao(evento.timestamp) === dataSelecionada
+                    );
+                }
+                const dataCriacao = obterDataLocalMovimentacao(
+                    registro.atividade.data_criacao || registro.atividade.dataInicio
+                );
+                return Boolean(dataCriacao && (!dataSelecionada || dataCriacao === dataSelecionada));
+            }).length;
+        }
+
+        function contarAtividadesFinalizadasNaData(registros, dataSelecionada) {
+            if (!dataSelecionada) return 0;
+            return registros.filter(registro => {
+                if (registro.atividade.ehAjudante) return false;
+                const eventosCriacao = registro.eventos.filter(evento => evento.tipo === 'INICIO');
+                const dataCriacao = obterDataLocalMovimentacao(
+                    registro.atividade.data_criacao ||
+                        eventosCriacao[0]?.timestamp ||
+                        registro.atividade.dataInicio
+                );
+                return dataCriacao === dataSelecionada && registro.status === 'concluido';
+            }).length;
+        }
+
+        function contarAtividadesPausadasNaData(registros, dataSelecionada) {
+            if (!dataSelecionada) return 0;
+            return registros.filter(registro => {
+                if (registro.atividade.ehAjudante) return false;
+                const eventoCriacao = registro.eventos.find(evento => evento.tipo === 'INICIO');
+                const dataCriacao = obterDataLocalMovimentacao(
+                    registro.atividade.data_criacao || eventoCriacao?.timestamp || registro.atividade.dataInicio
+                );
+                return dataCriacao === dataSelecionada &&
+                    registro.status === 'pausado';
+            }).length;
+        }
+
+        function contarAtividadesEmAndamentoNaData(registros, dataSelecionada) {
+            if (!dataSelecionada) return 0;
+            return registros.filter(registro => {
+                if (registro.atividade.ehAjudante) return false;
+                const eventoCriacao = registro.eventos.find(evento => evento.tipo === 'INICIO');
+                const dataCriacao = obterDataLocalMovimentacao(
+                    registro.atividade.data_criacao || eventoCriacao?.timestamp || registro.atividade.dataInicio
+                );
+                return dataCriacao === dataSelecionada &&
+                    registro.status === 'em_andamento';
+            }).length;
+        }
+
         function correspondeAtividade(atividade, registro, idRegistro = registro?.id) {
             const idAtividade = atividade?.id;
             const temIdAtividade = idAtividade !== null && idAtividade !== undefined && String(idAtividade) !== '';
@@ -1617,7 +1714,16 @@
             const tbody = document.getElementById('tableBodyMovimentacoes');
             const totalTempo = document.getElementById('totalTempoRastreabilidade');
             const dataSelecionada = document.getElementById('filtroDataRastreabilidade').value;
+            const registrosRastreabilidade = obterRegistrosRastreabilidade();
             const registros = obterRegistrosFiltradosPorData();
+            document.getElementById('totalAtividadesCriadasRastreabilidade').textContent =
+                contarAtividadesCriadasNaData(registrosRastreabilidade, dataSelecionada);
+            document.getElementById('totalAtividadesFinalizadasRastreabilidade').textContent =
+                contarAtividadesFinalizadasNaData(registrosRastreabilidade, dataSelecionada);
+            document.getElementById('totalAtividadesPausadasRastreabilidade').textContent =
+                contarAtividadesPausadasNaData(registrosRastreabilidade, dataSelecionada);
+            document.getElementById('totalAtividadesEmAndamentoRastreabilidade').textContent =
+                contarAtividadesEmAndamentoNaData(registrosRastreabilidade, dataSelecionada);
             let totalTempoAtivoMs = 0;
             totalTempo.textContent = 'Tempo total em andamento: 00:00:00';
 

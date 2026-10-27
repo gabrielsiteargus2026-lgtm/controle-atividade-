@@ -143,6 +143,7 @@
 
         .chart-section { margin-top: 20px; }
         .chart-title { color: #2c3e50; font-size: 1.25em; margin-bottom: 14px; }
+        .chart-description { margin: -7px 0 12px; color: #64748b; font-size: .85em; line-height: 1.45; }
         .chart-caption { color: #1e3a5f; font-size: .9em; font-weight: 600; margin: -6px 0 8px; }
         .chart-filter { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
         .chart-filter label { margin: 0; }
@@ -356,7 +357,7 @@
                 <div class="chart-container small"><canvas id="chartAtividadesPorColaborador"></canvas></div>
             </div>
             <div class="card linha-adaptavel">
-                <h2 class="chart-title">Status por Colaborador</h2>
+                <h2 class="chart-title">Status atual por Colaborador</h2>
                 <div class="chart-container small status-chart-wrap">
                     <canvas id="chartStatusPorColaborador"></canvas>
                 </div>
@@ -444,6 +445,7 @@
         let atividadesEmAndamento = [];
         let historicoPausas = [];
         let registrosAtividades = [];
+        let kanbanState = {};
         let graficoDiario;
         let graficoColaboradores;
         let graficoAtividadesRetroativas;
@@ -701,6 +703,10 @@
             return (Array.isArray(dados) ? dados : Object.values(dados)).filter(item => item && typeof item === 'object');
         }
 
+        function normalizarEstadoKanban(dados) {
+            return dados && typeof dados === 'object' && !Array.isArray(dados) ? dados : {};
+        }
+
         function lerLocalStorage() {
             const ler = chave => {
                 try { return normalizarLista(JSON.parse(localStorage.getItem(chave) || '[]')); } catch (erro) { return []; }
@@ -711,11 +717,20 @@
             const lerRegistros = () => {
                 try { return normalizarRegistros(JSON.parse(localStorage.getItem('registrosAtividades') || '[]')); } catch (erro) { return []; }
             };
+            const lerKanbanState = () => {
+                try {
+                    return normalizarEstadoKanban(JSON.parse(localStorage.getItem('kanbanState') || '{}'));
+                } catch (erro) {
+                    console.error('Erro ao carregar kanbanState do localStorage:', erro);
+                    return {};
+                }
+            };
             return {
                 atividades: ler('atividades'),
                 emAndamento: ler('atividadesEmAndamento'),
                 pausas: lerPausas(),
-                registros: lerRegistros()
+                registros: lerRegistros(),
+                kanbanState: lerKanbanState()
             };
         }
 
@@ -728,7 +743,8 @@
                     { caminho: 'atividades', normalizar: normalizarLista, aplicar: dados => { atividades = dados; }, chaveLocal: 'atividades' },
                     { caminho: 'atividadesEmAndamento', normalizar: normalizarLista, aplicar: dados => { atividadesEmAndamento = dados; }, chaveLocal: 'emAndamento' },
                     { caminho: 'historicoPausas', normalizar: normalizarPausas, aplicar: dados => { historicoPausas = dados; }, chaveLocal: 'pausas' },
-                    { caminho: 'registrosAtividades', normalizar: normalizarRegistros, aplicar: dados => { registrosAtividades = dados; }, chaveLocal: 'registros' }
+                    { caminho: 'registrosAtividades', normalizar: normalizarRegistros, aplicar: dados => { registrosAtividades = dados; }, chaveLocal: 'registros' },
+                    { caminho: 'kanbanState', normalizar: normalizarEstadoKanban, aplicar: dados => { kanbanState = dados; }, chaveLocal: 'kanbanState' }
                 ];
                 listeners.forEach(({ caminho, normalizar, aplicar, chaveLocal }) => {
                     window.db.ref(caminho).on('value', snapshot => {
@@ -745,6 +761,7 @@
                 atividadesEmAndamento = dados.emAndamento;
                 historicoPausas = dados.pausas;
                 registrosAtividades = dados.registros;
+                kanbanState = dados.kanbanState;
                 renderizar();
             }
         }
@@ -1012,6 +1029,89 @@
             return converterDataHoraPausa(data, hora)?.getTime() ?? null;
         }
 
+        function obterTimestampAtividadeResumo(valor, dataFallback, horaFallback) {
+            let timestamp = NaN;
+            if (valor !== null && valor !== undefined && valor !== '') {
+                timestamp = typeof valor === 'number' ? valor : new Date(valor).getTime();
+            }
+            if (Number.isFinite(timestamp)) return timestamp;
+            return converterDataHoraPausa(dataFallback || valor, horaFallback)?.getTime() ?? NaN;
+        }
+
+        function calcularTempoTotalRastreabilidade(atividadesDoDia, data) {
+            const partesData = /^(\d{4})-(\d{2})-(\d{2})$/.exec(data);
+            if (!partesData) return 0;
+            const inicioDia = new Date(
+                Number(partesData[1]),
+                Number(partesData[2]) - 1,
+                Number(partesData[3])
+            ).getTime();
+            const fimDia = new Date(
+                Number(partesData[1]),
+                Number(partesData[2]) - 1,
+                Number(partesData[3]) + 1
+            ).getTime();
+            const correspondeAtividade = (atividade, outra) => {
+                const temIdAtividade = atividade.id !== null && atividade.id !== undefined && String(atividade.id) !== '';
+                const temIdOutra = outra.id !== null && outra.id !== undefined && String(outra.id) !== '';
+                if (temIdAtividade && temIdOutra) return String(atividade.id) === String(outra.id);
+
+                const chaveAtividade = String(atividade.chaveAtividade || '');
+                const chaveOutra = String(outra.chaveAtividade || '');
+                if (chaveAtividade && chaveOutra) return chaveAtividade === chaveOutra;
+                if (chaveAtividade || chaveOutra) return false;
+                return Boolean(atividade.ticket && outra.ticket &&
+                    String(atividade.ticket) === String(outra.ticket));
+            };
+
+            const totalAtivoMs = atividadesDoDia.reduce((total, atividade) => {
+                const pausas = atividade._pausasResumo || [];
+                const pausaAtual = [...pausas]
+                    .sort((a, b) => (obterTimestampPausa(a) || 0) - (obterTimestampPausa(b) || 0))
+                    .reverse()
+                    .find(pausa =>
+                        !(pausa.dataHoraRetomada || pausa.horaRetomada || pausa.dataRetomada) &&
+                        (pausa.status === 'Pausado' || pausa.ativa !== false)
+                    );
+                const atividadeAberta = atividadesEmAndamento.some(item =>
+                    correspondeAtividade(atividade, item)
+                );
+                const estado = kanbanState[atividade.id] ||
+                    (atividade.chaveAtividade && kanbanState[atividade.chaveAtividade]);
+                const intervalos = obterIntervalosAtivosDiarios({
+                    data: '',
+                    eventos: atividade._eventosResumo || [],
+                    pausas: pausas.map(pausa => ({
+                        inicio: obterTimestampPausa(pausa),
+                        retomada: obterTimestampPausa(pausa, true)
+                    })),
+                    inicio: obterTimestampAtividadeResumo(
+                        atividade.data_criacao,
+                        atividade.dataInicio,
+                        atividade.horaInicio
+                    ),
+                    fim: obterTimestampAtividadeResumo(
+                        atividade.data_finalizacao,
+                        atividade.dataFim,
+                        atividade.horaFim
+                    ),
+                    aberta: atividadeAberta,
+                    pausada: Boolean(pausaAtual) || estado?.status === 'pausado' ||
+                        String(atividade.status || '').toLowerCase() === 'pausado',
+                    inicioPausa: (pausaAtual ? obterTimestampPausa(pausaAtual) : null) ??
+                        Number(estado?.tempoInicioPausa)
+                });
+                const intervalosEmAtuacao = separarIntervalosForaAtuacao(intervalos).intervalosAtivos;
+                const tempoAtivoMs = intervalosEmAtuacao.reduce((totalDoDia, intervalo) => {
+                    const inicio = Math.max(intervalo.inicio, inicioDia);
+                    const fim = Math.min(intervalo.fim, fimDia);
+                    return totalDoDia + Math.max(0, fim - inicio);
+                }, 0);
+                return total + Math.floor(tempoAtivoMs / 1000) * 1000;
+            }, 0);
+            return totalAtivoMs / 60000;
+        }
+
         function obterDataPausaISO(pausa) {
             const inicio = obterTimestampPausa(pausa);
             if (inicio !== null) return dataRegistroParaISO(inicio);
@@ -1020,20 +1120,24 @@
 
         function obterPausasDoDia(data) {
             const pausasUnicas = new Map();
-            historicoPausas.forEach(pausa => {
-                if (!pausa || obterDataPausaISO(pausa) !== data) return;
-                const inicio = obterTimestampPausa(pausa);
-                const identidadeAtividade = pausa.id || pausa.atividadeId || pausa.chaveAtividade ||
-                    (pausa.ticket ? `ticket:${pausa.ticket}` : '');
-                const identidadeInicio = inicio === null
-                    ? `${pausa.dataPausa || pausa.dataInicio || ''}:${pausa.horaPausa || ''}`
-                    : String(Math.floor(inicio / 1000));
-                const chave = identidadeAtividade
-                    ? `${identidadeAtividade}:${identidadeInicio}`
-                    : `${identidadeInicio}:${pausa.grupo || pausa.setor || ''}:${pausa.motivo || ''}`;
-                if (!pausasUnicas.has(chave)) pausasUnicas.set(chave, pausa);
+            obterAtividadesDaRastreabilidade().forEach(atividade => {
+                (atividade._pausasResumo || []).forEach(pausa => {
+                    const inicio = obterTimestampPausa(pausa);
+                    const identidadeAtividade = atividade.id || atividade.chaveAtividade ||
+                        (atividade.ticket ? `ticket:${atividade.ticket}` : '');
+                    const identidadeInicio = inicio === null
+                        ? `${pausa.dataPausa || pausa.dataInicio || ''}:${pausa.horaPausa || ''}`
+                        : String(Math.floor(inicio / 1000));
+                    const chave = identidadeAtividade
+                        ? `${identidadeAtividade}:${identidadeInicio}`
+                        : `${identidadeInicio}:${pausa.grupo || pausa.setor || ''}:${pausa.motivo || ''}`;
+                    if (!pausasUnicas.has(chave)) pausasUnicas.set(chave, pausa);
+                });
             });
-            return [...pausasUnicas.values()];
+            return [...pausasUnicas.values()].filter(pausa => {
+                const minutos = calcularMinutosPausaNoDia(pausa, data);
+                return Number.isFinite(minutos) && minutos > 0;
+            });
         }
 
         function obterDuracaoPausaMs(pausa) {
@@ -1046,10 +1150,12 @@
         }
 
         function calcularMinutosPausaNoDia(pausa, data) {
-            if (obterDataPausaISO(pausa) !== data) return 0;
             const inicio = obterTimestampPausa(pausa);
             const duracaoRegistradaMs = obterDuracaoPausaMs(pausa);
-            if (inicio === null) return duracaoRegistradaMs === null ? null : duracaoRegistradaMs / 60000;
+            if (inicio === null) {
+                if (obterDataPausaISO(pausa) !== data) return 0;
+                return duracaoRegistradaMs === null ? null : duracaoRegistradaMs / 60000;
+            }
 
             let fim = obterTimestampPausa(pausa, true);
             if (fim === null && duracaoRegistradaMs !== null &&
@@ -1065,18 +1171,18 @@
             return duracaoNoDiaMs / 60000;
         }
 
-        function obterResumoPausasPorSetor(data) {
+        function obterResumoPausasPorSetor(data, pausasDoResumo = obterPausasDoDia(data)) {
             const resumoPorSetor = new Map();
-            obterPausasDoDia(data).forEach(pausa => {
+            pausasDoResumo.forEach(pausa => {
                 const setor = obterSetorPausa(pausa);
                 const resumo = resumoPorSetor.get(setor) || {
                     quantidade: 0,
                     totalMinutos: 0,
                     quantidadeComDuracao: 0
                 };
-                resumo.quantidade++;
                 const minutos = calcularMinutosPausaNoDia(pausa, data);
                 if (Number.isFinite(minutos)) {
+                    resumo.quantidade++;
                     resumo.totalMinutos += minutos;
                     resumo.quantidadeComDuracao++;
                 }
@@ -1099,7 +1205,14 @@
                 if (!item || item.ehAjudante) return;
                 const chave = obterChave(item);
                 if (!chave) return;
-                atividadesPorChave.set(chave, { ...(atividadesPorChave.get(chave) || {}), ...item });
+                const dadosAtividade = { ...item };
+                delete dadosAtividade._eventosResumo;
+                delete dadosAtividade._pausasResumo;
+                atividadesPorChave.set(chave, {
+                    ...(atividadesPorChave.get(chave) || {}),
+                    ...dadosAtividade,
+                    _eventosResumo: []
+                });
                 if (item.id !== undefined && item.id !== null) aliases.set(`id:${item.id}`, chave);
                 if (item.chaveAtividade) aliases.set(`chave:${item.chaveAtividade}`, chave);
                 if (item.ticket) aliases.set(`ticket:${item.ticket}`, chave);
@@ -1295,7 +1408,7 @@
                         : atividade.ticket
                             ? `ticket:${atividade.ticket}`
                             : '';
-                if (!identificador || dataAtividadeParaISO(atividade.dataInicio) !== data) return;
+                if (!identificador || obterDataCriacaoComparativo(atividade) !== data) return;
                 const chave = identificador;
                 const existente = atividadesPorId.get(chave);
                 atividadesPorId.set(chave, existente ? { ...atividade, ...existente } : atividade);
@@ -1333,23 +1446,30 @@
             const emAndamento = [];
             const pausadas = [];
             const concluidas = [];
-            criadas.forEach(atividade => {
+            const concluidasCriadasNoDia = [];
+            const atividadesExistentesNoDia = obterAtividadesDaRastreabilidade().filter(atividade => {
+                const dataCriacao = obterDataCriacaoComparativo(atividade);
+                return dataCriacao && dataCriacao <= data;
+            });
+
+            atividadesExistentesNoDia.forEach(atividade => {
                 const status = obterStatusRastreabilidadeNoFimDoDia(atividade, data);
                 if (status === 'em_andamento') emAndamento.push(atividade);
                 if (status === 'pausado') pausadas.push(atividade);
-                if (status === 'concluido') {
-                    const [ano, mes, dia] = data.split('-').map(Number);
-                    const limite = new Date(ano, mes - 1, dia + 1).getTime();
-                    const finalizacao = [...(atividade._eventosResumo || [])].reverse().find(evento =>
-                        evento.tipo === 'FIM' && new Date(evento.timestamp).getTime() < limite
-                    );
-                    concluidas.push({
+                const finalizacoesDoDia = obterFinalizacoesDaAtividadeNoDia(atividade, data);
+                if (finalizacoesDoDia.length) {
+                    const finalizacao = finalizacoesDoDia[finalizacoesDoDia.length - 1];
+                    const atividadeFinalizada = {
                         ...atividade,
-                        duracao: finalizacao?.duracao || atividade.duracao
-                    });
+                        duracao: finalizacao.duracao || atividade.duracao
+                    };
+                    concluidas.push(atividadeFinalizada);
+                    if (obterDataCriacaoComparativo(atividade) === data) {
+                        concluidasCriadasNoDia.push(atividadeFinalizada);
+                    }
                 }
             });
-            return { criadas, emAndamento, pausadas, concluidas };
+            return { criadas, emAndamento, pausadas, concluidas, concluidasCriadasNoDia };
         }
 
         function obterDataCriacaoComparativo(atividade) {
@@ -1386,37 +1506,47 @@
         }
 
         function calcularMinutosAtivosAteFinalizacao(atividade, eventoFinalizacao) {
-            const limite = new Date(eventoFinalizacao.timestamp).getTime();
+            const limite = obterTimestampAtividadeResumo(
+                eventoFinalizacao.timestamp,
+                atividade.dataFim,
+                atividade.horaFim
+            );
             if (!Number.isFinite(limite)) return calcularMinutosAtivos(atividade);
-            const pausasAteFinalizacao = (atividade._pausasResumo || [])
+            const eventos = (atividade._eventosResumo || []).filter(evento =>
+                obterTimestampAtividadeResumo(evento.timestamp) <= limite
+            );
+            const pausas = (atividade._pausasResumo || [])
                 .filter(pausa => {
-                    const inicio = pausa.dataHoraPausa
-                        ? new Date(pausa.dataHoraPausa).getTime()
-                        : converterDataHoraPausa(pausa.dataPausa || pausa.dataInicio, pausa.horaPausa)?.getTime();
-                    return !Number.isFinite(inicio) || inicio <= limite;
+                    const inicio = obterTimestampPausa(pausa);
+                    return inicio === null || inicio <= limite;
                 })
                 .map(pausa => {
-                    const retomada = pausa.dataHoraRetomada
-                        ? new Date(pausa.dataHoraRetomada).getTime()
-                        : converterDataHoraPausa(
-                            pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio,
-                            pausa.horaRetomada
-                        )?.getTime();
-                    if (!Number.isFinite(retomada) || retomada <= limite) return pausa;
+                    const inicio = obterTimestampPausa(pausa);
+                    const retomada = obterTimestampPausa(pausa, true);
                     return {
-                        ...pausa,
-                        dataHoraRetomada: '',
-                        dataRetomada: '',
-                        horaRetomada: '',
-                        status: 'Pausado'
+                        inicio,
+                        retomada: retomada !== null && retomada <= limite ? retomada : null
                     };
                 });
-            return calcularMinutosAtivos({
-                ...atividade,
-                _eventosResumo: (atividade._eventosResumo || [])
-                    .filter(evento => new Date(evento.timestamp).getTime() <= limite),
-                _pausasResumo: pausasAteFinalizacao
+            const intervalos = obterIntervalosAtivosDiarios({
+                data: '',
+                eventos,
+                pausas,
+                inicio: obterTimestampAtividadeResumo(
+                    atividade.data_criacao,
+                    atividade.dataInicio,
+                    atividade.horaInicio
+                ),
+                fim: limite,
+                aberta: true,
+                pausada: false
             });
+            const intervalosEmAtuacao = separarIntervalosForaAtuacao(intervalos).intervalosAtivos;
+            const totalAtivoMs = intervalosEmAtuacao.reduce(
+                (total, intervalo) => total + intervalo.fim - intervalo.inicio,
+                0
+            );
+            return totalAtivoMs / 60000;
         }
 
         function obterAtividadesRetroativasFinalizadasNoDia(data) {
@@ -1452,12 +1582,12 @@
                     criterio: 'Atividades cuja criação ocorreu nesta data.'
                 },
                 {
-                    titulo: 'Atividades finalizadas (criadas no dia)',
-                    criterio: 'Atividades criadas e finalizadas nesta data. Esta contagem corresponde ao card “Total Concluídas no Dia”.'
-                },
-                {
                     titulo: 'Atividades retroativas finalizadas',
                     criterio: 'Atividades criadas antes desta data e finalizadas nesta data.'
+                },
+                {
+                    titulo: 'Atividades finalizadas no dia',
+                    criterio: 'Atividades criadas e finalizadas nesta mesma data.'
                 }
             ];
             const serie = series[indiceSerie];
@@ -1522,7 +1652,7 @@
         }
 
         function renderizarKanbanDia(data) {
-            const atividadesPorStatus = obterAtividadesPorStatus(data);
+            const atividadesPorStatus = obterAtividadesCriadasPorStatus(data);
             const estados = [
                 { chave: 'andamento', atividades: atividadesPorStatus.emAndamento },
                 { chave: 'pausadas', atividades: atividadesPorStatus.pausadas },
@@ -1563,6 +1693,13 @@
         }
 
         function atividadeCorrespondeAoPeriodoBaseDados(atividade, data) {
+            const partesData = /^(\d{4})-(\d{2})-(\d{2})$/.exec(data);
+            const inicioDia = partesData
+                ? new Date(Number(partesData[1]), Number(partesData[2]) - 1, Number(partesData[3])).getTime()
+                : NaN;
+            const fimDia = partesData
+                ? new Date(Number(partesData[1]), Number(partesData[2]) - 1, Number(partesData[3]) + 1).getTime()
+                : NaN;
             const eventos = atividade._eventosResumo || [];
             const inicioNoDia = eventos.some(evento =>
                 ['INICIO', 'REABRIU', 'REABRIU_DO_CONCLUIDO'].includes(evento.tipo) &&
@@ -1579,25 +1716,93 @@
             ) || eventos.some(evento =>
                 ['PAUSA', 'RETOMOU'].includes(evento.tipo) && dataMovimentacaoParaISO(evento.timestamp) === data
             );
+            const pausaNoDia = Number.isFinite(inicioDia) && Number.isFinite(fimDia) &&
+                (atividade._pausasResumo || []).some(pausa => {
+                    const inicio = obterTimestampPausa(pausa);
+                    if (!Number.isFinite(inicio) || inicio >= fimDia) return false;
+                    const retomadaInformada = pausa.dataHoraRetomada || pausa.horaRetomada || pausa.dataRetomada;
+                    if (!retomadaInformada) return true;
+                    const retomada = obterTimestampPausa(pausa, true);
+                    return Number.isFinite(retomada) && retomada > inicioDia;
+                });
             const finalizacao = [...eventos].reverse().find(evento => evento.tipo === 'FIM');
             const finalizacaoNoDia = dataMovimentacaoParaISO(
                 finalizacao?.timestamp || atividade.data_finalizacao || atividade.dataFim
             ) === data;
             const tempoAtivoNoDia = calcularMinutosAtivos(atividade, data);
-            return inicioNoDia || pausaOuRetomadaNoDia || finalizacaoNoDia || tempoAtivoNoDia > 0;
+            return inicioNoDia || pausaOuRetomadaNoDia || pausaNoDia || finalizacaoNoDia || tempoAtivoNoDia > 0;
+        }
+
+        function obterStatusAtualDaAtividade(atividade) {
+            const correspondeAtividade = item => {
+                const temIdAtividade = atividade.id !== null && atividade.id !== undefined;
+                const temIdItem = item.id !== null && item.id !== undefined;
+                if (temIdAtividade && temIdItem) return String(atividade.id) === String(item.id);
+
+                const chaveAtividade = String(atividade.chaveAtividade || '');
+                const chaveItem = String(item.chaveAtividade || '');
+                if (chaveAtividade && chaveItem) return chaveAtividade === chaveItem;
+                if (chaveAtividade || chaveItem || temIdAtividade || temIdItem) return false;
+
+                return Boolean(atividade.ticket && item.ticket &&
+                    String(atividade.ticket) === String(item.ticket));
+            };
+            const estaAberta = atividadesEmAndamento.some(correspondeAtividade);
+            if (!estaAberta) return 'concluido';
+
+            const estado = kanbanState[atividade.id] ||
+                (atividade.chaveAtividade && kanbanState[atividade.chaveAtividade]);
+            const pausaAberta = (atividade._pausasResumo || []).some(pausa =>
+                !(pausa.dataHoraRetomada || pausa.horaRetomada || pausa.dataRetomada) &&
+                (pausa.status === 'Pausado' || pausa.ativa !== false)
+            );
+            return estado?.status === 'pausado' || pausaAberta ? 'pausado' : 'em_andamento';
+        }
+
+        function obterAtividadesCriadasPorStatus(data) {
+            const grupos = {
+                criadas: obterAtividadesCriadasNoDia(data),
+                concluidas: [],
+                pausadas: [],
+                emAndamento: []
+            };
+            grupos.criadas.forEach(atividade => {
+                const status = obterStatusAtualDaAtividade(atividade);
+                if (status === 'concluido') grupos.concluidas.push(atividade);
+                if (status === 'pausado') grupos.pausadas.push(atividade);
+                if (status === 'em_andamento') grupos.emAndamento.push(atividade);
+            });
+            return grupos;
+        }
+
+        function obterPausasDasAtividades(atividadesDoResumo, data) {
+            const pausasUnicas = new Map();
+            atividadesDoResumo.forEach(atividade => {
+                const identidadeAtividade = atividade.id || atividade.chaveAtividade || atividade.ticket || '';
+                (atividade._pausasResumo || []).forEach(pausa => {
+                    const inicio = obterTimestampPausa(pausa);
+                    const identidadeInicio = inicio === null
+                        ? `${pausa.dataPausa || pausa.dataInicio || ''}:${pausa.horaPausa || ''}`
+                        : String(Math.floor(inicio / 1000));
+                    const chave = `${identidadeAtividade}:${identidadeInicio}`;
+                    if (pausasUnicas.has(chave)) return;
+                    const minutos = calcularMinutosPausaNoDia(pausa, data);
+                    if (Number.isFinite(minutos) && minutos > 0) {
+                        pausasUnicas.set(chave, pausa);
+                    }
+                });
+            });
+            return [...pausasUnicas.values()];
         }
 
         function contarStatus(data) {
-            const atividadesDoDia = obterAtividadesPorStatus(data);
-            const { criadas, concluidas, pausadas, emAndamento } = atividadesDoDia;
+            const atividadesPorStatusAtual = obterAtividadesCriadasPorStatus(data);
+            const criadas = atividadesPorStatusAtual.criadas;
             const atividadesRastreabilidade = obterAtividadesDaRastreabilidade();
             const atividadesTempoTotal = atividadesRastreabilidade.filter(atividade =>
                 atividadeCorrespondeAoPeriodoBaseDados(atividade, data)
             );
-            const tempoTotalAtivo = atividadesTempoTotal.reduce(
-                (total, atividade) => total + calcularMinutosAtivos(atividade, data),
-                0
-            );
+            const tempoTotalAtivo = calcularTempoTotalRastreabilidade(atividadesTempoTotal, data);
             const chaveTicket = atividade => {
                 const ticket = String(atividade.ticket || '').trim();
                 if (ticket) return `ticket:${ticket}`;
@@ -1606,12 +1811,19 @@
                 return '';
             };
             const finalizacoesPorTicket = new Map();
-            atividadesRastreabilidade.forEach(atividade => {
-                if (atividade.ehAjudante) return;
+            atividadesPorStatusAtual.concluidas.forEach(atividade => {
                 const ticket = chaveTicket(atividade);
                 if (!ticket) return;
-                const finalizacoes = obterFinalizacoesDaAtividadeNoDia(atividade, data);
-                if (!finalizacoes.length) return;
+                const finalizacao = [...(atividade._eventosResumo || [])]
+                    .filter(evento => evento.tipo === 'FIM')
+                    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+                    .pop() || {
+                        tipo: 'FIM',
+                        timestamp: atividade.data_finalizacao ||
+                            converterDataHoraPausa(atividade.dataFim, atividade.horaFim)?.toISOString() ||
+                            atividade.dataFim
+                    };
+                if (!finalizacao.timestamp) return;
 
                 const atividadesDoTicket = finalizacoesPorTicket.get(ticket) || new Map();
                 const chaveAtividade = atividade.id !== undefined && atividade.id !== null
@@ -1619,27 +1831,30 @@
                     : atividade.chaveAtividade
                         ? `chave:${atividade.chaveAtividade}`
                         : ticket;
-                const finalizacaoMaisRecente = finalizacoes[finalizacoes.length - 1];
                 const finalizacaoExistente = atividadesDoTicket.get(chaveAtividade);
                 if (!finalizacaoExistente ||
-                    new Date(finalizacaoMaisRecente.timestamp) > new Date(finalizacaoExistente.evento.timestamp)) {
-                    atividadesDoTicket.set(chaveAtividade, { atividade, evento: finalizacaoMaisRecente });
+                    new Date(finalizacao.timestamp) > new Date(finalizacaoExistente.evento.timestamp)) {
+                    atividadesDoTicket.set(chaveAtividade, { atividade, evento: finalizacao });
                 }
                 finalizacoesPorTicket.set(ticket, atividadesDoTicket);
             });
-            const tempoTotalTicketsFinalizados = [...finalizacoesPorTicket.values()]
-                .flatMap(atividadesDoTicket => [...atividadesDoTicket.values()])
-                .reduce((total, item) =>
-                    total + calcularMinutosAtivosAteFinalizacao(item.atividade, item.evento), 0);
-            const quantidadePeriodosFinalizados = [...finalizacoesPorTicket.values()]
-                .reduce((total, atividadesDoTicket) => total + atividadesDoTicket.size, 0);
-            const tempoMedioFinalizacao = quantidadePeriodosFinalizados
-                ? tempoTotalTicketsFinalizados / quantidadePeriodosFinalizados
+            const temposPorTicketFinalizado = [...finalizacoesPorTicket.values()].map(atividadesDoTicket =>
+                [...atividadesDoTicket.values()].reduce((total, item) =>
+                    total + calcularMinutosAtivosAteFinalizacao(item.atividade, item.evento), 0)
+            );
+            const tempoMedioFinalizacao = temposPorTicketFinalizado.length
+                ? temposPorTicketFinalizado.reduce((total, minutos) => total + minutos, 0) /
+                    temposPorTicketFinalizado.length
                 : null;
             const colaboradoresTempoTotal = new Set();
-            atividadesTempoTotal.forEach(atividade => {
+            let tempoAtivoAtividadesCriadas = 0;
+            criadas.forEach(atividade => {
+                const tempoAtivo = calcularTempoTotalRastreabilidade([atividade], data);
+                if (tempoAtivo <= 0) return;
+                tempoAtivoAtividadesCriadas += tempoAtivo;
                 const colaboradores = [
-                    atividade.nome || atividade.colaborador || atividade.criador_ticket,
+                    atividade.responsavel_periodo || atividade.nome || atividade.colaborador ||
+                        atividade.nome_usuario || atividade.criador_ticket,
                     ...(Array.isArray(atividade.colaboradoresAuxiliares) ? atividade.colaboradoresAuxiliares : [])
                 ];
                 colaboradores.forEach(colaborador => {
@@ -1648,18 +1863,24 @@
                 });
             });
             const mediaPorColaboradorDia = colaboradoresTempoTotal.size
-                ? tempoTotalAtivo / colaboradoresTempoTotal.size
+                ? tempoAtivoAtividadesCriadas / colaboradoresTempoTotal.size
                 : null;
-            const pausasDoDia = criadas.flatMap(item => item._pausasResumo || [])
-                .filter(pausa => dataRegistroParaISO(pausa.dataHoraPausa) === data ||
-                    dataAtividadeParaISO(pausa.dataPausa || pausa.dataInicio) === data);
-            const tempoTotalPausas = pausasDoDia.reduce((total, item) => total + calcularMinutosPausaNoDia(item, data), 0);
-            const tempoMedioPausa = pausasDoDia.length ? tempoTotalPausas / pausasDoDia.length : null;
-            const taxaFinalizacao = criadas.length ? Math.min(100, concluidas.length / criadas.length * 100) : 0;
+            const pausasDoResumo = obterPausasDasAtividades(atividadesPorStatusAtual.pausadas, data);
+            const minutosPausasDoResumo = pausasDoResumo
+                .map(pausa => calcularMinutosPausaNoDia(pausa, data))
+                .filter(Number.isFinite);
+            const tempoMedioPausa = minutosPausasDoResumo.length
+                ? minutosPausasDoResumo.reduce((total, minutos) => total + minutos, 0) /
+                    minutosPausasDoResumo.length
+                : null;
+            const finalizadasCriadasNoDia = atividadesPorStatusAtual.concluidas;
+            const taxaFinalizacao = criadas.length
+                ? Math.min(100, finalizadasCriadasNoDia.length / criadas.length * 100)
+                : 0;
             return {
-                emAndamento: emAndamento.length,
-                pausadas: pausadas.length,
-                concluidas: concluidas.length,
+                emAndamento: atividadesPorStatusAtual.emAndamento.length,
+                pausadas: atividadesPorStatusAtual.pausadas.length,
+                concluidas: atividadesPorStatusAtual.concluidas.length,
                 criadas: criadas.length,
                 taxaFinalizacao,
                 tempoTotalAtividades: tempoTotalAtivo,
@@ -1683,6 +1904,13 @@
             renderizarGraficoResumo(totais.taxaFinalizacao);
         }
 
+        function atualizarTempoTotalAtividades(data) {
+            const atividadesDoDia = obterAtividadesDaRastreabilidade()
+                .filter(atividade => atividadeCorrespondeAoPeriodoBaseDados(atividade, data));
+            document.getElementById('tempoTotalAtividades').textContent =
+                formatarTempoTotalAtividades(calcularTempoTotalRastreabilidade(atividadesDoDia, data));
+        }
+
         function gerarTextoRelatorio(data) {
             const totais = contarStatus(data);
             const formatarData = valor => {
@@ -1698,7 +1926,7 @@
                 '',
                 'RESULTADOS',
                 `- Iniciadas no dia: ${totais.criadas}`,
-                '- Status ao fim do dia:',
+                '- Status atual das atividades criadas na data:',
                 `  *  Em andamento: ${totais.emAndamento}`,
                 `  * Pausadas: ${totais.pausadas}`,
                 `  * Concluídas: ${totais.concluidas}`,
@@ -1801,8 +2029,8 @@
             });
             const detalhesPorSerie = [
                 datas.map(data => obterAtividadesCriadasNoDia(data)),
-                datas.map(data => obterAtividadesPorStatus(data).concluidas),
-                datas.map(data => obterAtividadesRetroativasFinalizadasNoDia(data))
+                datas.map(data => obterAtividadesRetroativasFinalizadasNoDia(data)),
+                datas.map(data => obterAtividadesPorStatus(data).concluidasCriadasNoDia)
             ];
             const contagensPorSerie = detalhesPorSerie.map(detalhes => detalhes.map(atividadesDoPonto => atividadesDoPonto.length));
             const canvas = document.getElementById('chartAtividadesCriadasPorDia');
@@ -1813,8 +2041,8 @@
                     labels,
                     datasets: [
                         { label: 'Atividades criadas', data: contagensPorSerie[0], borderColor: '#4b5563', backgroundColor: 'rgba(75, 85, 99, 0.12)', borderWidth: 1.5, fill: true, tension: 0.4, pointBackgroundColor: '#4b5563', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5, pointHitRadius: 22 },
-                        { label: 'Atividades finalizadas (criadas no dia)', data: contagensPorSerie[1], borderColor: '#93c5fd', backgroundColor: 'rgba(147, 197, 253, 0.1)', borderWidth: 1.5, fill: false, tension: 0.4, pointBackgroundColor: '#93c5fd', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5, pointHitRadius: 22 },
-                        { label: 'Atividades retroativas finalizadas', data: contagensPorSerie[2], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 1.5, fill: false, tension: 0.4, pointBackgroundColor: '#3b82f6', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5, pointHitRadius: 22 }
+                        { label: 'Atividades retroativas finalizadas', data: contagensPorSerie[1], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 1.5, fill: false, tension: 0.4, pointBackgroundColor: '#3b82f6', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5, pointHitRadius: 22 },
+                        { label: 'Atividades finalizadas no dia', data: contagensPorSerie[2], borderColor: '#1e3a5f', backgroundColor: 'rgba(30, 58, 95, 0.1)', borderWidth: 1.5, fill: false, tension: 0.4, pointBackgroundColor: '#1e3a5f', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5, pointHitRadius: 22 }
                     ]
                 },
                 options: {
@@ -1875,7 +2103,7 @@
             if (!window.chartPronto || typeof Chart === 'undefined') return;
             const data = obterDiaGrafico();
             const porColaborador = {};
-            const atividadesPorStatus = obterAtividadesPorStatus(data);
+            const atividadesPorStatus = obterAtividadesCriadasPorStatus(data);
             const atividadesCriadasNoDia = atividadesPorStatus.criadas;
             atividadesCriadasNoDia.forEach(atividade => {
                 const colaborador = obterNomeColaboradorAtividadeGrafico(atividade);
@@ -1895,7 +2123,7 @@
                 type: 'bar',
                 data: { labels: nomes, datasets: [
                     { label: 'Atividades criadas', data: nomes.map(nome => porColaborador[nome]), backgroundColor: PALETA_GRAFICOS[1], borderColor: PALETA_GRAFICOS[1], borderWidth: 1, borderRadius: 5, order: 1 },
-                    { type: 'line', label: 'Taxa de finalização', data: nomes.map(nome => porColaborador[nome] ? Math.min(100, finalizadasPorColaborador[nome] / porColaborador[nome] * 100) : 0), yAxisID: 'yTaxa', borderColor: '#f97316', backgroundColor: '#f97316', borderWidth: 3, tension: 0.3, fill: false, showLine: false, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 1.5, pointRadius: 4, pointHoverRadius: 6, order: 0 }
+                    { type: 'line', label: 'Taxa encerrada (status atual)', data: nomes.map(nome => porColaborador[nome] ? Math.min(100, finalizadasPorColaborador[nome] / porColaborador[nome] * 100) : 0), yAxisID: 'yTaxa', borderColor: '#f97316', backgroundColor: '#f97316', borderWidth: 3, tension: 0.3, fill: false, showLine: false, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 1.5, pointRadius: 4, pointHoverRadius: 6, order: 0 }
                 ] },
                 options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 44 } }, plugins: { legend: { display: true, position: 'bottom', align: 'center' } }, scales: { x: { grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' }, ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } }, y: { beginAtZero: true, grace: '15%', grid: { display: false }, ticks: { precision: 0 } }, yTaxa: { beginAtZero: true, position: 'right', grid: { display: false }, border: { display: true, color: '#f97316' }, ticks: { color: '#f97316', callback: valor => `${Math.round(valor)}%` } } } },
                 plugins: [PLUGIN_ROTULOS_ATIVIDADES_COLABORADOR]
@@ -1951,7 +2179,7 @@
         function renderizarGraficoStatusColaboradores() {
             if (!window.chartPronto || typeof Chart === 'undefined') return;
             const data = obterDiaGrafico();
-            const atividadesPorStatus = obterAtividadesPorStatus(data);
+            const atividadesPorStatus = obterAtividadesCriadasPorStatus(data);
             const contagens = new Map();
             const garantirColaborador = atividade => {
                 const nome = obterNomeColaboradorAtividadeGrafico(atividade);
@@ -1989,7 +2217,9 @@
 
         function renderizarGraficoPausasColaboradores() {
             const data = obterDiaGrafico();
-            const porSetor = obterResumoPausasPorSetor(data);
+            const atividadesPausadas = obterAtividadesCriadasPorStatus(data).pausadas;
+            const pausas = obterPausasDasAtividades(atividadesPausadas, data);
+            const porSetor = obterResumoPausasPorSetor(data, pausas);
 
             const setores = [...porSetor.entries()].sort(([setorA], [setorB]) => setorA.localeCompare(setorB, 'pt-BR'));
             const lista = document.getElementById('listaTempoMedioPausaPorSetor');
@@ -2024,8 +2254,16 @@
         function renderizarTabelaHistoricoPausas() {
             const corpo = document.getElementById('tabelaHistoricoPausas');
             const dataSelecionada = obterDiaGrafico();
+            const atividadesPausadas = obterAtividadesCriadasPorStatus(dataSelecionada).pausadas;
+            const correspondeAtividadePausada = pausa => atividadesPausadas.some(atividade =>
+                (pausa.id && atividade.id && String(pausa.id) === String(atividade.id)) ||
+                (pausa.chaveAtividade && atividade.chaveAtividade && pausa.chaveAtividade === atividade.chaveAtividade) ||
+                (!pausa.id && !pausa.chaveAtividade && pausa.ticket && String(pausa.ticket) === String(atividade.ticket))
+            );
             const pausas = [...historicoPausas]
-                .filter(item => item && typeof item === 'object' && dataAtividadeParaISO(item.dataPausa || item.dataInicio) === dataSelecionada)
+                .filter(item => item && typeof item === 'object' &&
+                    dataAtividadeParaISO(item.dataPausa || item.dataInicio) === dataSelecionada &&
+                    correspondeAtividadePausada(item))
                 .sort((pausaA, pausaB) => {
                     const dataA = converterDataHoraPausa(pausaA.dataPausa || pausaA.dataInicio, pausaA.horaPausa)?.getTime() || 0;
                     const dataB = converterDataHoraPausa(pausaB.dataPausa || pausaB.dataInicio, pausaB.horaPausa)?.getTime() || 0;
@@ -2080,85 +2318,19 @@
         function renderizarGraficoTempoMedio() {
             if (!window.chartPronto || typeof Chart === 'undefined') return;
             const data = obterDiaGrafico();
-            const temposEfetivosPublicados = obterTemposEfetivosPorColaboradorPublicados(data);
-            const temposPublicados = obterTemposPorColaboradorPublicados(data);
-            const colaboradores = temposEfetivosPublicados || temposPublicados || agruparTempoAtivoPorColaborador(
-                obterAtividadesDaRastreabilidade().map(atividade => {
-                    const eventoInicio = (atividade._eventosResumo || []).find(evento => evento.tipo === 'INICIO');
-                    const emailColaborador = [
-                        atividade.email_responsavel_periodo,
-                        eventoInicio?.email_usuario,
-                        atividade.email_criador,
-                        atividade.email_usuario
-                    ].find(email => typeof email === 'string' && email.includes('@'));
-                    const nomesColaborador = [
-                        atividade.responsavel_periodo,
-                        eventoInicio?.colaborador,
-                        eventoInicio?.nome_usuario,
-                        atividade.criador_atividade,
-                        atividade.nome_usuario,
-                        atividade.colaborador,
-                        atividade.nome
-                    ];
-                    const pausas = atividade._pausasResumo || [];
-                    const estaEmAndamento = atividadesEmAndamento.some(item =>
-                        (atividade.id !== undefined && atividade.id !== null && String(item.id) === String(atividade.id)) ||
-                        (atividade.chaveAtividade && item.chaveAtividade === atividade.chaveAtividade) ||
-                        (!atividade.id && !atividade.chaveAtividade && atividade.ticket &&
-                            String(item.ticket) === String(atividade.ticket))
-                    );
-                    const pausaAtual = [...pausas].reverse().find(pausa =>
-                        !(pausa.dataHoraRetomada || pausa.horaRetomada || pausa.dataRetomada) &&
-                        (pausa.status === 'Pausado' || pausa.ativa !== false)
-                    );
-                    const inicio = atividade.data_criacao
-                        ? new Date(atividade.data_criacao).getTime()
-                        : converterDataHoraPausa(atividade.dataInicio, atividade.horaInicio)?.getTime();
-                    const fim = atividade.data_finalizacao
-                        ? new Date(atividade.data_finalizacao).getTime()
-                        : converterDataHoraPausa(atividade.dataFim, atividade.horaFim)?.getTime();
-                    const totalAtivoMs = calcularTempoAtivoDiarioMs({
-                        data,
-                        eventos: atividade._eventosResumo || [],
-                        pausas: pausas.map(pausa => ({
-                            inicio: pausa.dataHoraPausa
-                                ? new Date(pausa.dataHoraPausa).getTime()
-                                : converterDataHoraPausa(pausa.dataPausa || pausa.dataInicio, pausa.horaPausa)?.getTime(),
-                            retomada: pausa.dataHoraRetomada
-                                ? new Date(pausa.dataHoraRetomada).getTime()
-                                : converterDataHoraPausa(
-                                    pausa.dataRetomada || pausa.dataPausa || pausa.dataInicio,
-                                    pausa.horaRetomada
-                                )?.getTime()
-                        })),
-                        inicio,
-                        fim,
-                        aberta: estaEmAndamento,
-                        pausada: String(atividade.status || '').toLocaleLowerCase('pt-BR') === 'pausado' ||
-                            Boolean(pausaAtual),
-                        inicioPausa: pausaAtual?.dataHoraPausa
-                            ? new Date(pausaAtual.dataHoraPausa).getTime()
-                            : converterDataHoraPausa(
-                                pausaAtual?.dataPausa || pausaAtual?.dataInicio,
-                                pausaAtual?.horaPausa
-                            )?.getTime()
-                    });
-                    return {
-                        nome: obterNomeColaboradorTempo(nomesColaborador, emailColaborador),
-                        totalMs: Math.floor(totalAtivoMs / 1000) * 1000,
-                        ehAjudante: atividade.ehAjudante
-                    };
-                })
-            );
+            const colaboradores = obterTemposEfetivosPorColaboradorPublicados(data);
             const container = document.getElementById('containerGraficoTempoMedioAtividade');
             const estadoVazio = document.getElementById('estadoTempoMedioAtividade');
-            if (colaboradores.length === 0) {
+            if (colaboradores === null || colaboradores.length === 0) {
                 if (graficoTempoMedio) {
                     graficoTempoMedio.destroy();
                     graficoTempoMedio = null;
                 }
                 container.hidden = true;
                 estadoVazio.hidden = false;
+                estadoVazio.textContent = colaboradores === null
+                    ? 'Dados de tempo efetivo ainda não disponíveis para esta data'
+                    : 'Nenhum tempo ativo registrado nesta data';
                 return;
             }
             container.hidden = false;
@@ -2205,7 +2377,9 @@
         function renderizarGraficoPausasSetor() {
             if (!window.chartPronto || typeof Chart === 'undefined') return;
             const data = obterDiaGrafico();
-            const resumoPorSetor = obterResumoPausasPorSetor(data);
+            const atividadesPausadas = obterAtividadesCriadasPorStatus(data).pausadas;
+            const pausas = obterPausasDasAtividades(atividadesPausadas, data);
+            const resumoPorSetor = obterResumoPausasPorSetor(data, pausas);
             const porSetor = Object.fromEntries(
                 [...resumoPorSetor].map(([setor, resumo]) => [setor, resumo.quantidade])
             );
@@ -2252,6 +2426,11 @@
         setInterval(() => {
             if (!document.hidden && window.chartPronto && typeof Chart !== 'undefined') {
                 renderizarGraficoTempoMedio();
+            }
+            if (!document.hidden) {
+                atualizarTempoTotalAtividades(
+                    document.getElementById('dataResumoCards').value || dataD1()
+                );
             }
         }, 1000);
 
