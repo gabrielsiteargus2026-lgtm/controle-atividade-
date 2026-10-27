@@ -2042,7 +2042,7 @@
                     datasets: [
                         { label: 'Atividades criadas', data: contagensPorSerie[0], borderColor: '#4b5563', backgroundColor: 'rgba(75, 85, 99, 0.12)', borderWidth: 1.5, fill: true, tension: 0.4, pointBackgroundColor: '#4b5563', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5, pointHitRadius: 22 },
                         { label: 'Atividades retroativas finalizadas', data: contagensPorSerie[1], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 1.5, fill: false, tension: 0.4, pointBackgroundColor: '#3b82f6', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5, pointHitRadius: 22 },
-                        { label: 'Atividades finalizadas no dia', data: contagensPorSerie[2], borderColor: '#1e3a5f', backgroundColor: 'rgba(30, 58, 95, 0.1)', borderWidth: 1.5, fill: false, tension: 0.4, pointBackgroundColor: '#1e3a5f', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5, pointHitRadius: 22 }
+                        { label: 'Atividades finalizadas no dia', data: contagensPorSerie[2], borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', borderWidth: 1.5, fill: false, tension: 0.4, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 1, pointRadius: 3, pointHoverRadius: 5, pointHitRadius: 22 }
                     ]
                 },
                 options: {
@@ -2068,7 +2068,42 @@
                     onHover(event, elementos) {
                         event.native.target.style.cursor = elementos.length ? 'pointer' : 'default';
                     },
-                    plugins: { legend: { display: true, position: 'bottom' } },
+                    plugins: {
+                        legend: { display: true, position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                title: itens => itens.length
+                                    ? formatarDataComparativo(datas[itens[0].dataIndex])
+                                    : '',
+                                label: contexto => {
+                                    const atividadesDoPonto =
+                                        detalhesPorSerie[contexto.datasetIndex]?.[contexto.dataIndex] || [];
+                                    return `${contexto.dataset.label}: ${atividadesDoPonto.length}`;
+                                },
+                                afterBody: itens => {
+                                    const item = itens[0];
+                                    if (!item) return [];
+                                    const atividadesDoPonto =
+                                        detalhesPorSerie[item.datasetIndex]?.[item.dataIndex] || [];
+                                    const limite = 6;
+                                    const linhas = atividadesDoPonto.slice(0, limite).map(atividade => {
+                                        const identificador = atividade.ticket ||
+                                            atividade.chaveAtividade ||
+                                            atividade.id ||
+                                            'Sem identificação';
+                                        const descricao = atividade.titulo || atividade.descricao;
+                                        return descricao
+                                            ? `${identificador} — ${descricao}`
+                                            : String(identificador);
+                                    });
+                                    if (atividadesDoPonto.length > limite) {
+                                        linhas.push(`... e mais ${atividadesDoPonto.length - limite} atividade(s)`);
+                                    }
+                                    return linhas;
+                                }
+                            }
+                        }
+                    },
                     scales: { x: { grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' } }, y: { beginAtZero: true, grid: { display: true, color: 'rgba(148, 163, 184, 0.22)' }, ticks: { precision: 0, stepSize: 1 } } }
                 },
                 plugins: [{
@@ -2080,6 +2115,7 @@
                         contexto.textAlign = 'center';
                         contexto.textBaseline = 'middle';
                         chart.data.datasets.forEach((dataset, indiceDataset) => {
+                            if (!chart.isDatasetVisible(indiceDataset)) return;
                             contexto.fillStyle = '#1f2937';
                             contexto.strokeStyle = '#fff';
                             contexto.lineWidth = 4;
