@@ -2188,6 +2188,94 @@
             return obterNomeColaboradorTempo(nomesColaborador, emailColaborador);
         }
 
+        function obterTemposEfetivosPorColaborador(data) {
+            const temposPublicados = obterTemposEfetivosPorColaboradorPublicados(data);
+            if (temposPublicados?.length) return temposPublicados;
+
+            const registros = obterAtividadesDaRastreabilidade().map(atividade => {
+                const eventos = atividade._eventosResumo || [];
+                const eventoInicio = eventos.find(evento => evento.tipo === 'INICIO');
+                const email = [
+                    atividade.email_responsavel_periodo,
+                    eventoInicio?.email_usuario,
+                    atividade.email_criador,
+                    atividade.email_usuario
+                ].find(valor => typeof valor === 'string' && valor.includes('@')) || '';
+                const usuarioId = [
+                    atividade.responsavel_usuario_id,
+                    eventoInicio?.usuario_id,
+                    !atividade.isReabertura ? atividade.usuario_id : ''
+                ].find(valor =>
+                    typeof valor === 'string' && valor.trim() &&
+                    !['anonimo', 'desconhecido'].includes(valor.trim().toLocaleLowerCase('pt-BR'))
+                ) || '';
+                const identificador = usuarioId
+                    ? `uid:${usuarioId.trim()}`
+                    : email
+                        ? `email:${email.trim().toLocaleLowerCase('pt-BR')}`
+                        : '';
+                const atividadeEstaAberta = atividadesEmAndamento.some(item => {
+                    const temIdAtividade = atividade.id !== null && atividade.id !== undefined;
+                    const temIdItem = item.id !== null && item.id !== undefined;
+                    if (temIdAtividade && temIdItem) {
+                        return String(atividade.id) === String(item.id);
+                    }
+                    const chaveAtividade = String(atividade.chaveAtividade || '');
+                    const chaveItem = String(item.chaveAtividade || '');
+                    if (chaveAtividade && chaveItem) return chaveAtividade === chaveItem;
+                    if (chaveAtividade || chaveItem || temIdAtividade || temIdItem) return false;
+                    return Boolean(atividade.ticket && item.ticket &&
+                        String(atividade.ticket) === String(item.ticket));
+                });
+                const pausas = atividade._pausasResumo || [];
+                const pausaAtual = [...pausas].reverse().find(pausa =>
+                    !(pausa.dataHoraRetomada || pausa.horaRetomada || pausa.dataRetomada) &&
+                    (pausa.status === 'Pausado' || pausa.ativa !== false)
+                );
+                const estado = kanbanState[atividade.id] ||
+                    (atividade.chaveAtividade && kanbanState[atividade.chaveAtividade]);
+                const intervalos = obterIntervalosAtivosDiarios({
+                    data,
+                    eventos,
+                    pausas: pausas.map(pausa => ({
+                        inicio: obterTimestampPausa(pausa),
+                        retomada: obterTimestampPausa(pausa, true)
+                    })),
+                    inicio: obterTimestampAtividadeResumo(
+                        atividade.data_criacao,
+                        atividade.dataInicio,
+                        atividade.horaInicio
+                    ),
+                    fim: obterTimestampAtividadeResumo(
+                        atividade.data_finalizacao,
+                        atividade.dataFim,
+                        atividade.horaFim
+                    ),
+                    aberta: atividadeEstaAberta,
+                    pausada: obterStatusAtualDaAtividade(atividade) === 'pausado' ||
+                        estado?.status === 'pausado',
+                    inicioPausa: (pausaAtual ? obterTimestampPausa(pausaAtual) : null) ??
+                        Number(estado?.tempoInicioPausa)
+                });
+                const intervalosAtivos = separarIntervalosForaAtuacao(intervalos).intervalosAtivos;
+                const nome = obterNomeColaboradorTempo([
+                    atividade.responsavel_periodo,
+                    eventoInicio?.colaborador,
+                    eventoInicio?.nome_usuario,
+                    atividade.criador_atividade,
+                    atividade.nome_usuario
+                ], email);
+
+                return {
+                    nome,
+                    identificador,
+                    intervalos: intervalosAtivos,
+                    ehAjudante: atividade.ehAjudante
+                };
+            });
+            return agruparTempoEfetivoPorColaborador(registros);
+        }
+
         function renderizarGraficoAtividadesRetroativas() {
             if (!window.chartPronto || typeof Chart === 'undefined') return;
             const data = obterDiaGrafico();
@@ -2354,19 +2442,17 @@
         function renderizarGraficoTempoMedio() {
             if (!window.chartPronto || typeof Chart === 'undefined') return;
             const data = obterDiaGrafico();
-            const colaboradores = obterTemposEfetivosPorColaboradorPublicados(data);
+            const colaboradores = obterTemposEfetivosPorColaborador(data);
             const container = document.getElementById('containerGraficoTempoMedioAtividade');
             const estadoVazio = document.getElementById('estadoTempoMedioAtividade');
-            if (colaboradores === null || colaboradores.length === 0) {
+            if (colaboradores.length === 0) {
                 if (graficoTempoMedio) {
                     graficoTempoMedio.destroy();
                     graficoTempoMedio = null;
                 }
                 container.hidden = true;
                 estadoVazio.hidden = false;
-                estadoVazio.textContent = colaboradores === null
-                    ? 'Dados de tempo efetivo ainda não disponíveis para esta data'
-                    : 'Nenhum tempo ativo registrado nesta data';
+                estadoVazio.textContent = 'Nenhum tempo ativo registrado nesta data';
                 return;
             }
             container.hidden = false;
